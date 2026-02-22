@@ -44,7 +44,7 @@ namespace StockPrizeSenderService
 			LoadExecutionHistoryFromFile();
 		}
 
-		private void Test()
+		private void ManualLogin()
 		{
 			// 1. Hent værdier fra din konfiguration (.env / docker-compose)
 			string? appKey = _configuration["Saxo:AppKey"];
@@ -69,61 +69,82 @@ namespace StockPrizeSenderService
 
 		protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 		{
-			Test();
+			// Print login-link ved opstart (kun til manuel brug hvis token udløber)
+			ManualLogin();
+
 			while (!stoppingToken.IsCancellationRequested)
 			{
-				decimal totalValue = 0;
 				var localTime = GetLocalTime(DateTimeOffset.UtcNow);
 				var nextRunUtc = GetNextRunTime(localTime, 03, 30);
 				var delay = nextRunUtc - DateTimeOffset.UtcNow;
 
-				if (delay < TimeSpan.Zero)
-					delay = TimeSpan.Zero;
+				if (delay < TimeSpan.Zero) delay = TimeSpan.Zero;
 
 				_logger.LogInformation("Næste kørsel planlagt til: {nextRun}", nextRunUtc);
 
-				string? saxoToken = await GetSaxoAccessTokenAsync(stoppingToken);
-				if (saxoToken != null)
-				{
-					decimal saxoBalance = await GetSaxoBalanceAsync(saxoToken, stoppingToken);
-					totalValue += saxoBalance;
-					_logger.LogInformation("Saxo værdi lagt til total: {val}", saxoBalance);
-				}
-
 				try
 				{
+					// Vent til kl. 03:30
 					await Task.Delay(delay, stoppingToken);
 
 					if (!IsExecutionSafe())
 					{
-						_logger.LogWarning("Kørsel blokeret: For mange kørsler registreret. Sikkerhedsmekanisme aktiveret.");
+						_logger.LogWarning("Kørsel blokeret: Sikkerhedsmekanisme aktiveret.");
 						continue;
 					}
-					EodResponse eodResponse;
+
+					_logger.LogInformation("Starter daglig værdiberegning...");
+					decimal runningTotal = 0;
+
+					// --- 1. SAXO BALANCE ---
+					string? saxoToken = await GetSaxoAccessTokenAsync(stoppingToken);
+					if (saxoToken != null)
+					{
+						decimal saxoBalance = await GetSaxoBalanceAsync(saxoToken, stoppingToken);
+						runningTotal += saxoBalance;
+						_logger.LogInformation("Saxo balance hentet: {val} DKK", saxoBalance);
+					}
+					else
+					{
+						_logger.LogWarning("Kunne ikke hente Saxo balance - fortsætter med de øvrige værdier.");
+					}
+
+					// --- 2. AKTIER (MarketStack) ---
+					EodResponse? eodResponse;
 					if (DateTime.UtcNow >= new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc))
 					{
 						eodResponse = await GetStockPrizeAsync(stoppingToken);
 					}
 					else
 					{
+						_logger.LogInformation("Bruger testdata for aktier (før marts 2026).");
 						eodResponse = _testDataClass.Test();
 					}
 
 					if (eodResponse != null)
 					{
-						totalValue = CalculateTotalStockValueAsync(eodResponse);
+						decimal stockValue = CalculateTotalStockValueAsync(eodResponse);
+						runningTotal += stockValue;
+						_logger.LogInformation("Aktieværdi beregnet: {val} DKK", stockValue);
 					}
 
-					totalValue += await FindTotalFundValue(stoppingToken);
+					// --- 3. FONDE (Scraper) ---
+					decimal fundValue = await FindTotalFundValue(stoppingToken);
+					runningTotal += fundValue;
+					_logger.LogInformation("Fondsværdi hentet: {val} DKK", fundValue);
+
+					// --- 4. OPDATER GOOGLE SHEETS ---
 					var sheetsKey = _configuration["SheetsApi:SheetsKey"];
-					if (sheetsKey == null)
+					if (!string.IsNullOrEmpty(sheetsKey))
 					{
-						_logger.LogError("SheetsKey mangler i konfigurationen. Kørsel afbrudt.");
-						continue;
+						_logger.LogInformation("Sender total værdi til Google Sheets: {total} DKK", runningTotal);
+						await _updateCellAsync.UpdateGoogleSheetsCellAsync(sheetsKey, "Ark1", runningTotal);
+						LogExecution();
 					}
-					await _updateCellAsync.UpdateGoogleSheetsCellAsync(sheetsKey, "Ark1", totalValue);
-
-					LogExecution();
+					else
+					{
+						_logger.LogError("SheetsKey mangler! Kunne ikke gemme resultatet.");
+					}
 				}
 				catch (OperationCanceledException)
 				{
@@ -131,26 +152,20 @@ namespace StockPrizeSenderService
 				}
 				catch (Exception ex)
 				{
-					_logger.LogError(ex, "Fejl i daglig opgave");
+					_logger.LogError(ex, "Fejl i den daglige kørsel.");
 				}
 			}
 		}
 
 		private async Task<string?> GetSaxoAccessTokenAsync(CancellationToken stoppingToken)
 		{
-			// Stien til din gemte token-fil (mappet via Docker volume)
 			string tokenPath = "/app/data/refresh_token.bin";
-			string? encryptionKey = _configuration["Saxo:EncryptionKey"]; // Skal sættes i din .env
+			string? encryptionKey = _configuration["Saxo:EncryptionKey"];
 
-			if (!File.Exists(tokenPath))
-			{
-				_logger.LogWarning("Ingen refresh token fundet på stien: {path}. Log venligst ind manuelt første gang.", tokenPath);
-				return null;
-			}
+			if (!File.Exists(tokenPath)) return null;
 
 			try
 			{
-				// 1. Læs og dekrypter det gemte refresh token
 				string encryptedToken = await File.ReadAllTextAsync(tokenPath, stoppingToken);
 				string refreshToken = TokenEncryptor.Decrypt(encryptedToken, encryptionKey!);
 
@@ -163,13 +178,13 @@ namespace StockPrizeSenderService
 			{ "client_secret", _configuration["Saxo:AppSecret"] }
 		});
 
-				// Endpoint (Husk at fjerne 'sim' når du går live)
-				string tokenEndpoint = "https://sim.logonvalidation.net/token";
+				// LIVE ENDPOINT
+				string tokenEndpoint = "https://live.logonvalidation.net/token";
 				var response = await client.PostAsync(tokenEndpoint, requestData, stoppingToken);
 
 				if (!response.IsSuccessStatusCode)
 				{
-					_logger.LogError("Saxo afviste refresh token: {error}", await response.Content.ReadAsStringAsync());
+					_logger.LogError("Saxo LIVE afviste refresh token.");
 					return null;
 				}
 
@@ -179,16 +194,15 @@ namespace StockPrizeSenderService
 				string newAccessToken = doc.RootElement.GetProperty("access_token").GetString()!;
 				string newRefreshToken = doc.RootElement.GetProperty("refresh_token").GetString()!;
 
-				// 2. Krypter og gem det NYE refresh token (Saxo roterer dem hver gang)
+				// Gem det nye roterede token krypteret
 				string encryptedNewToken = TokenEncryptor.Encrypt(newRefreshToken, encryptionKey!);
 				await File.WriteAllTextAsync(tokenPath, encryptedNewToken, stoppingToken);
 
-				_logger.LogInformation("Saxo access token fornyet succesfuldt.");
 				return newAccessToken;
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Fejl under automatisk Saxo login process.");
+				_logger.LogError(ex, "Fejl under Saxo token refresh.");
 				return null;
 			}
 		}
@@ -198,19 +212,17 @@ namespace StockPrizeSenderService
 			var client = _httpClientFactory.CreateClient();
 			client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
 
-			// Endpoint (Husk at fjerne 'sim' når du går live)
-			string apiEndpoint = "https://gateway.saxobank.com/sim/openapi/port/v1/balances/me";
+			// LIVE ENDPOINT (Uden /sim/)
+			string apiEndpoint = "https://gateway.saxobank.com/openapi/port/v1/balances/me";
 			var response = await client.GetAsync(apiEndpoint, stoppingToken);
 
 			if (response.IsSuccessStatusCode)
 			{
 				var json = await response.Content.ReadAsStringAsync(stoppingToken);
 				using var doc = JsonDocument.Parse(json);
-				// Saxo returnerer 'TotalValue' som et tal
 				return doc.RootElement.GetProperty("TotalValue").GetDecimal();
 			}
 
-			_logger.LogError("Kunne ikke hente balance fra Saxo API.");
 			return 0;
 		}
 
