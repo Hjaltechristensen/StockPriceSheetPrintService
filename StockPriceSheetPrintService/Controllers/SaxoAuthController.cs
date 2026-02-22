@@ -29,7 +29,7 @@ namespace StockPriceSheetPrintService.Controllers
 		private string TokenEndpoint => _configuration["Saxo:TokenEndpoint"] ?? "https://sim.logonvalidation.net/token";
 		private string ApiBaseUrl => _configuration["Saxo:ApiBaseUrl"] ?? "https://gateway.saxobank.com/sim/openapi";
 
-		private const string RedirectUrl = "http://192.168.1.239:5151/saxo/callback";
+		private string RedirectUrl => _configuration["Saxo:RedirectUrl"] ?? "http://192.168.1.239:5151/saxo/callback";
 		private const string TokenPath = "/app/data/refresh_token.bin";
 
 		[HttpGet("login")]
