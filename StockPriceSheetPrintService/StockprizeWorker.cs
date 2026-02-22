@@ -47,7 +47,7 @@ namespace StockPrizeSenderService
 		private void Test()
 		{
 			string? appKey = _configuration["Saxo:AppKey"];
-			string redirectUrl = "http://localhost:5151/saxo/callback"; // Skal matche portalen 100%
+			string redirectUrl = "http://192.168.1.239:5151/saxo/callback"; // Skal matche portalen 100%
 			string authUrl = $"https://live.saxobank.com/sim/openapi/controls/oauth/authorize?client_id={appKey}&response_type=code&redirect_uri={Uri.EscapeDataString(redirectUrl)}";
 
 			_logger.LogInformation("OAuth login URL genereret - se nedenfor:");
