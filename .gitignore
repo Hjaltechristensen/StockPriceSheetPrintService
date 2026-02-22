@@ -1,0 +1,30 @@
+# Secrets and sensitive files
+Secrets/
+*.json.secret
+appsettings.*.secret.json
+refresh_token.txt
+*.pem
+*.key
+*.crt
+
+# Build results
+bin/
+obj/
+.vs/
+.vscode/
+*.user
+*.suo
+
+# NuGet
+.nuget/
+packages/
+
+# Logs
+logs/
+*.log
+execution_log.txt
+
+# Environment
+.env
+.env.local
+.env.*.local
