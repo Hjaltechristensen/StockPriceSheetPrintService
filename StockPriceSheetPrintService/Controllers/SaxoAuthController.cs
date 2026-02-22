@@ -35,9 +35,15 @@ namespace StockPriceSheetPrintService.Controllers
 		[HttpGet("login")]
 		public IActionResult GetLoginUrl()
 		{
-			var authUrl = $"{AuthEndpoint}?client_id={AppKey}&response_type=code&redirect_uri={Uri.EscapeDataString(RedirectUrl)}";
-			_logger.LogInformation("Login URL genereret");
-			return Ok(new { LoginUrl = authUrl });
+			// LIVE adresser!
+			string authEndpoint = "https://live.logonvalidation.net/authorize";
+			string clientId = _configuration["Saxo:AppKey"]; // Husk: Brug din LIVE key
+			string redirectUri = _configuration["Saxo:RedirectUrl"];
+
+			// Uri.EscapeDataString er stadig livsvigtig
+			var authUrl = $"{authEndpoint}?client_id={clientId}&response_type=code&redirect_uri={Uri.EscapeDataString(redirectUri)}";
+
+			return Content(authUrl);
 		}
 
 		[HttpGet("callback")]

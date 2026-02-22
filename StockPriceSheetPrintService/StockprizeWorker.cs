@@ -46,12 +46,25 @@ namespace StockPrizeSenderService
 
 		private void Test()
 		{
+			// 1. Hent værdier fra din konfiguration (.env / docker-compose)
 			string? appKey = _configuration["Saxo:AppKey"];
-			string authUrl = $"https://live.logonvalidation.net/authorize";
 
-			_logger.LogInformation("OAuth login URL genereret - se nedenfor:");
-			Console.WriteLine("Venligst log ind her for at give adgang:");
+			// 2. BRUG LOCALHOST (Fordi du bruger SSH-tunnel og det matcher din .env/portal)
+			string redirectUrl = _configuration["Saxo:RedirectUrl"] ?? "http://localhost:5151/saxo/callback";
+
+			// 3. BRUG LIVE AUTH ENDPOINT (Ikke sim-openapi-controls...)
+			string authEndpoint = _configuration["Saxo:AuthEndpoint"] ?? "https://live.logonvalidation.net/authorize";
+
+			// 4. Byg URL'en med Uri.EscapeDataString
+			string authUrl = $"{authEndpoint}?client_id={appKey}&response_type=code&redirect_uri={Uri.EscapeDataString(redirectUrl)}";
+
+			_logger.LogInformation("OAuth LIVE login URL genereret:");
+
+			// Vi skriver det ud så det er nemt at kopiere fra SSH-terminalen
+			Console.WriteLine("\n************************************************************");
+			Console.WriteLine("KOPIÉR DETTE LINK TIL DIN BROWSER FOR AT GIVE ADGANG (LIVE):");
 			Console.WriteLine(authUrl);
+			Console.WriteLine("************************************************************\n");
 		}
 
 		protected override async Task ExecuteAsync(CancellationToken stoppingToken)
