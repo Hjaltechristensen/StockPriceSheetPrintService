@@ -239,6 +239,8 @@ namespace StockPrizeSenderService
 				}
 			});
 
+			Console.WriteLine($"Total stock value from Nordnet: {totalPrice}");
+
 			return totalPrice;
 		}
 
