@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using StockPriceSheetPrintService.Krypto;
 using StockPrizeSenderService.GoogleSheets;
 using StockPrizeSenderService.Models;
 using StockPrizeSenderService.TestData;
@@ -69,6 +70,14 @@ namespace StockPrizeSenderService
 
 				_logger.LogInformation("Næste kørsel planlagt til: {nextRun}", nextRunUtc);
 
+				string? saxoToken = await GetSaxoAccessTokenAsync(stoppingToken);
+				if (saxoToken != null)
+				{
+					decimal saxoBalance = await GetSaxoBalanceAsync(saxoToken, stoppingToken);
+					totalValue += saxoBalance;
+					_logger.LogInformation("Saxo værdi lagt til total: {val}", saxoBalance);
+				}
+
 				try
 				{
 					await Task.Delay(delay, stoppingToken);
@@ -113,6 +122,84 @@ namespace StockPrizeSenderService
 					_logger.LogError(ex, "Fejl i daglig opgave");
 				}
 			}
+		}
+
+		private async Task<string?> GetSaxoAccessTokenAsync(CancellationToken stoppingToken)
+		{
+			// Stien til din gemte token-fil (mappet via Docker volume)
+			string tokenPath = "/app/data/refresh_token.bin";
+			string? encryptionKey = _configuration["Saxo:EncryptionKey"]; // Skal sættes i din .env
+
+			if (!File.Exists(tokenPath))
+			{
+				_logger.LogWarning("Ingen refresh token fundet på stien: {path}. Log venligst ind manuelt første gang.", tokenPath);
+				return null;
+			}
+
+			try
+			{
+				// 1. Læs og dekrypter det gemte refresh token
+				string encryptedToken = await File.ReadAllTextAsync(tokenPath, stoppingToken);
+				string refreshToken = TokenEncryptor.Decrypt(encryptedToken, encryptionKey!);
+
+				var client = _httpClientFactory.CreateClient();
+				var requestData = new FormUrlEncodedContent(new Dictionary<string, string>
+		{
+			{ "grant_type", "refresh_token" },
+			{ "refresh_token", refreshToken },
+			{ "client_id", _configuration["Saxo:AppKey"] },
+			{ "client_secret", _configuration["Saxo:AppSecret"] }
+		});
+
+				// Endpoint (Husk at fjerne 'sim' når du går live)
+				string tokenEndpoint = "https://sim.logonvalidation.net/token";
+				var response = await client.PostAsync(tokenEndpoint, requestData, stoppingToken);
+
+				if (!response.IsSuccessStatusCode)
+				{
+					_logger.LogError("Saxo afviste refresh token: {error}", await response.Content.ReadAsStringAsync());
+					return null;
+				}
+
+				var json = await response.Content.ReadAsStringAsync(stoppingToken);
+				using var doc = JsonDocument.Parse(json);
+
+				string newAccessToken = doc.RootElement.GetProperty("access_token").GetString()!;
+				string newRefreshToken = doc.RootElement.GetProperty("refresh_token").GetString()!;
+
+				// 2. Krypter og gem det NYE refresh token (Saxo roterer dem hver gang)
+				string encryptedNewToken = TokenEncryptor.Encrypt(newRefreshToken, encryptionKey!);
+				await File.WriteAllTextAsync(tokenPath, encryptedNewToken, stoppingToken);
+
+				_logger.LogInformation("Saxo access token fornyet succesfuldt.");
+				return newAccessToken;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Fejl under automatisk Saxo login process.");
+				return null;
+			}
+		}
+
+		private async Task<decimal> GetSaxoBalanceAsync(string accessToken, CancellationToken stoppingToken)
+		{
+			var client = _httpClientFactory.CreateClient();
+			client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+
+			// Endpoint (Husk at fjerne 'sim' når du går live)
+			string apiEndpoint = "https://gateway.saxobank.com/sim/openapi/port/v1/balances/me";
+			var response = await client.GetAsync(apiEndpoint, stoppingToken);
+
+			if (response.IsSuccessStatusCode)
+			{
+				var json = await response.Content.ReadAsStringAsync(stoppingToken);
+				using var doc = JsonDocument.Parse(json);
+				// Saxo returnerer 'TotalValue' som et tal
+				return doc.RootElement.GetProperty("TotalValue").GetDecimal();
+			}
+
+			_logger.LogError("Kunne ikke hente balance fra Saxo API.");
+			return 0;
 		}
 
 		private decimal CalculateTotalStockValueAsync(EodResponse data)
