@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using StockPriceSheetPrintService.Models;
+using StockPrizeSenderService;
 using System.Net.Http.Headers;
 using System.Text.Json;
 
@@ -106,6 +107,14 @@ namespace StockPriceSheetPrintService.Controllers
 				_logger.LogError(ex, "Fejl i Saxo Callback");
 				return StatusCode(500, "Intern serverfejl.");
 			}
+		}
+
+		[HttpPost("trigger")]
+		public async Task<IActionResult> TriggerJob([FromServices] StockprizeWorker worker, CancellationToken ct)
+		{
+			_logger.LogInformation("Manuel trigger aktiveret via HTTP.");
+			await worker.RunJobAsync(ct);
+			return Ok(new { Message = "Kørsel gennemført." });
 		}
 	}
 }
