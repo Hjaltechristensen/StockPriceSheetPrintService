@@ -103,7 +103,8 @@ namespace StockPrizeSenderService
 			}
 
 			_logger.LogInformation("Starter daglig værdiberegning...");
-			decimal runningTotal = 0;
+decimal nordnetCash = 1116m;
+			decimal runningTotal = nordnetCash;
 
 			// --- 1. SAXO BALANCE ---
 			string? saxoToken = await GetSaxoAccessTokenAsync(stoppingToken);
