@@ -1,0 +1,21 @@
+name: Deploy StockPriceSheetPrintService
+
+on:
+  push:
+    branches:
+      - master
+
+concurrency:
+  group: deploy-stock-price-sheet-print-service
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Deploy service
+        run: |
+          echo "Deploying..."
+          cd /home/hjalte/deploy/update
+          ./update_stock-price-sheet-print-service.sh
