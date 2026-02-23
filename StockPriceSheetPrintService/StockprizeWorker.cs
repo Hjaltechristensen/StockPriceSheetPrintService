@@ -181,7 +181,11 @@ decimal nordnetCash = 1116m;
 
 				string tokenEndpoint = "https://live.logonvalidation.net/token";
 				var response = await client.PostAsync(tokenEndpoint, requestData, stoppingToken);
+				var errorBody = await response.Content.ReadAsStringAsync(stoppingToken);
 
+_logger.LogError("Saxo refresh fejl. Status: {Status}. Body: {Body}",
+    response.StatusCode,
+    errorBody);
 				if (!response.IsSuccessStatusCode)
 				{
 					_logger.LogError("Saxo LIVE afviste refresh token.");
@@ -193,7 +197,9 @@ decimal nordnetCash = 1116m;
 				using var doc = JsonDocument.Parse(json);
 
 				string newAccessToken = doc.RootElement.GetProperty("access_token").GetString()!;
+				_logger.LogError(newAccessToken);
 				string newRefreshToken = doc.RootElement.GetProperty("refresh_token").GetString()!;
+				_logger.LogError(newRefreshToken);
 
 				string encryptedNewToken = TokenEncryptor.Encrypt(newRefreshToken, encryptionKey!);
 				await File.WriteAllTextAsync(tokenPath, encryptedNewToken, stoppingToken);
