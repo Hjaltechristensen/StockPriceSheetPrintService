@@ -160,7 +160,7 @@ decimal nordnetCash = 1116m;
 
 		private async Task<string?> GetSaxoAccessTokenAsync(CancellationToken stoppingToken)
 		{
-			string tokenPath = "/app/saxo_data/refresh_token.bin";
+			string tokenPath = "/app/data/refresh_token.bin";
 			string? encryptionKey = _configuration["Saxo:EncryptionKey"];
 
 			if (!File.Exists(tokenPath)) return null;
