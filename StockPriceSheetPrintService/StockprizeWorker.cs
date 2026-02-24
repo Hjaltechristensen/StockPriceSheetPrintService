@@ -237,6 +237,7 @@ namespace StockPrizeSenderService
 				_logger.LogInformation("[SAXO-TOKEN] Token Endpoint: {endpoint}", tokenEndpoint);
 
 				var response = await client.PostAsync(tokenEndpoint, requestData, stoppingToken);
+				var errorBody = await response.Content.ReadAsStringAsync(stoppingToken);
 
 				_logger.LogInformation("[SAXO-TOKEN] [STEP 4] Response status: {statusCode}", (int)response.StatusCode);
 
@@ -255,7 +256,9 @@ namespace StockPrizeSenderService
 				using var doc = JsonDocument.Parse(json);
 
 				string newAccessToken = doc.RootElement.GetProperty("access_token").GetString()!;
+				_logger.LogError(newAccessToken);
 				string newRefreshToken = doc.RootElement.GetProperty("refresh_token").GetString()!;
+				_logger.LogError(newRefreshToken);
 
 				_logger.LogInformation("[SAXO-TOKEN] ✓ Nye tokens hentet fra Saxo");
 				_logger.LogInformation("[SAXO-TOKEN] [STEP 5] Krypterer nyt refresh token...");
