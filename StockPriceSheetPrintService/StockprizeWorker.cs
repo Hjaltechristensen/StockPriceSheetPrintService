@@ -111,7 +111,8 @@ namespace StockPrizeSenderService
 
 			try
 			{
-				decimal runningTotal = 0;
+				decimal nordnetCash = 1116m;
+				decimal runningTotal = nordnetCash;
 
 				// --- 1. SAXO BALANCE ---
 				_logger.LogInformation("[JOB] [1/4] Starter Saxo balance hentning...");
