@@ -43,7 +43,7 @@ namespace StockPrizeSenderService.GoogleSheets
 				{
 					new List<object>
 					{
-						DateOnly.FromDateTime(DateTime.Now).ToString("dd/MM/yyyy"),
+						DateOnly.FromDateTime(DateTime.Now.AddDays(-1)).ToString("dd/MM/yyyy"),
 						totalValue
 					}
 				}
