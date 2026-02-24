@@ -18,39 +18,42 @@ namespace StockPrizeSenderService.GoogleSheets
 
 		public async Task UpdateGoogleSheetsCellAsync(string spreadsheetId, string sheetName, decimal totalValue)
 		{
-				var credential = GoogleCredential
+			var credential = GoogleCredential
 				.FromFile("Secrets/stockprizeservice-59bc4ea3961d.json")
-					.CreateScoped(SheetsService.Scope.Spreadsheets);
+				.CreateScoped(SheetsService.Scope.Spreadsheets);
 
-				var service = new SheetsService(new BaseClientService.Initializer
+			var service = new SheetsService(new BaseClientService.Initializer
+			{
+				HttpClientInitializer = credential,
+				ApplicationName = "HomeServerBackend"
+			});
+
+			// Find næste ledige række
+			var getRequest = service.Spreadsheets.Values.Get(spreadsheetId, $"'{sheetName}'!R15:R");
+			var getResponse = await getRequest.ExecuteAsync();
+			var existingValues = getResponse.Values ?? new List<IList<object>>();
+
+			int nextRow = 15 + existingValues.Count;
+			_logger.LogInformation("[SHEETS] Skriver til række {row}", nextRow);
+
+			var updateRange = $"'{sheetName}'!R{nextRow}:S{nextRow}";
+			var valueRange = new ValueRange
+			{
+				Values = new List<IList<object>>
 				{
-					HttpClientInitializer = credential,
-					ApplicationName = "HomeServerBackend"
-				});
+					new List<object>
+					{
+						DateOnly.FromDateTime(DateTime.Now).ToString("dd/MM/yyyy"),
+						totalValue
+					}
+				}
+			};
 
-				var valueRange = new ValueRange
-				{
-					Values = new List<IList<object>>
-						{
-							new List<object>
-							{
-								DateOnly.FromDateTime(DateTime.Now).ToString("dd/MM/yyyy"),
-								totalValue
-							}
-						}
-				};
+			var updateRequest = service.Spreadsheets.Values.Update(valueRange, spreadsheetId, updateRange);
+			updateRequest.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.USERENTERED;
+			await updateRequest.ExecuteAsync();
 
-				var request = service.Spreadsheets.Values.Append(
-					valueRange,
-					spreadsheetId,
-					$"'{sheetName}'!R15"
-				);
-
-				request.ValueInputOption =
-					SpreadsheetsResource.ValuesResource.AppendRequest
-						.ValueInputOptionEnum.USERENTERED;
-
-				await request.ExecuteAsync();
+			_logger.LogInformation("[SHEETS] ✓ Værdi {value} skrevet til {range}", totalValue, updateRange);
 		}
 	}
 }

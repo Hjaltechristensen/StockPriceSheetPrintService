@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using StockPriceSheetPrintService.Models;
 using StockPrizeSenderService;
+using StockPrizeSenderService.GoogleSheets;
 using System.Net.Http.Headers;
 using System.Text.Json;
 
@@ -24,13 +25,11 @@ namespace StockPriceSheetPrintService.Controllers
 		private string AppKey => _configuration["Saxo:AppKey"] ?? throw new InvalidOperationException("Saxo:AppKey missing");
 		private string AppSecret => _configuration["Saxo:AppSecret"] ?? throw new InvalidOperationException("Saxo:AppSecret missing");
 		private string EncryptionKey => _configuration["Saxo:EncryptionKey"] ?? throw new InvalidOperationException("Saxo:EncryptionKey missing");
+		private string AuthEndpoint => _configuration["Saxo:AuthEndpoint"] ?? throw new InvalidOperationException("AuthEndpoint missing");
+		private string TokenEndpoint => _configuration["Saxo:TokenEndpoint"] ?? throw new InvalidOperationException("TokenEndpoint missing");
+		private string ApiBaseUrl => _configuration["Saxo:ApiBaseUrl"] ?? throw new InvalidOperationException("ApiBaseUrl missing");
 
-		// Brug konfiguration til disse, så du let kan skifte mellem Sim og Live
-		private string AuthEndpoint => _configuration["Saxo:AuthEndpoint"] ?? "https://sim.logonvalidation.net/authorize";
-		private string TokenEndpoint => _configuration["Saxo:TokenEndpoint"] ?? "https://sim.logonvalidation.net/token";
-		private string ApiBaseUrl => _configuration["Saxo:ApiBaseUrl"] ?? "https://gateway.saxobank.com/sim/openapi";
-
-		private string RedirectUrl => _configuration["Saxo:RedirectUrl"] ?? "http://192.168.1.239:5151/saxo/callback";
+		private string RedirectUrl => _configuration["Saxo:RedirectUrl"] ?? throw new InvalidOperationException("RedirectUrl missing");
 		private const string TokenPath = "/app/data/refresh_token.bin";
 
 		[HttpGet("login")]
@@ -39,17 +38,16 @@ namespace StockPriceSheetPrintService.Controllers
 			try
 			{
 				// LIVE adresser!
-				string authEndpoint = _configuration["Saxo:AuthEndpoint"] ?? throw new InvalidOperationException("AuthEndpoint ikke konfigureret");
 				string clientId = AppKey;
 				string redirectUri = RedirectUrl;
 
 				_logger.LogInformation("[SAXO-LOGIN] Genererer login URL");
-				_logger.LogInformation("[SAXO-LOGIN] Auth Endpoint: {endpoint}", authEndpoint);
+				_logger.LogInformation("[SAXO-LOGIN] Auth Endpoint: {endpoint}", AuthEndpoint);
 				_logger.LogInformation("[SAXO-LOGIN] Client ID: {clientId}", clientId[..Math.Min(4, clientId.Length)] + "****");
 				_logger.LogInformation("[SAXO-LOGIN] Redirect URI: {redirectUri}", redirectUri);
 
 				// Uri.EscapeDataString er stadig livsvigtig
-				var authUrl = $"{authEndpoint}?client_id={clientId}&response_type=code&redirect_uri={Uri.EscapeDataString(redirectUri)}";
+				var authUrl = $"{AuthEndpoint}?client_id={clientId}&response_type=code&redirect_uri={Uri.EscapeDataString(redirectUri)}";
 
 				_logger.LogInformation("[SAXO-LOGIN] ✓ Login URL genereret succesfuldt");
 
@@ -227,6 +225,19 @@ namespace StockPriceSheetPrintService.Controllers
 			_logger.LogInformation("Manuel trigger aktiveret via HTTP.");
 			await worker.RunJobAsync(ct);
 			return Ok(new { Message = "Kørsel gennemført." });
+		}
+
+		[HttpPost("sheets")]
+		public async Task<IActionResult> TriggerSheets([FromServices] UpdateCellAsync worker)
+		{
+			_logger.LogInformation("Manuel sheets trigger aktiveret via HTTP");
+			var sheetsKey = _configuration["SheetsApi:SheetsKey"];
+			if (sheetsKey != null)
+			{
+				await worker.UpdateGoogleSheetsCellAsync(sheetsKey, "Ark1", 20202m);
+				return Ok(new { Message = "Sheets kørsel gennemført"});
+			}
+			return Ok(new { Message = "Sheets failed" });
 		}
 	}
 }
