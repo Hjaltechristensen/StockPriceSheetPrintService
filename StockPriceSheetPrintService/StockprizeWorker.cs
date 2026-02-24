@@ -65,110 +65,165 @@ namespace StockPrizeSenderService
 
 		protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 		{
+			_logger.LogInformation("╔═══════════════════════════════════════════╗");
+			_logger.LogInformation("║  STOCKPRIZE WORKER STARTET               ║");
+			_logger.LogInformation("╚═══════════════════════════════════════════╝");
+
 			ManualLoginIfNeeded();
 
 			while (!stoppingToken.IsCancellationRequested)
 			{
-				var localTime = GetLocalTime(DateTimeOffset.UtcNow);
-				var nextRunUtc = GetNextRunTime(localTime, 03, 30);
-				var delay = nextRunUtc - DateTimeOffset.UtcNow;
-
-				if (delay < TimeSpan.Zero) delay = TimeSpan.Zero;
-
-				_logger.LogInformation("Næste kørsel planlagt til: {nextRun}", nextRunUtc);
-
 				try
 				{
+					var localTime = GetLocalTime(DateTimeOffset.UtcNow);
+					var nextRunUtc = GetNextRunTime(localTime, 03, 30);
+					var delay = nextRunUtc - DateTimeOffset.UtcNow;
+
+					if (delay < TimeSpan.Zero) delay = TimeSpan.Zero;
+
+					_logger.LogInformation("[SCHEDULER] Næste kørsel planlagt til: {nextRun} (om {hours:F1} timer)", nextRunUtc, delay.TotalHours);
+
 					await Task.Delay(delay, stoppingToken);
 					await RunJobAsync(stoppingToken);
-
 				}
 				catch (OperationCanceledException)
 				{
-					_logger.LogInformation("Worker stopper...");
+					_logger.LogInformation("[SCHEDULER] ✓ Worker stopper normalt...");
 				}
 				catch (Exception ex)
 				{
-					_logger.LogError(ex, "Fejl i den daglige kørsel.");
+					_logger.LogError(ex, "[SCHEDULER] ✗ UVENTET FEJL i scheduleren!");
 				}
 			}
 		}
 
 		public async Task RunJobAsync(CancellationToken stoppingToken)
 		{
+			_logger.LogInformation("╔═══════════════════════════════════════════╗");
+			_logger.LogInformation("║  JOB KØRSEL STARTER - {time:HH:mm:ss}              ║", DateTime.Now);
+			_logger.LogInformation("╚═══════════════════════════════════════════╝");
+
 			if (!IsExecutionSafe())
 			{
-				_logger.LogWarning("Kørsel blokeret: Sikkerhedsmekanisme aktiveret.");
+				_logger.LogWarning("[JOB] ✗ KØRSEL BLOKERET: Sikkerhedsmekanisme aktiveret (for mange kørsler)");
 				return;
 			}
 
-			_logger.LogInformation("Starter daglig værdiberegning...");
-			decimal runningTotal = 0;
+			try
+			{
+				decimal runningTotal = 0;
 
-			// --- 1. SAXO BALANCE ---
-			string? saxoToken = await GetSaxoAccessTokenAsync(stoppingToken);
-			if (saxoToken != null)
-			{
-				decimal saxoBalance = await GetSaxoBalanceAsync(saxoToken, stoppingToken);
-				runningTotal += saxoBalance;
-				_logger.LogInformation("Saxo balance hentet: {val} DKK", saxoBalance);
-			}
-			else
-			{
-				_logger.LogWarning("Kunne ikke hente Saxo balance - fortsætter med de øvrige værdier.");
-			}
+				// --- 1. SAXO BALANCE ---
+				_logger.LogInformation("[JOB] [1/4] Starter Saxo balance hentning...");
+				string? saxoToken = await GetSaxoAccessTokenAsync(stoppingToken);
+				if (saxoToken != null)
+				{
+					decimal saxoBalance = await GetSaxoBalanceAsync(saxoToken, stoppingToken);
+					runningTotal += saxoBalance;
+					_logger.LogInformation("[JOB] ✓ Saxo balance: {val:F2} DKK", saxoBalance);
+				}
+				else
+				{
+					_logger.LogWarning("[JOB] ⚠ Saxo balance ikke tilgængelig (log ind første gang via /saxo/login)");
+				}
 
-			// --- 2. AKTIER (MarketStack) ---
-			EodResponse? eodResponse;
-			DateTime liveStockDate = DateTime.Parse(_configuration["StockApi:LiveFromDate"] ?? "2026-03-01");
-			if (DateTime.UtcNow >= liveStockDate)
-			{
-				eodResponse = await GetStockPricesAsync(stoppingToken);
-			}
-			else
-			{
-				_logger.LogInformation("Bruger testdata for aktier (før {date}).", liveStockDate.ToString("dd/MM/yyyy"));
-				eodResponse = _testDataClass.Test();
-			}
 
-			if (eodResponse != null)
-			{
-				decimal stockValue = CalculateTotalStockValue(eodResponse);
-				runningTotal += stockValue;
-				_logger.LogInformation("Aktieværdi beregnet: {val} DKK", stockValue);
-			}
+					// --- 2. AKTIER (MarketStack) ---
+					_logger.LogInformation("[JOB] [2/4] Starter aktiepriser hentning...");
+					EodResponse? eodResponse;
+					DateTime liveStockDate = DateTime.Parse(_configuration["StockApi:LiveFromDate"] ?? "2026-03-01");
+					if (DateTime.UtcNow >= liveStockDate)
+					{
+						eodResponse = await GetStockPricesAsync(stoppingToken);
+					}
+					else
+					{
+						_logger.LogInformation("[JOB] Bruger testdata for aktier (før {date})", liveStockDate.ToString("dd/MM/yyyy"));
+						eodResponse = _testDataClass.Test();
+					}
 
-			// --- 3. FONDE (Scraper) ---
-			decimal fundValue = await FindTotalFundValue(stoppingToken);
-			runningTotal += fundValue;
-			_logger.LogInformation("Fondsværdi hentet: {val} DKK", fundValue);
+					if (eodResponse != null)
+					{
+						decimal stockValue = CalculateTotalStockValue(eodResponse);
+						runningTotal += stockValue;
+						_logger.LogInformation("[JOB] ✓ Aktieværdi: {val:F2} DKK", stockValue);
+					}
+					else
+					{
+						_logger.LogWarning("[JOB] ⚠ Kunne ikke hente aktiepriser");
+					}
 
-			// --- 4. OPDATER GOOGLE SHEETS ---
-			var sheetsKey = _configuration["SheetsApi:SheetsKey"];
-			if (!string.IsNullOrEmpty(sheetsKey))
-			{
-				_logger.LogInformation("Sender total værdi til Google Sheets: {total} DKK", runningTotal);
-				await _updateCellAsync.UpdateGoogleSheetsCellAsync(sheetsKey, "Ark1", runningTotal);
-				LogExecution();
+					// --- 3. FONDE (Scraper) ---
+					_logger.LogInformation("[JOB] [3/4] Starter fondsværdi hentning...");
+					decimal fundValue = await FindTotalFundValue(stoppingToken);
+					runningTotal += fundValue;
+					_logger.LogInformation("[JOB] ✓ Fondsværdi: {val:F2} DKK", fundValue);
+
+					// --- 4. OPDATER GOOGLE SHEETS ---
+					_logger.LogInformation("[JOB] [4/4] TOTAL værdi: {total:F2} DKK", runningTotal);
+					var sheetsKey = _configuration["SheetsApi:SheetsKey"];
+					if (!string.IsNullOrEmpty(sheetsKey))
+					{
+						_logger.LogInformation("[JOB] Sender data til Google Sheets...");
+						await _updateCellAsync.UpdateGoogleSheetsCellAsync(sheetsKey, "Ark1", runningTotal);
+						LogExecution();
+						_logger.LogInformation("[JOB] ✓ Google Sheets opdateret succesfuldt");
+					}
+					else
+					{
+						_logger.LogError("[JOB] ✗ FEJL: SheetsKey mangler! Kunne ikke gemme resultatet.");
+					}
+
+					_logger.LogInformation("╔═══════════════════════════════════════════╗");
+					_logger.LogInformation("║  JOB AFSLUTTET - SUCCESFULDT               ║");
+					_logger.LogInformation("║  Total værdi: {total:F2} DKK", runningTotal);
+					_logger.LogInformation("╚═══════════════════════════════════════════╝");
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "[JOB] ✗ UVENTET FEJL under job kørsel!");
+					_logger.LogError("[JOB] Exception Type: {type}", ex.GetType().Name);
+					_logger.LogError("[JOB] Stack Trace: {stackTrace}", ex.StackTrace);
+					throw;
+				}
 			}
-			else
-			{
-				_logger.LogError("SheetsKey mangler! Kunne ikke gemme resultatet.");
-			}
-		}
 
 		private async Task<string?> GetSaxoAccessTokenAsync(CancellationToken stoppingToken)
 		{
+			_logger.LogInformation("[SAXO-TOKEN] ========== TOKEN REFRESH STARTER ==========");
+
 			string tokenPath = "/app/data/refresh_token.bin";
 			string? encryptionKey = _configuration["Saxo:EncryptionKey"];
 
-			if (!File.Exists(tokenPath)) return null;
+			_logger.LogInformation("[SAXO-TOKEN] Token Path: {path}", tokenPath);
+			_logger.LogInformation("[SAXO-TOKEN] EncryptionKey konfigureret: {hasKey}", !string.IsNullOrEmpty(encryptionKey));
+
+			if (!File.Exists(tokenPath))
+			{
+				_logger.LogWarning("[SAXO-TOKEN] ✗ ADVARSEL: Ingen refresh token fundet på: {path}", tokenPath);
+				_logger.LogWarning("[SAXO-TOKEN] Du skal logge ind manuelt først via: http://localhost:5151/saxo/login");
+				return null;
+			}
+
+			_logger.LogInformation("[SAXO-TOKEN] ✓ Token fil fundet");
 
 			try
 			{
+				_logger.LogInformation("[SAXO-TOKEN] [STEP 1] Læser encrypted token fra disk...");
 				string encryptedToken = await File.ReadAllTextAsync(tokenPath, stoppingToken);
-				string refreshToken = TokenEncryptor.Decrypt(encryptedToken, encryptionKey!);
+				_logger.LogInformation("[SAXO-TOKEN] ✓ Encrypted token læst (længde: {length})", encryptedToken.Length);
 
+				_logger.LogInformation("[SAXO-TOKEN] [STEP 2] Dekrypterer token med EncryptionKey...");
+				if (string.IsNullOrEmpty(encryptionKey))
+				{
+					_logger.LogError("[SAXO-TOKEN] ✗ FEJL: Saxo:EncryptionKey ikke konfigureret!");
+					return null;
+				}
+
+				string refreshToken = TokenEncryptor.Decrypt(encryptedToken, encryptionKey);
+				_logger.LogInformation("[SAXO-TOKEN] ✓ Token dekrypteret succesfuldt");
+
+				_logger.LogInformation("[SAXO-TOKEN] [STEP 3] Sender refresh token request til Saxo...");
 				var client = _httpClientFactory.CreateClient();
 				var requestData = new FormUrlEncodedContent(new Dictionary<string, string>
 				{
@@ -178,50 +233,101 @@ namespace StockPrizeSenderService
 					{ "client_secret", _configuration["Saxo:AppSecret"] }
 				});
 
-				string tokenEndpoint = "https://live.logonvalidation.net/token";
+				string tokenEndpoint = _configuration["Saxo:TokenEndpoint"] ?? "https://live.logonvalidation.net/token";
+				_logger.LogInformation("[SAXO-TOKEN] Token Endpoint: {endpoint}", tokenEndpoint);
+
 				var response = await client.PostAsync(tokenEndpoint, requestData, stoppingToken);
+
+				_logger.LogInformation("[SAXO-TOKEN] [STEP 4] Response status: {statusCode}", (int)response.StatusCode);
 
 				if (!response.IsSuccessStatusCode)
 				{
-					_logger.LogError("Saxo LIVE afviste refresh token.");
+					var errorContent = await response.Content.ReadAsStringAsync(stoppingToken);
+					_logger.LogError("[SAXO-TOKEN] ✗ FEJL: Saxo afviste refresh token!");
+					_logger.LogError("[SAXO-TOKEN] Status: {status}", (int)response.StatusCode);
+					_logger.LogError("[SAXO-TOKEN] Response: {response}", errorContent);
 					return null;
 				}
 
+				_logger.LogInformation("[SAXO-TOKEN] ✓ Token response succesfuldt modtaget");
+
 				var json = await response.Content.ReadAsStringAsync(stoppingToken);
-				// ✅ FIX: Genbruger den statiske JsonOptions
 				using var doc = JsonDocument.Parse(json);
 
 				string newAccessToken = doc.RootElement.GetProperty("access_token").GetString()!;
 				string newRefreshToken = doc.RootElement.GetProperty("refresh_token").GetString()!;
 
-				string encryptedNewToken = TokenEncryptor.Encrypt(newRefreshToken, encryptionKey!);
+				_logger.LogInformation("[SAXO-TOKEN] ✓ Nye tokens hentet fra Saxo");
+				_logger.LogInformation("[SAXO-TOKEN] [STEP 5] Krypterer nyt refresh token...");
+
+				string encryptedNewToken = TokenEncryptor.Encrypt(newRefreshToken, encryptionKey);
 				await File.WriteAllTextAsync(tokenPath, encryptedNewToken, stoppingToken);
+
+				_logger.LogInformation("[SAXO-TOKEN] ✓ Nyt token gemt sikkert på disk");
+				_logger.LogInformation("[SAXO-TOKEN] ========== ✓ TOKEN REFRESH SUCCESFULDT ==========");
 
 				return newAccessToken;
 			}
+			catch (FileNotFoundException ex)
+			{
+				_logger.LogError(ex, "[SAXO-TOKEN] ✗ FEJL: Token fil ikke fundet!");
+				return null;
+			}
+			catch (UnauthorizedAccessException ex)
+			{
+				_logger.LogError(ex, "[SAXO-TOKEN] ✗ FEJL: Ingen adgang til token fil (permissions problem!)");
+				return null;
+			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Fejl under Saxo token refresh.");
+				_logger.LogError(ex, "[SAXO-TOKEN] ✗ UVENTET FEJL under Saxo token refresh!");
+				_logger.LogError("[SAXO-TOKEN] Exception Type: {exceptionType}", ex.GetType().Name);
+				_logger.LogError("[SAXO-TOKEN] Stack Trace: {stackTrace}", ex.StackTrace);
 				return null;
 			}
 		}
 
 		private async Task<decimal> GetSaxoBalanceAsync(string accessToken, CancellationToken stoppingToken)
 		{
-			var client = _httpClientFactory.CreateClient();
-			client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+			_logger.LogInformation("[SAXO-BALANCE] Henter balance fra Saxo API...");
 
-			string apiEndpoint = "https://gateway.saxobank.com/openapi/port/v1/balances/me";
-			var response = await client.GetAsync(apiEndpoint, stoppingToken);
-
-			if (response.IsSuccessStatusCode)
+			try
 			{
-				var json = await response.Content.ReadAsStringAsync(stoppingToken);
-				using var doc = JsonDocument.Parse(json);
-				return doc.RootElement.GetProperty("TotalValue").GetDecimal();
-			}
+				var client = _httpClientFactory.CreateClient();
+				client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
 
-			return 0;
+				string apiEndpoint = "https://gateway.saxobank.com/openapi/port/v1/balances/me";
+				_logger.LogInformation("[SAXO-BALANCE] API Endpoint: {endpoint}", apiEndpoint);
+
+				_logger.LogInformation("[SAXO-BALANCE] [STEP 1] Sender GET request...");
+				var response = await client.GetAsync(apiEndpoint, stoppingToken);
+
+				_logger.LogInformation("[SAXO-BALANCE] [STEP 2] Response status: {statusCode}", (int)response.StatusCode);
+
+				if (response.IsSuccessStatusCode)
+				{
+					var json = await response.Content.ReadAsStringAsync(stoppingToken);
+					_logger.LogInformation("[SAXO-BALANCE] ✓ Balance response modtaget (længde: {length})", json.Length);
+
+					using var doc = JsonDocument.Parse(json);
+					var totalValue = doc.RootElement.GetProperty("TotalValue").GetDecimal();
+
+					_logger.LogInformation("[SAXO-BALANCE] ✓ Total værdi: {value} DKK", totalValue);
+					return totalValue;
+				}
+
+				var errorContent = await response.Content.ReadAsStringAsync(stoppingToken);
+				_logger.LogError("[SAXO-BALANCE] ✗ FEJL: Saxo returnerede fejl!");
+				_logger.LogError("[SAXO-BALANCE] Status: {status}", (int)response.StatusCode);
+				_logger.LogError("[SAXO-BALANCE] Response: {response}", errorContent);
+				return 0;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[SAXO-BALANCE] ✗ UVENTET FEJL ved hentning af balance!");
+				_logger.LogError("[SAXO-BALANCE] Exception Type: {type}", ex.GetType().Name);
+				return 0;
+			}
 		}
 
 		// ✅ FIX: Omdøbt fra CalculateTotalStockValueAsync – metoden er ikke async
