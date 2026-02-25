@@ -255,9 +255,7 @@ namespace StockPrizeSenderService
 				using var doc = JsonDocument.Parse(responseBody); // Brug den allerede læste body
 
 				string newAccessToken = doc.RootElement.GetProperty("access_token").GetString()!;
-				_logger.LogError($"[SAXO-TOKEN] ✗ FEJL: Ny access token: {newAccessToken}");
 				string newRefreshToken = doc.RootElement.GetProperty("refresh_token").GetString()!;
-				_logger.LogError($"[SAXO-TOKEN] ✗ FEJL: Ny refresh token: {newRefreshToken}");
 
 				_logger.LogInformation("[SAXO-TOKEN] ✓ Nye tokens hentet fra Saxo");
 				_logger.LogInformation("[SAXO-TOKEN] [STEP 5] Krypterer nyt refresh token...");
