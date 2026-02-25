@@ -52,7 +52,7 @@ namespace StockPrizeSenderService
 			}
 
 			string? appKey = _configuration["Saxo:AppKey"];
-			string redirectUrl = _configuration["Saxo:RedirectUrl"] ?? "http://localhost:5151/saxo/callback";
+			string redirectUrl = _configuration["Saxo:RedirectUrl"] ?? "http://127.0.0.1:5151/saxo/callback";
 			string authEndpoint = _configuration["Saxo:AuthEndpoint"] ?? "https://live.logonvalidation.net/authorize";
 			string authUrl = $"{authEndpoint}?client_id={appKey}&response_type=code&redirect_uri={Uri.EscapeDataString(redirectUrl)}";
 
@@ -91,7 +91,7 @@ namespace StockPrizeSenderService
 
 						if (refreshDelay > timeUntilJob)
 							break; // Tæt på job-tidspunkt, lad jobbet håndtere det
-
+						_logger.LogInformation("[SCHEDULER] Session refresh om {minutes} minutter for at holde token i live...", DateTime.Now.AddMinutes(refreshDelay.TotalMinutes));
 						await Task.Delay(refreshDelay, stoppingToken);
 						_logger.LogInformation("\n{}[SCHEDULER] Udfører token refresh for at holde session i live...", DateTime.Now);
 						await GetSaxoAccessTokenAsync(stoppingToken);
