@@ -78,13 +78,31 @@ namespace StockPrizeSenderService
 					var localTime = GetLocalTime(DateTimeOffset.UtcNow);
 					var nextRunUtc = GetNextRunTime(localTime, 03, 30);
 					var delay = nextRunUtc - DateTimeOffset.UtcNow;
-
 					if (delay < TimeSpan.Zero) delay = TimeSpan.Zero;
+
 
 					_logger.LogInformation("[SCHEDULER] Næste kørsel planlagt til: {nextRun} (om {hours:F1} timer)", nextRunUtc, delay.TotalHours);
 
-					await Task.Delay(delay, stoppingToken);
+					while (DateTimeOffset.UtcNow < nextRunUtc && !stoppingToken.IsCancellationRequested)
+					{
+						var timeUntilJob = nextRunUtc - DateTimeOffset.UtcNow;
+						var refreshDelay = TimeSpan.FromMinutes(45);
+
+						if (refreshDelay > timeUntilJob)
+							break; // Tæt på job-tidspunkt, lad jobbet håndtere det
+
+						await Task.Delay(refreshDelay, stoppingToken);
+						_logger.LogInformation("[SCHEDULER] Udfører token refresh for at holde session i live...");
+						await GetSaxoAccessTokenAsync(stoppingToken);
+					}
+
+					// Vent de sidste minutter til præcis 03:30
+					var finalDelay = nextRunUtc - DateTimeOffset.UtcNow;
+					if (finalDelay > TimeSpan.Zero)
+						await Task.Delay(finalDelay, stoppingToken);
+
 					await RunJobAsync(stoppingToken);
+
 				}
 				catch (OperationCanceledException)
 				{
