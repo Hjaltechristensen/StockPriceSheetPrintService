@@ -238,23 +238,21 @@ namespace StockPrizeSenderService
 				_logger.LogInformation("[SAXO-TOKEN] Token Endpoint: {endpoint}", tokenEndpoint);
 
 				var response = await client.PostAsync(tokenEndpoint, requestData, stoppingToken);
-				var errorBody = await response.Content.ReadAsStringAsync(stoppingToken);
+				var responseBody = await response.Content.ReadAsStringAsync(stoppingToken); // Læs kun én gang
 
 				_logger.LogInformation("[SAXO-TOKEN] [STEP 4] Response status: {statusCode}", (int)response.StatusCode);
 
 				if (!response.IsSuccessStatusCode)
 				{
-					var errorContent = await response.Content.ReadAsStringAsync(stoppingToken);
 					_logger.LogError("[SAXO-TOKEN] ✗ FEJL: Saxo afviste refresh token!");
 					_logger.LogError("[SAXO-TOKEN] Status: {status}", (int)response.StatusCode);
-					_logger.LogError("[SAXO-TOKEN] Response: {response}", errorContent);
+					_logger.LogError("[SAXO-TOKEN] Response: {response}", responseBody);
 					return null;
 				}
 
 				_logger.LogInformation("[SAXO-TOKEN] ✓ Token response succesfuldt modtaget");
 
-				var json = await response.Content.ReadAsStringAsync(stoppingToken);
-				using var doc = JsonDocument.Parse(json);
+				using var doc = JsonDocument.Parse(responseBody); // Brug den allerede læste body
 
 				string newAccessToken = doc.RootElement.GetProperty("access_token").GetString()!;
 				_logger.LogError($"[SAXO-TOKEN] ✗ FEJL: Ny access token: {newAccessToken}");
