@@ -37,19 +37,10 @@ namespace StockPriceSheetPrintService.Controllers
 		{
 			try
 			{
-				// LIVE adresser!
 				string clientId = AppKey;
 				string redirectUri = RedirectUrl;
 
-				_logger.LogInformation("[SAXO-LOGIN] Genererer login URL");
-				_logger.LogInformation("[SAXO-LOGIN] Auth Endpoint: {endpoint}", AuthEndpoint);
-				_logger.LogInformation("[SAXO-LOGIN] Client ID: {clientId}", clientId[..Math.Min(4, clientId.Length)] + "****");
-				_logger.LogInformation("[SAXO-LOGIN] Redirect URI: {redirectUri}", redirectUri);
-
-				// Uri.EscapeDataString er stadig livsvigtig
 				var authUrl = $"{AuthEndpoint}?client_id={clientId}&response_type=code&redirect_uri={Uri.EscapeDataString(redirectUri)}";
-
-				_logger.LogInformation("[SAXO-LOGIN] ✓ Login URL genereret succesfuldt");
 
 				Console.WriteLine("\n************************************************************");
 				Console.WriteLine("KOPIÉR DETTE LINK TIL DIN BROWSER FOR AT GIVE ADGANG:");
@@ -82,8 +73,6 @@ namespace StockPriceSheetPrintService.Controllers
 			try
 			{
 				_logger.LogInformation("[SAXO-CALLBACK] [STEP 1] Starter token exchange");
-				_logger.LogInformation("[SAXO-CALLBACK] Token Endpoint: {endpoint}", TokenEndpoint);
-				_logger.LogInformation("[SAXO-CALLBACK] Redirect URL: {redirectUrl}", RedirectUrl);
 
 				// Brug factory i stedet for 'new'
 				var client = _httpClientFactory.CreateClient();
