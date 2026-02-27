@@ -208,7 +208,7 @@ namespace StockPrizeSenderService
 				}
 			}
 
-		private async Task<string?> GetSaxoAccessTokenAsync(CancellationToken stoppingToken)
+		internal async Task<string?> GetSaxoAccessTokenAsync(CancellationToken stoppingToken)
 		{
 			string tokenPath = "/app/data/refresh_token.bin";
 			string? encryptionKey = _configuration["Saxo:EncryptionKey"];

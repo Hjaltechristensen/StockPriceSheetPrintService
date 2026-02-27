@@ -228,5 +228,13 @@ namespace StockPriceSheetPrintService.Controllers
 			}
 			return Ok(new { Message = "Sheets failed" });
 		}
+
+		[HttpPost("refreshToken")]
+		public async Task<IActionResult> RefreshToken([FromServices] StockprizeWorker worker, CancellationToken ct)
+		{
+			_logger.LogInformation("Manuel token refresh aktiveret via HTTP.");
+			await worker.GetSaxoAccessTokenAsync(ct);
+			return Ok(new { Message = "Token refresh gennemført." });
+		}
 	}
 }
