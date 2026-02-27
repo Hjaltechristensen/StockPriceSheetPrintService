@@ -91,7 +91,7 @@ namespace StockPrizeSenderService
 
 						if (refreshDelay > timeUntilJob)
 							break; // Tæt på job-tidspunkt, lad jobbet håndtere det
-						_logger.LogInformation("[SCHEDULER] Session refresh om {minutes} minutter for at holde token i live...", DateTime.Now.AddHours(1).AddMinutes(refreshDelay.TotalMinutes));
+						_logger.LogInformation("[SCHEDULER] Session refresh kl. {minutes} for at holde token i live...", DateTime.Now.AddHours(1).AddMinutes(refreshDelay.TotalMinutes));
 						await Task.Delay(refreshDelay, stoppingToken);
 						_logger.LogInformation("\n{}[SCHEDULER] Udfører token refresh for at holde session i live...", DateTime.Now);
 						await GetSaxoAccessTokenAsync(stoppingToken);
@@ -220,8 +220,6 @@ namespace StockPrizeSenderService
 				return null;
 			}
 
-			_logger.LogInformation("[SAXO-TOKEN] ✓ Refresh token fil fundet");
-
 			try
 			{
 				string encryptedToken = await File.ReadAllTextAsync(tokenPath, stoppingToken);
@@ -263,6 +261,8 @@ namespace StockPrizeSenderService
 
 				string encryptedNewToken = TokenEncryptor.Encrypt(newRefreshToken, encryptionKey);
 				await File.WriteAllTextAsync(tokenPath, encryptedNewToken, stoppingToken);
+
+				_logger.LogInformation("[SAXO-TOKEN] ✓ Token refresh fuldført");
 
 				return newAccessToken;
 			}
