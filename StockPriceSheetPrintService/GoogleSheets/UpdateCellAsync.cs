@@ -16,7 +16,7 @@ namespace StockPrizeSenderService.GoogleSheets
 			_logger = logger;
 		}
 
-		public async Task UpdateGoogleSheetsCellAsync(string spreadsheetId, string sheetName, decimal totalValue)
+		public async Task UpdateGoogleSheetsCellAsync(string spreadsheetId, string sheetName, string totalValue)
 		{
 			var credential = GoogleCredential
 				.FromFile("Secrets/stockprizeservice-59bc4ea3961d.json")

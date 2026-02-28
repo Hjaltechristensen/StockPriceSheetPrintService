@@ -131,7 +131,7 @@ namespace StockPrizeSenderService
 			try
 			{
 				decimal nordnetCash = 1116m;
-				decimal runningTotal = nordnetCash;
+				string runningTotal = "=" + nordnetCash;
 
 				// --- 1. SAXO BALANCE ---
 				_logger.LogInformation("[JOB] [1/4] Starter Saxo balance hentning...");
@@ -139,7 +139,7 @@ namespace StockPrizeSenderService
 				if (saxoToken != null)
 				{
 					decimal saxoBalance = await GetSaxoBalanceAsync(saxoToken, stoppingToken);
-					runningTotal += saxoBalance;
+					runningTotal += "+" + saxoBalance;
 					_logger.LogInformation("[JOB] ✓ Saxo balance: {val:F2} DKK", saxoBalance);
 				}
 				else
@@ -165,7 +165,7 @@ namespace StockPrizeSenderService
 					if (eodResponse != null)
 					{
 						decimal stockValue = CalculateTotalStockValue(eodResponse);
-						runningTotal += stockValue;
+						runningTotal += "+" + stockValue;
 						_logger.LogInformation("[JOB] ✓ Aktieværdi: {val:F2} DKK", stockValue);
 					}
 					else
@@ -176,7 +176,7 @@ namespace StockPrizeSenderService
 					// --- 3. FONDE (Scraper) ---
 					_logger.LogInformation("[JOB] [3/4] Starter hentning af fondsværdi...");
 					decimal fundValue = await FindTotalFundValue(stoppingToken);
-					runningTotal += fundValue;
+					runningTotal += "+" + fundValue;
 					_logger.LogInformation("[JOB] ✓ Fondsværdi: {val:F2} DKK", fundValue);
 
 					// --- 4. OPDATER GOOGLE SHEETS ---

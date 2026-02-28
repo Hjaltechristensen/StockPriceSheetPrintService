@@ -223,7 +223,7 @@ namespace StockPriceSheetPrintService.Controllers
 			var sheetsKey = _configuration["SheetsApi:SheetsKey"];
 			if (sheetsKey != null)
 			{
-				await worker.UpdateGoogleSheetsCellAsync(sheetsKey, "Ark1", 20202m);
+				await worker.UpdateGoogleSheetsCellAsync(sheetsKey, "Ark1", "20202");
 				return Ok(new { Message = "Sheets kørsel gennemført"});
 			}
 			return Ok(new { Message = "Sheets failed" });
