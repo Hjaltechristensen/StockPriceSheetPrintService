@@ -68,7 +68,6 @@ namespace StockPrizeSenderService
 
 		protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 		{
-			_logger.LogInformation("\n\n");
 			_logger.LogInformation("╔═══════════════════════════════════════════╗");
 			_logger.LogInformation("║  STOCKPRIZE WORKER STARTET		  ║");
 			_logger.LogInformation("╚═══════════════════════════════════════════╝");
@@ -200,7 +199,12 @@ namespace StockPrizeSenderService
 					_logger.LogError("[JOB] ✗ FEJL: SheetsKey mangler! Kunne ikke gemme resultatet.");
 				}
 
-				string totalLine = $"║  Total værdi: {runningTotal:F2} DKK";
+				double total = runningTotal
+					.TrimStart('=')
+					.Split('+')
+					.Sum(part => double.Parse(part, System.Globalization.CultureInfo.CurrentCulture));
+
+				string totalLine = $"║  Total værdi: {total:F2} DKK";
 				int boxWidth = 45;
 				totalLine = totalLine.PadRight(boxWidth - 1) + "║";
 
@@ -208,6 +212,7 @@ namespace StockPrizeSenderService
 				_logger.LogInformation("║  JOB AFSLUTTET - SUCCESFULDT              ║");
 				_logger.LogInformation(totalLine);
 				_logger.LogInformation("╚═══════════════════════════════════════════╝");
+
 
 			}
 			catch (Exception ex)
