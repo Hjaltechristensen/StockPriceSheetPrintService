@@ -29,6 +29,8 @@ namespace StockPrizeSenderService
 		private readonly List<DateTimeOffset> _executionCache = new();
 		private readonly object _cacheLock = new();
 		private DateTimeOffset _lastFileSyncTime = DateTimeOffset.UtcNow;
+		private static readonly TimeZoneInfo TimeZone =
+	TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
 
 		public StockprizeWorker(IHttpClientFactory httpClientFactory, ILogger<StockprizeWorker> logger, IConfiguration configuration, HtmlScraper htmlScraper, UpdateCellAsync updateCellAsync, TestDataClass testDataClass)
 		{
@@ -77,13 +79,15 @@ namespace StockPrizeSenderService
 			{
 				try
 				{
-					var localTime = GetLocalTime(DateTimeOffset.UtcNow);
-					var nextRunUtc = GetNextRunTime(localTime, 03, 30);
-					var delay = nextRunUtc - DateTimeOffset.UtcNow;
-					if (delay < TimeSpan.Zero) delay = TimeSpan.Zero;
+					var utcNow = DateTimeOffset.UtcNow;
+					var nextRunUtc = GetNextRunTime(3, 30);
+					var delay = nextRunUtc - utcNow;
 
+					if (delay < TimeSpan.Zero)
+						delay = TimeSpan.Zero;
 
-					_logger.LogInformation("[SCHEDULER] Næste kørsel planlagt til: {nextRun} (om {hours:F1} timer)", nextRunUtc, delay.TotalHours);
+					var nextRunLocal = TimeZoneInfo.ConvertTime(nextRunUtc, TimeZone);
+					_logger.LogInformation("[SCHEDULER] Næste kørsel planlagt til: {nextRun:dd/MM/yyyy HH:mm} (om {hours:F1} timer)", nextRunLocal, delay.TotalHours);
 
 					while (DateTimeOffset.UtcNow < nextRunUtc && !stoppingToken.IsCancellationRequested)
 					{
@@ -92,9 +96,10 @@ namespace StockPrizeSenderService
 
 						if (refreshDelay > timeUntilJob)
 							break; // Tæt på job-tidspunkt, lad jobbet håndtere det
-						_logger.LogInformation("[SCHEDULER] Session refresh kl. {minutes} for at holde token i live...", DateTime.Now.AddHours(1).AddMinutes(refreshDelay.TotalMinutes).ToString("dd/MM/yyy"));
+						var danskTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+						_logger.LogInformation("[SCHEDULER] Session refresh kl. {time} for at holde token i live...", TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow + refreshDelay, danskTimeZone).ToString("G", new CultureInfo("da-DK")));
 						await Task.Delay(refreshDelay, stoppingToken);
-						_logger.LogInformation("\n{}[SCHEDULER] Udfører token refresh for at holde session i live...", DateTime.Now.AddHours(1).ToString("dd/MM/yyyy"));
+						_logger.LogInformation("[SCHEDULER] Udfører token refresh for at holde session i live kl. {time}...",TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, danskTimeZone).ToString("G", new CultureInfo("da-DK")));
 						await GetSaxoAccessTokenAsync(stoppingToken);
 					}
 
@@ -149,65 +154,65 @@ namespace StockPrizeSenderService
 				}
 
 
-					// --- 2. AKTIER (MarketStack) ---
-					_logger.LogInformation("[JOB] [2/4] Starter hentning af Nordnet priser...");
-					EodResponse? eodResponse;
-					DateTime liveStockDate = DateTime.Parse(_configuration["StockApi:LiveFromDate"] ?? "2026-03-01");
-					if (DateTime.UtcNow >= liveStockDate)
-					{
-						eodResponse = await GetStockPricesAsync(stoppingToken);
-					}
-					else
-					{
-						_logger.LogInformation("[JOB] Bruger testdata for aktier (før {date})", liveStockDate.ToString("dd/MM/yyyy"));
-						eodResponse = _testDataClass.Test();
-					}
-
-					if (eodResponse != null)
-					{
-						decimal stockValue = CalculateTotalStockValue(eodResponse);
-						runningTotal += "+" + stockValue.ToString(new CultureInfo("da-DK")); ;
-						_logger.LogInformation("[JOB] ✓ Aktieværdi: {val:F2} DKK", stockValue);
-					}
-					else
-					{
-						_logger.LogWarning("[JOB] ⚠ Kunne ikke hente aktiepriser");
-					}
-
-					// --- 3. FONDE (Scraper) ---
-					_logger.LogInformation("[JOB] [3/4] Starter hentning af fondsværdi...");
-					decimal fundValue = await FindTotalFundValue(stoppingToken);
-					runningTotal += "+" + fundValue.ToString(new CultureInfo("da-DK")); ;
-					_logger.LogInformation("[JOB] ✓ Fondsværdi: {val:F2} DKK", fundValue);
-
-					// --- 4. OPDATER GOOGLE SHEETS ---
-					_logger.LogInformation("[JOB] [4/4] TOTAL værdi: {total:F2} DKK", runningTotal);
-					var sheetsKey = _configuration["SheetsApi:SheetsKey"];
-					if (!string.IsNullOrEmpty(sheetsKey))
-					{
-						_logger.LogInformation("[JOB] Sender data til Google Sheets...");
-						await _updateCellAsync.UpdateGoogleSheetsCellAsync(sheetsKey, "Ark1", runningTotal);
-						LogExecution();
-						_logger.LogInformation("[JOB] ✓ Google Sheets opdateret succesfuldt");
-					}
-					else
-					{
-						_logger.LogError("[JOB] ✗ FEJL: SheetsKey mangler! Kunne ikke gemme resultatet.");
-					}
-
-					_logger.LogInformation("╔═══════════════════════════════════════════╗");
-					_logger.LogInformation("║  JOB AFSLUTTET - SUCCESFULDT               ║");
-					_logger.LogInformation("║  Total værdi: {total:F2} DKK", runningTotal);
-					_logger.LogInformation("╚═══════════════════════════════════════════╝");
-				}
-				catch (Exception ex)
+				// --- 2. AKTIER (MarketStack) ---
+				_logger.LogInformation("[JOB] [2/4] Starter hentning af Nordnet priser...");
+				EodResponse? eodResponse;
+				DateTime liveStockDate = DateTime.Parse(_configuration["StockApi:LiveFromDate"] ?? "2026-03-01");
+				if (DateTime.UtcNow >= liveStockDate)
 				{
-					_logger.LogError(ex, "[JOB] ✗ UVENTET FEJL under job kørsel!");
-					_logger.LogError("[JOB] Exception Type: {type}", ex.GetType().Name);
-					_logger.LogError("[JOB] Stack Trace: {stackTrace}", ex.StackTrace);
-					throw;
+					eodResponse = await GetStockPricesAsync(stoppingToken);
 				}
+				else
+				{
+					_logger.LogInformation("[JOB] Bruger testdata for aktier (før {date})", liveStockDate.ToString("dd/MM/yyyy"));
+					eodResponse = _testDataClass.Test();
+				}
+
+				if (eodResponse != null)
+				{
+					decimal stockValue = CalculateTotalStockValue(eodResponse);
+					runningTotal += "+" + stockValue.ToString(new CultureInfo("da-DK")); ;
+					_logger.LogInformation("[JOB] ✓ Aktieværdi: {val:F2} DKK", stockValue);
+				}
+				else
+				{
+					_logger.LogWarning("[JOB] ⚠ Kunne ikke hente aktiepriser");
+				}
+
+				// --- 3. FONDE (Scraper) ---
+				_logger.LogInformation("[JOB] [3/4] Starter hentning af fondsværdi...");
+				decimal fundValue = await FindTotalFundValue(stoppingToken);
+				runningTotal += "+" + fundValue.ToString(new CultureInfo("da-DK")); ;
+				_logger.LogInformation("[JOB] ✓ Fondsværdi: {val:F2} DKK", fundValue);
+
+				// --- 4. OPDATER GOOGLE SHEETS ---
+				_logger.LogInformation("[JOB] [4/4] TOTAL værdi: {total:F2} DKK", runningTotal);
+				var sheetsKey = _configuration["SheetsApi:SheetsKey"];
+				if (!string.IsNullOrEmpty(sheetsKey))
+				{
+					_logger.LogInformation("[JOB] Sender data til Google Sheets...");
+					await _updateCellAsync.UpdateGoogleSheetsCellAsync(sheetsKey, "Ark1", runningTotal);
+					LogExecution();
+					_logger.LogInformation("[JOB] ✓ Google Sheets opdateret succesfuldt");
+				}
+				else
+				{
+					_logger.LogError("[JOB] ✗ FEJL: SheetsKey mangler! Kunne ikke gemme resultatet.");
+				}
+
+				_logger.LogInformation("╔═══════════════════════════════════════════╗");
+				_logger.LogInformation("║  JOB AFSLUTTET - SUCCESFULDT               ║");
+				_logger.LogInformation("║  Total værdi: {total:F2} DKK", runningTotal);
+				_logger.LogInformation("╚═══════════════════════════════════════════╝");
 			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[JOB] ✗ UVENTET FEJL under job kørsel!");
+				_logger.LogError("[JOB] Exception Type: {type}", ex.GetType().Name);
+				_logger.LogError("[JOB] Stack Trace: {stackTrace}", ex.StackTrace);
+				throw;
+			}
+		}
 
 		internal async Task<string?> GetSaxoAccessTokenAsync(CancellationToken stoppingToken)
 		{
@@ -370,25 +375,27 @@ namespace StockPrizeSenderService
 			return totalFundValue;
 		}
 
-		private DateTimeOffset GetNextRunTime(DateTimeOffset currentTime, int hour, int minute)
+		public DateTimeOffset GetNextRunTime(int hour, int minute)
 		{
-			var localNow = GetLocalTime(currentTime);
+			var utcNow = DateTimeOffset.UtcNow;
 
-			var nextRunDate = new DateTime(
-				localNow.Year, localNow.Month, localNow.Day,
-				hour, minute, 0, DateTimeKind.Unspecified);
+			var localNow = TimeZoneInfo.ConvertTime(utcNow, TimeZone);
 
-			if (nextRunDate <= localNow.DateTime)
-				nextRunDate = nextRunDate.AddDays(1);
+			var nextLocal = new DateTime(
+				localNow.Year,
+				localNow.Month,
+				localNow.Day,
+				hour,
+				minute,
+				0,
+				DateTimeKind.Unspecified);
 
-			var offset = GetUtcOffset(nextRunDate);
-			return new DateTimeOffset(nextRunDate, offset);
-		}
+			if (nextLocal <= localNow.DateTime)
+				nextLocal = nextLocal.AddDays(1);
 
-		private DateTimeOffset GetLocalTime(DateTimeOffset utcTime)
-		{
-			var offset = GetUtcOffset(utcTime.DateTime);
-			return utcTime.ToOffset(offset);
+			var nextUtc = TimeZoneInfo.ConvertTimeToUtc(nextLocal, TimeZone);
+
+			return new DateTimeOffset(nextUtc, TimeSpan.Zero);
 		}
 
 		private TimeSpan GetUtcOffset(DateTime dateTime)
