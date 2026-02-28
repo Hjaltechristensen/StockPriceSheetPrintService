@@ -398,21 +398,6 @@ namespace StockPrizeSenderService
 			return new DateTimeOffset(nextUtc, TimeSpan.Zero);
 		}
 
-		private TimeSpan GetUtcOffset(DateTime dateTime)
-		{
-			int year = dateTime.Year;
-
-			var marchLastDay = new DateTime(year, 3, 31);
-			var dstStart = marchLastDay.AddDays(-(int)marchLastDay.DayOfWeek).AddHours(2);
-
-			var octoberLastDay = new DateTime(year, 10, 31);
-			var dstEnd = octoberLastDay.AddDays(-(int)octoberLastDay.DayOfWeek).AddHours(3);
-
-			return (dateTime >= dstStart && dateTime < dstEnd)
-				? TimeSpan.FromHours(2)
-				: TimeSpan.FromHours(1);
-		}
-
 		private bool IsExecutionSafe()
 		{
 			try
