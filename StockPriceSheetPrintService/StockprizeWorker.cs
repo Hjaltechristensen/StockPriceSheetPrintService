@@ -70,7 +70,7 @@ namespace StockPrizeSenderService
 		{
 			_logger.LogInformation("\n\n");
 			_logger.LogInformation("╔═══════════════════════════════════════════╗");
-			_logger.LogInformation("║  STOCKPRIZE WORKER STARTET		║");
+			_logger.LogInformation("║  STOCKPRIZE WORKER STARTET		  ║");
 			_logger.LogInformation("╚═══════════════════════════════════════════╝");
 
 			ManualLoginIfNeeded();
