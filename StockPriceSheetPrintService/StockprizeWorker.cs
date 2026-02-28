@@ -125,7 +125,7 @@ namespace StockPrizeSenderService
 		public async Task RunJobAsync(CancellationToken stoppingToken)
 		{
 			_logger.LogInformation("╔═══════════════════════════════════════════╗");
-			_logger.LogInformation("║  JOB KØRSEL STARTER - {time:HH:mm:ss}              ║", DateTime.Now);
+			_logger.LogInformation("║  JOB KØRSEL STARTER - {time:HH:mm:ss}            ║", DateTime.Now);
 			_logger.LogInformation("╚═══════════════════════════════════════════╝");
 
 			if (!IsExecutionSafe())
@@ -200,10 +200,15 @@ namespace StockPrizeSenderService
 					_logger.LogError("[JOB] ✗ FEJL: SheetsKey mangler! Kunne ikke gemme resultatet.");
 				}
 
+				string totalLine = $"║  Total værdi: {runningTotal:F2} DKK";
+				int boxWidth = 45;
+				totalLine = totalLine.PadRight(boxWidth - 1) + "║";
+
 				_logger.LogInformation("╔═══════════════════════════════════════════╗");
-				_logger.LogInformation("║  JOB AFSLUTTET - SUCCESFULDT               ║");
-				_logger.LogInformation("║  Total værdi: {total:F2} DKK", runningTotal);
+				_logger.LogInformation("║  JOB AFSLUTTET - SUCCESFULDT              ║");
+				_logger.LogInformation(totalLine);
 				_logger.LogInformation("╚═══════════════════════════════════════════╝");
+
 			}
 			catch (Exception ex)
 			{
