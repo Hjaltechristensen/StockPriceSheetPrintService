@@ -70,7 +70,7 @@ namespace StockPrizeSenderService
 		{
 			_logger.LogInformation("\n\n");
 			_logger.LogInformation("╔═══════════════════════════════════════════╗");
-			_logger.LogInformation("║  STOCKPRIZE WORKER STARTET				║");
+			_logger.LogInformation("║  STOCKPRIZE WORKER STARTET		║");
 			_logger.LogInformation("╚═══════════════════════════════════════════╝");
 
 			ManualLoginIfNeeded();
@@ -217,7 +217,7 @@ namespace StockPrizeSenderService
 		internal async Task<string?> GetSaxoAccessTokenAsync(CancellationToken stoppingToken)
 		{
 			string tokenPath = "/app/data/refresh_token.bin";
-			string? encryptionKey = _configuration["Saxo:EncryptionKey"];
+			string encryptionKey = _configuration["Saxo:EncryptionKey"] ?? string.Empty;
 
 			if (!File.Exists(tokenPath))
 			{
@@ -243,14 +243,14 @@ namespace StockPrizeSenderService
 				{
 					{ "grant_type", "refresh_token" },
 					{ "refresh_token", refreshToken },
-					{ "client_id", _configuration["Saxo:AppKey"] },
-					{ "client_secret", _configuration["Saxo:AppSecret"] }
+					{ "client_id", _configuration["Saxo:AppKey"] ?? string.Empty},
+					{ "client_secret", _configuration["Saxo:AppSecret"] ?? string.Empty }
 				});
 
-				string tokenEndpoint = _configuration["Saxo:TokenEndpoint"] ?? "https://live.logonvalidation.net/token";
+				string tokenEndpoint = _configuration["Saxo:TokenEndpoint"] ?? string.Empty;
 
 				var response = await client.PostAsync(tokenEndpoint, requestData, stoppingToken);
-				var responseBody = await response.Content.ReadAsStringAsync(stoppingToken); // Læs kun én gang
+				var responseBody = await response.Content.ReadAsStringAsync(stoppingToken);
 
 				if (!response.IsSuccessStatusCode)
 				{
@@ -260,7 +260,7 @@ namespace StockPrizeSenderService
 					return null;
 				}
 
-				using var doc = JsonDocument.Parse(responseBody); // Brug den allerede læste body
+				using var doc = JsonDocument.Parse(responseBody);
 
 				string newAccessToken = doc.RootElement.GetProperty("access_token").GetString()!;
 				string newRefreshToken = doc.RootElement.GetProperty("refresh_token").GetString()!;
@@ -326,8 +326,7 @@ namespace StockPrizeSenderService
 			}
 		}
 
-		// ✅ FIX: Omdøbt fra CalculateTotalStockValueAsync – metoden er ikke async
-		private decimal CalculateTotalStockValue(EodResponse data)
+		private static decimal CalculateTotalStockValue(EodResponse data)
 		{
 			decimal totalPrice = 0;
 			if (data == null) return 0;
@@ -346,7 +345,6 @@ namespace StockPrizeSenderService
 			return totalPrice;
 		}
 
-		// ✅ FIX: Omdøbt fra GetStockPrizeAsync – "Prize" → "Prices"
 		private async Task<EodResponse?> GetStockPricesAsync(CancellationToken stoppingToken)
 		{
 			var client = _httpClientFactory.CreateClient("StockApi");
@@ -366,10 +364,10 @@ namespace StockPrizeSenderService
 			decimal shareAmount = 708.4689m;
 			decimal totalFundValue = 0m;
 
-			var fundPrice = await _htmlScraper.GetFundNavAsync("https://www.danskeinvest.dk/w/show_funds.product?p_nId=75&p_nFundgroup=75&p_nFund=5847", stoppingToken);
+			var fundPrice = await _htmlScraper.GetFundNavAsync(_configuration["JuneUrl"] ?? string.Empty, stoppingToken);
 			if (fundPrice != null)
 			{
-				_logger.LogInformation("Dagens NAV: {nav} pr. {date}", fundPrice.Nav, fundPrice.Date.ToString("dd/MM/yyyy"));
+				_logger.LogInformation("Todays June price: {nav} pr. {date}", fundPrice.Nav, fundPrice.Date.ToString("dd/MM/yyyy"));
 				totalFundValue = fundPrice.Nav * shareAmount;
 			}
 			return totalFundValue;
@@ -502,7 +500,7 @@ namespace StockPrizeSenderService
 						.ToList();
 				}
 
-				if (recentExecutions.Any())
+				if (recentExecutions.Count != 0)
 					File.WriteAllLines(_executionLogPath, recentExecutions);
 			}
 			catch (Exception ex)
