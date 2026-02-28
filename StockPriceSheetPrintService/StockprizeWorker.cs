@@ -205,8 +205,7 @@ namespace StockPrizeSenderService
 					.Split('+')
 					.Sum(part =>
 					{
-						// Trimmer til maks 2 decimaler før parsing
-						var trimmed = System.Text.RegularExpressions.Regex.Replace(part, @"(\,\d{2})\d+", "$1");
+						var trimmed = System.Text.RegularExpressions.Regex.Replace(part, @"(\,\d{10})\d+", "$1");
 						return decimal.Parse(trimmed, daDK);
 					});
 
