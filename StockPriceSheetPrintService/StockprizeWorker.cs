@@ -199,10 +199,10 @@ namespace StockPrizeSenderService
 					_logger.LogError("[JOB] ✗ FEJL: SheetsKey mangler! Kunne ikke gemme resultatet.");
 				}
 
-				double total = runningTotal
+				decimal total = runningTotal
 					.TrimStart('=')
 					.Split('+')
-					.Sum(part => double.Parse(part, System.Globalization.CultureInfo.CurrentCulture));
+					.Sum(part => decimal.Parse(part, System.Globalization.CultureInfo.CurrentCulture));
 
 				string totalLine = $"║  Total værdi: {total:F2} DKK";
 				int boxWidth = 45;
