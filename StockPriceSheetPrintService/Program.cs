@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Console;
+using StockPriceSheetPrintService.Logging;
 using StockPrizeSenderService;
 using StockPrizeSenderService.GoogleSheets;
 using StockPrizeSenderService.Models;
