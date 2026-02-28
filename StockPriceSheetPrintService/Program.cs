@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Console;
 using StockPrizeSenderService;
 using StockPrizeSenderService.GoogleSheets;
 using StockPrizeSenderService.Models;
@@ -26,6 +27,10 @@ builder.WebHost.ConfigureKestrel(options =>
 {
 	options.ListenAnyIP(5151);
 });
+
+builder.Logging.AddConsole(options =>
+	options.FormatterName = "clean")
+.AddConsoleFormatter<CleanFormatter, ConsoleFormatterOptions>();
 
 var app = builder.Build();
 
