@@ -199,10 +199,17 @@ namespace StockPrizeSenderService
 					_logger.LogError("[JOB] ✗ FEJL: SheetsKey mangler! Kunne ikke gemme resultatet.");
 				}
 
+				var daDK = System.Globalization.CultureInfo.GetCultureInfo("da-DK");
 				decimal total = runningTotal
 					.TrimStart('=')
 					.Split('+')
-					.Sum(part => decimal.Parse(part, System.Globalization.CultureInfo.CurrentCulture));
+					.Sum(part =>
+					{
+						// Trimmer til maks 2 decimaler før parsing
+						var trimmed = System.Text.RegularExpressions.Regex.Replace(part, @"(\,\d{2})\d+", "$1");
+						return decimal.Parse(trimmed, daDK);
+					});
+
 
 				string totalLine = $"║  Total værdi: {total:F2} DKK";
 				int boxWidth = 45;
