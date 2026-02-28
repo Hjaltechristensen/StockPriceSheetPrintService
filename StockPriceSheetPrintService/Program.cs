@@ -23,6 +23,7 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 builder.Services.AddHostedService<StockprizeWorker>();
+builder.Services.AddSingleton<StockprizeWorker>();
 builder.Services.AddSingleton<HtmlScraper>();
 builder.Services.AddSingleton<UpdateCellAsync>();
 builder.Services.AddSingleton<TestDataClass>();

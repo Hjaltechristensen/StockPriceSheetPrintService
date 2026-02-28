@@ -342,7 +342,7 @@ namespace StockPrizeSenderService
 			}
 		}
 
-		private static decimal CalculateTotalStockValue(EodResponse data)
+		private decimal CalculateTotalStockValue(EodResponse data)
 		{
 			decimal totalPrice = 0;
 			if (data == null) return 0;
@@ -351,7 +351,7 @@ namespace StockPrizeSenderService
 			{
 				if (AllTickers.Symbols.TryGetValue(d.Symbol, out decimal multiplier))
 				{
-					Console.WriteLine($"{multiplier} x {d.Symbol} closed at: {d.Close} total: {multiplier * d.Close}");
+					_logger.LogInformation($"[JOB] {multiplier} x {d.Symbol} closed at: {d.Close} total: {multiplier * d.Close}");
 					totalPrice += (decimal)d.Close * multiplier;
 				}
 			});
