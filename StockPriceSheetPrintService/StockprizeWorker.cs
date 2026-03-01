@@ -377,6 +377,9 @@ namespace StockPrizeSenderService
 
 			var json = await response.Content.ReadAsStringAsync(stoppingToken);
 
+			// Log første 500 tegn af JSON for debugging
+			_logger.LogInformation("[API-DEBUG] Marketstack response: {json}", json.Substring(0, Math.Min(500, json.Length)));
+
 			// ✅ FIX: Genbruger den statiske JsonOptions fremfor at instantiere en ny
 			return JsonSerializer.Deserialize<EodResponse>(json, JsonOptions);
 		}

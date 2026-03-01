@@ -35,7 +35,7 @@ namespace StockPrizeSenderService.TestData
 				{
 					Symbol = ticker,
 					Exchange = "OSE",
-					Date = DateTime.Now.AddDays(-1),
+					Date = DateTimeOffset.Now.AddDays(-1),
 					Open = basePrice,
 					High = basePrice + random.Next(1, 20),
 					Low = basePrice - random.Next(1, 20),
