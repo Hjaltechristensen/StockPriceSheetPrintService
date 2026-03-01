@@ -377,16 +377,16 @@ namespace StockPrizeSenderService
 			response.EnsureSuccessStatusCode();
 
 			var json = await response.Content.ReadAsStringAsync(stoppingToken);
-			_logger.LogInformation("[API-DEBUG] Marketstack response: {json}", json.Substring(0, Math.Min(500, json.Length)));
+			_logger.LogInformation("[API-DEBUG] Marketstack response: {json}", json);
 
 			using var doc = JsonDocument.Parse(json);
-			if (!doc.RootElement.TryGetProperty("json", out var jsonEl) || !jsonEl.TryGetProperty("data", out var dataEl))
+			if (!doc.RootElement.TryGetProperty("data", out var dataEl))
 			{
-				_logger.LogError("[API-DEBUG] Uventet JSON-struktur fra Marketstack");
+				_logger.LogError("[API-DEBUG] Uventet JSON-struktur fra Marketstack: {json}", json.Substring(0, Math.Min(500, json.Length)));
 				return null;
 			}
-			var data = JsonSerializer.Deserialize<List<EodDatum>>(dataEl.GetRawText(), options);
 
+			var data = JsonSerializer.Deserialize<List<EodDatum>>(dataEl.GetRawText(), options);
 			return new EodResponse { Data = data ?? [] };
 		}
 
