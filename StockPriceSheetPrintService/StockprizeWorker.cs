@@ -80,12 +80,18 @@ namespace StockPrizeSenderService
 				{
 					var utcNow = DateTimeOffset.UtcNow;
 					var nextRunUtc = GetNextRunTime(3, 30);
-					var delay = nextRunUtc - utcNow;
 
+					var nextRunLocal = TimeZoneInfo.ConvertTime(nextRunUtc, TimeZone);
+					while (nextRunLocal.DayOfWeek == DayOfWeek.Saturday || nextRunLocal.DayOfWeek == DayOfWeek.Sunday)
+					{
+						nextRunUtc = nextRunUtc.AddDays(1);
+						nextRunLocal = TimeZoneInfo.ConvertTime(nextRunUtc, TimeZone);
+					}
+
+					var delay = nextRunUtc - utcNow;
 					if (delay < TimeSpan.Zero)
 						delay = TimeSpan.Zero;
 
-					var nextRunLocal = TimeZoneInfo.ConvertTime(nextRunUtc, TimeZone);
 					_logger.LogInformation("[SCHEDULER] Næste kørsel planlagt til: {nextRun:dd/MM/yyyy HH:mm} (om {hours:F1} timer)", nextRunLocal, delay.TotalHours);
 
 					while (DateTimeOffset.UtcNow < nextRunUtc && !stoppingToken.IsCancellationRequested)
