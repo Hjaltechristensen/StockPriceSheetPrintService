@@ -33,6 +33,12 @@ builder.Services.AddHttpClient("StockApi", client =>
 	client.BaseAddress = new Uri("https://api.marketstack.com/");
 });
 
+builder.Services.AddHttpClient("NationalbankApi", c =>
+{
+	c.BaseAddress = new Uri("https://www.nationalbanken.dk/");
+});
+
+
 builder.WebHost.ConfigureKestrel(options =>
 {
 	options.ListenAnyIP(5151);

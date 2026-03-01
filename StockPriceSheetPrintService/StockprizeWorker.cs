@@ -5,6 +5,7 @@ using StockPrizeSenderService.TestData;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Xml.Linq;
 
 namespace StockPrizeSenderService
 {
@@ -19,6 +20,8 @@ namespace StockPrizeSenderService
 		private readonly string _executionLogPath = "execution_log.txt";
 		private const int MaxExecutionsPerHour = 3;
 		private const int MaxExecutionsPerMonth = 100;
+		private Dictionary<string, decimal>? _exchangeRateCache;
+		private const decimal NordnetFxMargin = 0.0025m;
 
 		private static readonly JsonSerializerOptions options = new()
 		{
@@ -176,7 +179,7 @@ namespace StockPrizeSenderService
 
 				if (eodResponse != null)
 				{
-					decimal stockValue = CalculateTotalStockValue(eodResponse);
+					decimal stockValue = await CalculateTotalStockValueAsync(eodResponse, stoppingToken);
 					runningTotal += "+" + stockValue.ToString(new CultureInfo("da-DK")); ;
 					_logger.LogInformation("[JOB] ✓ Aktieværdi: {val:F2} DKK", stockValue);
 				}
@@ -349,23 +352,71 @@ namespace StockPrizeSenderService
 			}
 		}
 
-		private decimal CalculateTotalStockValue(EodResponse data)
+		private async Task<decimal> CalculateTotalStockValueAsync(EodResponse data, CancellationToken stoppingToken)
 		{
 			decimal totalPrice = 0;
 			if (data == null) return 0;
+
+			_exchangeRateCache = null;
+			var rates = await GetExchangeRatesAsync(stoppingToken);
 
 			data.Data.ForEach(d =>
 			{
 				if (AllTickers.Symbols.TryGetValue(d.Symbol, out decimal multiplier))
 				{
-					_logger.LogInformation("[JOB] {multiplier} x {symbol} closed at: {close} total: {total}", multiplier, d.Symbol, d.Close, multiplier * d.Close);
-					totalPrice += (decimal)d.Close * multiplier;
+					var priceInDkk = ConvertCurrencyToDkk(d.Close, d.PriceCurrency, rates);
+					_logger.LogInformation("[JOB] {multiplier} x {symbol} closed at: {close} {currency} = {dkk:F4} DKK, total: {total:F2} DKK",
+						multiplier, d.Symbol, d.Close, d.PriceCurrency, priceInDkk, multiplier * priceInDkk);
+					totalPrice += priceInDkk * multiplier;
 				}
 			});
 
-			_logger.LogInformation("Total stock value from Nordnet: {totalPrice}", totalPrice);
-
+			_logger.LogInformation("[JOB] Total aktieværdi: {totalPrice:F2} DKK", totalPrice);
 			return totalPrice;
+		}
+
+
+		private decimal ConvertCurrencyToDkk(decimal price, string currency, Dictionary<string, decimal> rates)
+		{
+			if (rates.TryGetValue(currency, out var rate))
+				return price * rate;
+
+			_logger.LogWarning("[VALUTA] Ukendt valuta: {currency} – bruger kurs 1:1", currency);
+			return price;
+		}
+
+
+		private async Task<Dictionary<string, decimal>> GetExchangeRatesAsync(CancellationToken stoppingToken)
+		{
+			if (_exchangeRateCache != null)
+				return _exchangeRateCache;
+
+			var client = _httpClientFactory.CreateClient("NationalbankApi");
+			var response = await client.GetAsync("api/currencyratesxml?lang=da", stoppingToken);
+			response.EnsureSuccessStatusCode();
+
+			var xml = await response.Content.ReadAsStringAsync(stoppingToken);
+			var doc = XDocument.Parse(xml);
+
+			_exchangeRateCache = new Dictionary<string, decimal> { ["DKK"] = 1m };
+
+			foreach (var c in doc.Descendants("currency"))
+			{
+				var code = c.Attribute("code")?.Value;
+				var rateStr = c.Attribute("rate")?.Value;
+
+				if (code != null && rateStr != null &&
+					decimal.TryParse(rateStr, NumberStyles.Any, new CultureInfo("da-DK"), out decimal rate))
+				{
+					_exchangeRateCache[code] = (rate / 100m) * (1 - NordnetFxMargin);
+				}
+			}
+
+			_logger.LogInformation("[VALUTA] Kurser inkl. Nordnet margin – USD: {usd:F4} DKK, EUR: {eur:F4} DKK",
+				_exchangeRateCache.GetValueOrDefault("USD"),
+				_exchangeRateCache.GetValueOrDefault("EUR"));
+
+			return _exchangeRateCache;
 		}
 
 		private async Task<EodResponse?> GetStockPricesAsync(CancellationToken stoppingToken)

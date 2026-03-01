@@ -1,4 +1,6 @@
-﻿namespace StockPrizeSenderService.Models
+﻿using System.Text.Json.Serialization;
+
+namespace StockPrizeSenderService.Models
 {
 	public class EodDatum
 	{
@@ -10,6 +12,7 @@
 		public decimal Low { get; set; }
 		public decimal Close { get; set; }
 		public decimal? Volume { get; set; }
-
+		[JsonPropertyName("price_currency")]
+		public string PriceCurrency { get; set; } = string.Empty;
 	}
 }
