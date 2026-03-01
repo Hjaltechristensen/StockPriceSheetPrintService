@@ -364,20 +364,42 @@ namespace StockPrizeSenderService
 			{
 				if (AllTickers.Symbols.TryGetValue(d.Symbol, out decimal multiplier))
 				{
-					var priceInDkk = ConvertCurrencyToDkk(d.Close, d.PriceCurrency, rates);
+					var priceInDkk = ConvertCurrencyToDkk(d.Close, d.PriceCurrency, d.Exchange, rates);
 					_logger.LogInformation("[JOB] {multiplier} x {symbol} closed at: {close} {currency} = {dkk:F4} DKK, total: {total:F2} DKK",
-						multiplier, d.Symbol, d.Close, d.PriceCurrency, priceInDkk, multiplier * priceInDkk);
+						multiplier, d.Symbol, d.Close, d.PriceCurrency ?? d.Exchange, priceInDkk, multiplier * priceInDkk);
 					totalPrice += priceInDkk * multiplier;
 				}
 			});
+
 
 			_logger.LogInformation("[JOB] Total aktieværdi: {totalPrice:F2} DKK", totalPrice);
 			return totalPrice;
 		}
 
 
-		private decimal ConvertCurrencyToDkk(decimal price, string currency, Dictionary<string, decimal> rates)
+		private decimal ConvertCurrencyToDkk(decimal price, string? currency, string? exchange, Dictionary<string, decimal> rates)
 		{
+			if (string.IsNullOrEmpty(currency) && !string.IsNullOrEmpty(exchange))
+			{
+				if (ExchangeCurrencyFallback.TryGetValue(exchange, out var fallback))
+				{
+					_logger.LogWarning("[VALUTA] {exchange} har null currency – bruger fallback: {currency}", exchange, fallback);
+					currency = fallback;
+				}
+			}
+
+			if (string.IsNullOrEmpty(currency))
+			{
+				_logger.LogWarning("[VALUTA] Kunne ikke bestemme valuta – bruger kurs 1:1");
+				return price;
+			}
+
+			if (currency == "GBp" || currency == "GBX")
+			{
+				if (rates.TryGetValue("GBP", out var gbpRate))
+					return (price / 100m) * gbpRate;
+			}
+
 			if (rates.TryGetValue(currency, out var rate))
 				return price * rate;
 
@@ -385,6 +407,16 @@ namespace StockPrizeSenderService
 			return price;
 		}
 
+		private static readonly Dictionary<string, string> ExchangeCurrencyFallback = new()
+		{
+			["XETR"] = "EUR",
+			["XPAR"] = "EUR",
+			["XAMS"] = "EUR",
+			["XNAS"] = "USD",
+			["XNYS"] = "USD",
+			["XLON"] = "GBp",
+			["XCSE"] = "DKK",
+		};
 
 		private async Task<Dictionary<string, decimal>> GetExchangeRatesAsync(CancellationToken stoppingToken)
 		{
