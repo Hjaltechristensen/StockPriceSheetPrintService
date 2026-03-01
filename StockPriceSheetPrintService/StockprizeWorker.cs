@@ -86,7 +86,7 @@ namespace StockPrizeSenderService
 					var nextRunUtc = GetNextRunTime(3, 30);
 
 					var nextRunLocal = TimeZoneInfo.ConvertTime(nextRunUtc, TimeZone);
-					while (nextRunLocal.DayOfWeek == DayOfWeek.Saturday || nextRunLocal.DayOfWeek == DayOfWeek.Sunday)
+					while (nextRunLocal.DayOfWeek == DayOfWeek.Sunday || nextRunLocal.DayOfWeek == DayOfWeek.Monday)
 					{
 						nextRunUtc = nextRunUtc.AddDays(1);
 						nextRunLocal = TimeZoneInfo.ConvertTime(nextRunUtc, TimeZone);
