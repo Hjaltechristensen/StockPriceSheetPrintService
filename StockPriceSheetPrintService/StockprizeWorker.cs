@@ -146,7 +146,7 @@ namespace StockPrizeSenderService
 			try
 			{
 				decimal nordnetCash = 1116m;
-				string runningTotal = "=" + nordnetCash;
+				string runningTotal = "=";
 
 				// --- 1. SAXO BALANCE ---
 				_logger.LogInformation("[JOB] [1/4] Starter Saxo balance hentning...");
@@ -180,6 +180,7 @@ namespace StockPrizeSenderService
 				if (eodResponse != null)
 				{
 					decimal stockValue = await CalculateTotalStockValueAsync(eodResponse, stoppingToken);
+					stockValue += nordnetCash;
 					runningTotal += "+" + stockValue.ToString(new CultureInfo("da-DK")); ;
 					_logger.LogInformation("[JOB] ✓ Aktieværdi: {val:F2} DKK", stockValue);
 				}
