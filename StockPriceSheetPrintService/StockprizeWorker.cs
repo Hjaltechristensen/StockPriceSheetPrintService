@@ -4,6 +4,7 @@ using StockPrizeSenderService.Models;
 using StockPrizeSenderService.TestData;
 using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace StockPrizeSenderService
 {
@@ -19,10 +20,10 @@ namespace StockPrizeSenderService
 		private const int MaxExecutionsPerHour = 3;
 		private const int MaxExecutionsPerMonth = 100;
 
-		// ✅ FIX: JsonOptions genbruges nu korrekt
-		private static readonly JsonSerializerOptions JsonOptions = new()
+		private static readonly JsonSerializerOptions options = new()
 		{
-			PropertyNameCaseInsensitive = true
+			PropertyNameCaseInsensitive = true,
+			Converters = { new FlexibleDateTimeOffsetConverter() }
 		};
 
 		// ✅ FIX: Erstattet ConcurrentBag med en trådsikker liste + lock
@@ -104,7 +105,7 @@ namespace StockPrizeSenderService
 						var danskTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
 						_logger.LogInformation("[SCHEDULER] Session refresh kl. {time} for at holde token i live...", TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow + refreshDelay, danskTimeZone).ToString("G", new CultureInfo("da-DK")));
 						await Task.Delay(refreshDelay, stoppingToken);
-						_logger.LogInformation("[SCHEDULER] Udfører token refresh for at holde session i live kl. {time}...",TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, danskTimeZone).ToString("G", new CultureInfo("da-DK")));
+						_logger.LogInformation("[SCHEDULER] Udfører token refresh for at holde session i live kl. {time}...", TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, danskTimeZone).ToString("G", new CultureInfo("da-DK")));
 						await GetSaxoAccessTokenAsync(stoppingToken);
 					}
 
@@ -357,12 +358,12 @@ namespace StockPrizeSenderService
 			{
 				if (AllTickers.Symbols.TryGetValue(d.Symbol, out decimal multiplier))
 				{
-					_logger.LogInformation($"[JOB] {multiplier} x {d.Symbol} closed at: {d.Close} total: {multiplier * d.Close}");
+					_logger.LogInformation("[JOB] {multiplier} x {symbol} closed at: {close} total: {total}", multiplier, d.Symbol, d.Close, multiplier * d.Close);
 					totalPrice += (decimal)d.Close * multiplier;
 				}
 			});
 
-			Console.WriteLine($"Total stock value from Nordnet: {totalPrice}");
+			_logger.LogInformation("Total stock value from Nordnet: {totalPrice}", totalPrice);
 
 			return totalPrice;
 		}
@@ -376,12 +377,35 @@ namespace StockPrizeSenderService
 			response.EnsureSuccessStatusCode();
 
 			var json = await response.Content.ReadAsStringAsync(stoppingToken);
-
-			// Log første 500 tegn af JSON for debugging
 			_logger.LogInformation("[API-DEBUG] Marketstack response: {json}", json.Substring(0, Math.Min(500, json.Length)));
 
-			// ✅ FIX: Genbruger den statiske JsonOptions fremfor at instantiere en ny
-			return JsonSerializer.Deserialize<EodResponse>(json, JsonOptions);
+			using var doc = JsonDocument.Parse(json);
+			if (!doc.RootElement.TryGetProperty("json", out var jsonEl) || !jsonEl.TryGetProperty("data", out var dataEl))
+			{
+				_logger.LogError("[API-DEBUG] Uventet JSON-struktur fra Marketstack");
+				return null;
+			}
+			var data = JsonSerializer.Deserialize<List<EodDatum>>(dataEl.GetRawText(), options);
+
+			return new EodResponse { Data = data ?? [] };
+		}
+
+		public class FlexibleDateTimeOffsetConverter : JsonConverter<DateTimeOffset>
+		{
+			private static readonly string[] Formats =
+			{
+				"yyyy-MM-dd'T'HH:mm:sszzz",  // +00:00
+				"yyyy-MM-dd'T'HH:mm:sszz"    // +0000
+			};
+
+			public override DateTimeOffset Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+			{
+				var raw = reader.GetString()!;
+				return DateTimeOffset.ParseExact(raw, Formats, CultureInfo.InvariantCulture, DateTimeStyles.None);
+			}
+
+			public override void Write(Utf8JsonWriter writer, DateTimeOffset value, JsonSerializerOptions options)
+				=> writer.WriteStringValue(value.ToString("yyyy-MM-dd'T'HH:mm:sszzz"));
 		}
 
 		private async Task<decimal> FindTotalFundValue(CancellationToken stoppingToken)
