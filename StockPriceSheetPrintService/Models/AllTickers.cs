@@ -4,8 +4,8 @@
 	{
 		public static readonly Dictionary<string, decimal> Symbols = new()
 	{
-		{"RBOT", 218},
-		{ "IH2O", 47},
+		{"2B76.DE", 218},
+		{ "IH2O.DE", 47},
 		{ "O", 40}
 	};
 	}
