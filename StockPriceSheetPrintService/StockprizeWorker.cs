@@ -364,9 +364,12 @@ namespace StockPrizeSenderService
 			{
 				if (AllTickers.Symbols.TryGetValue(d.Symbol, out decimal multiplier))
 				{
+					var effectiveCurrency = !string.IsNullOrEmpty(d.PriceCurrency) ? d.PriceCurrency
+						: (ExchangeCurrencyFallback.TryGetValue(d.Exchange ?? "", out var fb) ? fb : "?");
+
 					var priceInDkk = ConvertCurrencyToDkk(d.Close, d.PriceCurrency, d.Exchange, rates);
 					_logger.LogInformation("[JOB] {multiplier} x {symbol} closed at: {close} {currency} = {dkk:F4} DKK, total: {total:F2} DKK",
-						multiplier, d.Symbol, d.Close, d.PriceCurrency ?? d.Exchange, priceInDkk, multiplier * priceInDkk);
+						multiplier, d.Symbol, d.Close, effectiveCurrency, priceInDkk, multiplier * priceInDkk);
 					totalPrice += priceInDkk * multiplier;
 				}
 			});
@@ -394,7 +397,8 @@ namespace StockPrizeSenderService
 				return price;
 			}
 
-			if (currency == "GBp" || currency == "GBX")
+			// XLON handler altid i pence uanset hvad Marketstack siger
+			if (exchange == "XLON" || currency == "GBp" || currency == "GBX")
 			{
 				if (rates.TryGetValue("GBP", out var gbpRate))
 					return (price / 100m) * gbpRate;
@@ -406,6 +410,7 @@ namespace StockPrizeSenderService
 			_logger.LogWarning("[VALUTA] Ukendt valuta: {currency} – bruger kurs 1:1", currency);
 			return price;
 		}
+
 
 		private static readonly Dictionary<string, string> ExchangeCurrencyFallback = new()
 		{
