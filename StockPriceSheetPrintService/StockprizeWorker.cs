@@ -1,7 +1,7 @@
+using StockPriceSheetPrintService.DiscordUpdates;
 using StockPriceSheetPrintService.Krypto;
 using StockPrizeSenderService.GoogleSheets;
 using StockPrizeSenderService.Models;
-using StockPrizeSenderService.TestData;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -15,7 +15,7 @@ namespace StockPrizeSenderService
 		private readonly ILogger<StockprizeWorker> _logger;
 		private readonly HtmlScraper _htmlScraper;
 		private readonly UpdateCellAsync _updateCellAsync;
-		private readonly TestDataClass _testDataClass;
+		private readonly DiscordNotifier _discordNotifier;
 		private readonly IConfiguration _configuration;
 		private readonly string _executionLogPath = "execution_log.txt";
 		private const int MaxExecutionsPerHour = 3;
@@ -34,15 +34,21 @@ namespace StockPrizeSenderService
 		private readonly object _cacheLock = new();
 		private DateTimeOffset _lastFileSyncTime = DateTimeOffset.UtcNow;
 		private static readonly TimeZoneInfo TimeZone =
-	TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+			TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
 
-		public StockprizeWorker(IHttpClientFactory httpClientFactory, ILogger<StockprizeWorker> logger, IConfiguration configuration, HtmlScraper htmlScraper, UpdateCellAsync updateCellAsync, TestDataClass testDataClass)
+		public StockprizeWorker(
+			IHttpClientFactory httpClientFactory,
+			ILogger<StockprizeWorker> logger,
+			IConfiguration configuration,
+			HtmlScraper htmlScraper,
+			UpdateCellAsync updateCellAsync,
+			DiscordNotifier discordNotifier)
 		{
 			_httpClientFactory = httpClientFactory;
 			_logger = logger;
 			_htmlScraper = htmlScraper;
 			_updateCellAsync = updateCellAsync;
-			_testDataClass = testDataClass;
+			_discordNotifier = discordNotifier;
 			_configuration = configuration;
 
 			LoadExecutionHistoryFromFile();
@@ -146,6 +152,9 @@ namespace StockPrizeSenderService
 			try
 			{
 				decimal nordnetCash = 1116m;
+				decimal saxoBalance = 0m;
+				decimal stockValue = 0m;
+				decimal fundValue = 0m;
 				string runningTotal = "=";
 
 				// --- 1. SAXO BALANCE ---
@@ -153,7 +162,7 @@ namespace StockPrizeSenderService
 				string? saxoToken = await GetSaxoAccessTokenAsync(stoppingToken);
 				if (saxoToken != null)
 				{
-					decimal saxoBalance = await GetSaxoBalanceAsync(saxoToken, stoppingToken);
+					saxoBalance = await GetSaxoBalanceAsync(saxoToken, stoppingToken);
 					runningTotal += "+" + saxoBalance.ToString(new CultureInfo("da-DK"));
 					_logger.LogInformation("[JOB] ✓ Saxo balance: {val:F2} DKK", saxoBalance);
 				}
@@ -166,20 +175,12 @@ namespace StockPrizeSenderService
 				// --- 2. AKTIER (MarketStack) ---
 				_logger.LogInformation("[JOB] [2/4] Starter hentning af Nordnet priser...");
 				EodResponse? eodResponse;
-				DateTime liveStockDate = DateTime.Parse(_configuration["StockApi:LiveFromDate"] ?? "2026-03-01");
-				if (DateTime.UtcNow >= liveStockDate)
-				{
-					eodResponse = await GetStockPricesAsync(stoppingToken);
-				}
-				else
-				{
-					_logger.LogInformation("[JOB] Bruger testdata for aktier (før {date})", liveStockDate.ToString("dd/MM/yyyy"));
-					eodResponse = _testDataClass.Test();
-				}
+
+				eodResponse = await GetStockPricesAsync(stoppingToken);
 
 				if (eodResponse != null)
 				{
-					decimal stockValue = await CalculateTotalStockValueAsync(eodResponse, stoppingToken);
+					stockValue = await CalculateTotalStockValueAsync(eodResponse, stoppingToken);
 					stockValue += nordnetCash;
 					runningTotal += "+" + stockValue.ToString(new CultureInfo("da-DK")); ;
 					_logger.LogInformation("[JOB] ✓ Aktieværdi: {val:F2} DKK", stockValue);
@@ -191,12 +192,12 @@ namespace StockPrizeSenderService
 
 				// --- 3. FONDE (Scraper) ---
 				_logger.LogInformation("[JOB] [3/4] Starter hentning af fondsværdi...");
-				decimal fundValue = await FindTotalFundValue(stoppingToken);
+				fundValue = await FindTotalFundValue(stoppingToken);
 				runningTotal += "+" + fundValue.ToString(new CultureInfo("da-DK")); ;
 				_logger.LogInformation("[JOB] ✓ Fondsværdi: {val:F2} DKK", fundValue);
 
 				// --- 4. OPDATER GOOGLE SHEETS ---
-				_logger.LogInformation("[JOB] [4/4] TOTAL værdi: {total:F2} DKK", runningTotal);
+				_logger.LogInformation("[JOB] [4/4] TOTAL værdi: {total:F2} DKK - Sendes til Google Sheets...", runningTotal);
 				var sheetsKey = _configuration["SheetsApi:SheetsKey"];
 				if (!string.IsNullOrEmpty(sheetsKey))
 				{
@@ -219,7 +220,36 @@ namespace StockPrizeSenderService
 						var trimmed = System.Text.RegularExpressions.Regex.Replace(part, @"(\,\d{10})\d+", "$1");
 						return decimal.Parse(trimmed, daDK);
 					});
+				TimeSpan targetTime = new(8, 0, 0); // 08:00:00
+				DateTime now = DateTime.Now;
+				DateTime todayTarget = now.Date + targetTime;
 
+				if (now > todayTarget)
+				{
+					// Hvis klokken allerede er over 08:00, sæt til i morgen
+					todayTarget = todayTarget.AddDays(1);
+				}
+
+				TimeSpan delay = todayTarget - now;
+
+				// Start baggrunds-task til Discord-publicering – IKKE await her
+				_ = Task.Run(async () =>
+				{
+					try
+					{
+						await Task.Delay(delay, stoppingToken);
+						await _discordNotifier.SendMorningReportAsync(saxoBalance, stockValue, fundValue, total, stoppingToken);
+						_logger.LogInformation("[DISCORD] Morning report sendt kl. {time}", DateTime.Now);
+					}
+					catch (OperationCanceledException)
+					{
+						_logger.LogInformation("[DISCORD] Task annulleret før publicering");
+					}
+					catch (Exception ex)
+					{
+						_logger.LogError(ex, "[DISCORD] Fejl ved afsendelse af morning report");
+					}
+				}, stoppingToken);
 
 				string totalLine = $"║  Total værdi: {total:F2} DKK";
 				int boxWidth = 45;
@@ -229,7 +259,6 @@ namespace StockPrizeSenderService
 				_logger.LogInformation("║  JOB AFSLUTTET - SUCCESFULDT              ║");
 				_logger.LogInformation(totalLine);
 				_logger.LogInformation("╚═══════════════════════════════════════════╝");
-
 
 			}
 			catch (Exception ex)
@@ -374,12 +403,9 @@ namespace StockPrizeSenderService
 					totalPrice += priceInDkk * multiplier;
 				}
 			});
-
-
 			_logger.LogInformation("[JOB] Total aktieværdi: {totalPrice:F2} DKK", totalPrice);
 			return totalPrice;
 		}
-
 
 		private decimal ConvertCurrencyToDkk(decimal price, string? currency, string? exchange, Dictionary<string, decimal> rates)
 		{

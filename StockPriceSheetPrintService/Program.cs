@@ -1,9 +1,7 @@
-using Microsoft.Extensions.Logging.Console;
-using StockPriceSheetPrintService.Logging;
+using Serilog;
+using StockPriceSheetPrintService.DiscordUpdates;
 using StockPrizeSenderService;
 using StockPrizeSenderService.GoogleSheets;
-using StockPrizeSenderService.TestData;
-using Serilog;
 
 Log.Logger = new LoggerConfiguration()
 	.Enrich.FromLogContext()
@@ -26,7 +24,7 @@ builder.Services.AddHostedService<StockprizeWorker>();
 builder.Services.AddSingleton<StockprizeWorker>();
 builder.Services.AddSingleton<HtmlScraper>();
 builder.Services.AddSingleton<UpdateCellAsync>();
-builder.Services.AddSingleton<TestDataClass>();
+builder.Services.AddHttpClient<DiscordNotifier>();
 
 builder.Services.AddHttpClient("StockApi", client =>
 {
