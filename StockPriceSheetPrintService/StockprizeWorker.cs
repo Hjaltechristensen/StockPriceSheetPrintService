@@ -202,7 +202,7 @@ namespace StockPrizeSenderService
 				if (!string.IsNullOrEmpty(sheetsKey))
 				{
 					_logger.LogInformation("[JOB] Sender data til Google Sheets...");
-					await _updateCellAsync.UpdateGoogleSheetsCellAsync(sheetsKey, "Ark1", runningTotal);
+					await _updateCellAsync.UpdateGoogleSheetsCellAsync(sheetsKey, "Daily", runningTotal);
 					LogExecution();
 					_logger.LogInformation("[JOB] ✓ Google Sheets opdateret succesfuldt");
 				}
