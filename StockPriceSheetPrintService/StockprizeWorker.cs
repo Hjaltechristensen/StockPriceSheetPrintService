@@ -221,17 +221,22 @@ namespace StockPrizeSenderService
 						var trimmed = System.Text.RegularExpressions.Regex.Replace(part, @"(\,\d{10})\d+", "$1");
 						return decimal.Parse(trimmed, daDK);
 					});
-				TimeSpan targetTime = new(8, 0, 0); // 08:00:00
-				DateTime now = DateTime.Now;
-				DateTime todayTarget = now.Date + targetTime;
+				TimeZoneInfo localZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
 
-				if (now > todayTarget)
+				TimeSpan targetTime = new(7, 0, 0); // 07:00 lokal tid
+
+				// Nuværende tidspunkt i din tidszone
+				DateTime nowLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, localZone);
+				DateTime todayTargetLocal = nowLocal.Date + targetTime;
+
+				if (nowLocal > todayTargetLocal)
 				{
-					// Hvis klokken allerede er over 08:00, sæt til i morgen
-					todayTarget = todayTarget.AddDays(1);
+    				todayTargetLocal = todayTargetLocal.AddDays(1);
 				}
 
-				TimeSpan delay = todayTarget - now;
+				// Konverter tilbage til UTC for delay-beregning
+				DateTime todayTargetUtc = TimeZoneInfo.ConvertTimeToUtc(todayTargetLocal, localZone);
+				TimeSpan delay = todayTargetUtc - DateTime.UtcNow;
 
 				// Start baggrunds-task til Discord-publicering – IKKE await her
 				_ = Task.Run(async () =>

@@ -3,12 +3,14 @@
 	public class DiscordNotifier
 	{
 		private readonly HttpClient _httpClient;
+		private readonly IConfiguration _configuration;
 		private readonly string _webhookUrl;
 
-		public DiscordNotifier(HttpClient httpClient, IConfiguration config)
+		public DiscordNotifier(HttpClient httpClient, IConfiguration configuration)
 		{
 			_httpClient = httpClient;
-			_webhookUrl = config["Discord:WebhookUrl"] ?? string.Empty;
+			_configuration = configuration;
+			_webhookUrl = _configuration["Discord:Webhook"] ?? string.Empty;
 		}
 
 		public async Task SendMorningReportAsync(decimal saxoBalance, decimal stockValue, decimal fundValue, decimal total, CancellationToken stoppingToken)
