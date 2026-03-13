@@ -222,7 +222,7 @@ namespace StockPrizeSenderService
 					});
 				TimeZoneInfo localZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
 
-				TimeSpan targetTime = new(8, 0, 0); // 08:00 lokal tid
+				TimeSpan targetTime = new(7, 0, 0); // 07:00 lokal tid
 
 				// Nuværende tidspunkt i din tidszone
 				DateTime nowLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, localZone);
