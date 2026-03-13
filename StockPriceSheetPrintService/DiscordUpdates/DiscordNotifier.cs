@@ -29,11 +29,11 @@
 					new
 					{
 						title = "🌅 Morning Market Report",
-						description = DateTime.Now.ToString("dddd dd MMMM yyyy"),
+						description = DateTime.Now.AddDays(-1).ToString("dddd dd MMMM yyyy"),
 						color = 3447003,
 						fields = new[]
 						{
-							new { name = "📈 Portfolio", value = "```" + $"Saxo   {saxoBalance,12:F2} DKK\nStocks {stockValue,12:F2} DKK\nFunds  {fundValue,12:F2} DKK\n```", inline = false },
+							new { name = "📈 Portfolio", value = "```" + $"Saxo   {saxoBalance,12:F2} DKK\nNordnet {stockValue,12:F2} DKK\nJune  {fundValue,12:F2} DKK\n```", inline = false },
 							new { name = "💰 Total Value", value = $"**{total:F2} DKK**", inline = false }
 						},
 						timestamp = DateTime.UtcNow
