@@ -45,9 +45,9 @@
 						color = 10181046,
 						fields = new[]
 						{
-							new { name = "Saxo %", value = $"{Math.Round((saxoBalance/total)*100,1)}%", inline = true },
-							new { name = "Stocks %", value = $"{Math.Round((stockValue/total)*100,1)}%", inline = true },
-							new { name = "Funds %", value = $"{Math.Round((fundValue/total)*100,1)}%", inline = true }
+							new { name = "Saxo", value = $"{Math.Round((saxoBalance/total)*100,1)}%", inline = true },
+							new { name = "Nordnet", value = $"{Math.Round((stockValue/total)*100,1)}%", inline = true },
+							new { name = "June", value = $"{Math.Round((fundValue/total)*100,1)}%", inline = true }
 						}
 					}
 				}
