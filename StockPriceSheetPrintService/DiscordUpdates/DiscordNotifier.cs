@@ -19,8 +19,15 @@
 			await _httpClient.PostAsJsonAsync(_webhookUrl, payload, cancellationToken: stoppingToken);
 		}
 
+static string Dkk(decimal value)
+{
+    return value.ToString("N2", CultureInfo.GetCultureInfo("da-DK"));
+}
+
 		private object BuildPayload(decimal saxoBalance, decimal stockValue, decimal fundValue, decimal total)
 		{
+var da = CultureInfo.GetCultureInfo("da-DK");
+
 			return new
 			{
 				embeds = new object[]
@@ -33,7 +40,7 @@
 						color = 3447003,
 						fields = new[]
 						{
-							new { name = "📈 Portfolio", value = "```" + $"Saxo   {saxoBalance,12:F2} DKK\nNordnet {stockValue,12:F2} DKK\nJune  {fundValue,12:F2} DKK\n```", inline = false },
+							new { name = "📈 Portfolio", value = "```" + $"Saxo   {Dkk(saxoBalance), 12} DKK\nNordnet {Dkk(stockValue), 12} DKK\nJune  {Dkk(fundValue),12} DKK\n```", inline = false },
 							new { name = "💰 Total Value", value = $"**{total:F2} DKK**", inline = false }
 						},
 						timestamp = DateTime.UtcNow
