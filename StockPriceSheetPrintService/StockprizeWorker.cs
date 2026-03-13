@@ -231,20 +231,22 @@ namespace StockPrizeSenderService
 
 				if (nowLocal > todayTargetLocal)
 				{
-    				todayTargetLocal = todayTargetLocal.AddDays(1);
+					todayTargetLocal = todayTargetLocal.AddDays(1);
 				}
 
 				// Konverter tilbage til UTC for delay-beregning
 				DateTime todayTargetUtc = TimeZoneInfo.ConvertTimeToUtc(todayTargetLocal, localZone);
 				TimeSpan delay = todayTargetUtc - DateTime.UtcNow;
 
+				_logger.LogInformation("[DISCORD] Discord notifikation planlagt til kl. 07:00 (om {hours:F1} timer)", delay.TotalHours);
+
 				// Start baggrunds-task til Discord-publicering – IKKE await her
 				_ = Task.Run(async () =>
 				{
 					try
 					{
-						await Task.Delay(delay, stoppingToken);
-						await _discordNotifier.SendMorningReportAsync(saxoBalance, stockValue, fundValue, total, stoppingToken);
+						await Task.Delay(delay, CancellationToken.None);
+						await _discordNotifier.SendMorningReportAsync(saxoBalance, stockValue, fundValue, total, CancellationToken.None);
 						_logger.LogInformation("[DISCORD] Morning report sendt kl. {time}", DateTime.Now);
 					}
 					catch (OperationCanceledException)
@@ -255,7 +257,7 @@ namespace StockPrizeSenderService
 					{
 						_logger.LogError(ex, "[DISCORD] Fejl ved afsendelse af morning report");
 					}
-				}, stoppingToken);
+				}, CancellationToken.None);
 
 				string totalLine = $"║  Total værdi: {total:F2} DKK";
 				int boxWidth = 45;
