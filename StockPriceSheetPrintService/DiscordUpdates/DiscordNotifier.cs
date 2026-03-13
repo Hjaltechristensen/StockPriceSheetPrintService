@@ -1,3 +1,5 @@
+using System.Globalization;
+
 ﻿namespace StockPriceSheetPrintService.DiscordUpdates
 {
 	public class DiscordNotifier
