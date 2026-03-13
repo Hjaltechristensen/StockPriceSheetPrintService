@@ -26,8 +26,6 @@ static string Dkk(decimal value)
 
 		private object BuildPayload(decimal saxoBalance, decimal stockValue, decimal fundValue, decimal total)
 		{
-var da = CultureInfo.GetCultureInfo("da-DK");
-
 			return new
 			{
 				embeds = new object[]
