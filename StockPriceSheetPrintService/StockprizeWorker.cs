@@ -215,6 +215,7 @@ namespace StockPrizeSenderService
 				decimal total = runningTotal
 					.TrimStart('=')
 					.Split('+')
+					.Where(part => !string.IsNullOrWhiteSpace(part))
 					.Sum(part =>
 					{
 						var trimmed = System.Text.RegularExpressions.Regex.Replace(part, @"(\,\d{10})\d+", "$1");
