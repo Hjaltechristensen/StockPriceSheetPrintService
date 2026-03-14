@@ -49,8 +49,8 @@ namespace StockPriceSheetPrintService.DiscordUpdates
 						color = embedColor,
 						fields = new[]
 						{
-							new { name = "🏛️ Portfolio", value = portfolioValue, inline = false },
-							new { name = "💰 Total Value", value = $"**{Dkk(total)} DKK**", inline = false },
+							new { name = "🏛️ Portfolio", value = $"||{portfolioValue}||", inline = false },
+							new { name = "💰 Total Value", value = $"||**{Dkk(total)} DKK**||", inline = false },
 							new { name = changeSinceYesterdayString, value = changeValue, inline = false }
 						},
 						timestamp = DateTime.UtcNow
