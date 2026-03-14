@@ -199,10 +199,11 @@ namespace StockPrizeSenderService
 				// --- 4. OPDATER GOOGLE SHEETS ---
 				_logger.LogInformation("[JOB] [4/4] TOTAL værdi: {total:F2} DKK - Sendes til Google Sheets...", runningTotal);
 				var sheetsKey = _configuration["SheetsApi:SheetsKey"];
+				var dayBeforeValue = 0m;
 				if (!string.IsNullOrEmpty(sheetsKey))
 				{
 					_logger.LogInformation("[JOB] Sender data til Google Sheets...");
-					await _updateCellAsync.UpdateGoogleSheetsCellAsync(sheetsKey, "Daily", runningTotal);
+					dayBeforeValue = await _updateCellAsync.UpdateGoogleSheetsCellAsync(sheetsKey, "Daily", runningTotal);
 					LogExecution();
 					_logger.LogInformation("[JOB] ✓ Google Sheets opdateret succesfuldt");
 				}
@@ -246,7 +247,7 @@ namespace StockPrizeSenderService
 					try
 					{
 						await Task.Delay(delay, CancellationToken.None);
-						await _discordNotifier.SendMorningReportAsync(saxoBalance, stockValue, fundValue, total, CancellationToken.None);
+						await _discordNotifier.SendMorningReportAsync(saxoBalance, stockValue, fundValue, total, dayBeforeValue, CancellationToken.None);
 						_logger.LogInformation("[DISCORD] Morning report sendt kl. {time}", DateTime.Now);
 					}
 					catch (OperationCanceledException)

@@ -2,6 +2,7 @@
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
 using Google.Apis.Sheets.v4.Data;
+using System.Globalization;
 
 namespace StockPrizeSenderService.GoogleSheets
 {
@@ -21,7 +22,7 @@ namespace StockPrizeSenderService.GoogleSheets
             _logger = logger;
         }
 
-        public async Task UpdateGoogleSheetsCellAsync(string spreadsheetId, string sheetName, string totalValue)
+        public async Task<decimal> UpdateGoogleSheetsCellAsync(string spreadsheetId, string sheetName, string totalValue)
         {
             var credential = GoogleCredential
                 .FromFile(CredentialsPath)
@@ -33,25 +34,30 @@ namespace StockPrizeSenderService.GoogleSheets
                 ApplicationName = ApplicationName
             });
 
-            // Hent hele kolonnen og find næste tomme række
-            var getRequest = service.Spreadsheets.Values.Get(spreadsheetId, $"'{sheetName}'!{DateColumn}:{DateColumn}");
-            var getResponse = await getRequest.ExecuteAsync();
-            var existingValues = getResponse.Values ?? new List<IList<object>>();
+			// Hent hele kolonnen og find næste tomme række
+			var getRequest = service.Spreadsheets.Values.Get(spreadsheetId, $"'{sheetName}'!{DateColumn}:{ValueColumn}");
+			var getResponse = await getRequest.ExecuteAsync();
+			var existingValues = getResponse.Values ?? [];
 
-            int nextRow = existingValues.Count + 1;
-            _logger.LogInformation("[SHEETS] Skriver til række {row}", nextRow);
+			var lastRow = existingValues.LastOrDefault();
+			var rawValue = lastRow?[1]?.ToString();
+
+			var dayBeforeValue = rawValue is not null
+	            ? decimal.Parse(rawValue, NumberStyles.Any, CultureInfo.InvariantCulture)
+	            : 0m;
+			int nextRow = existingValues.Count + 1;
+			_logger.LogInformation("[SHEETS] Skriver til række {row}", nextRow);
 
             var updateRange = $"'{sheetName}'!{DateColumn}{nextRow}:{ValueColumn}{nextRow}";
             var valueRange = new ValueRange
             {
-                Values = new List<IList<object>>
-                {
-                    new List<object>
-                    {
+                Values =
+				[
+					[
                         DateOnly.FromDateTime(DateTime.Now.AddDays(-1)).ToString("dd/MM/yyyy"),
                         totalValue
-                    }
-                }
+                    ]
+                ]
             };
 
             var updateRequest = service.Spreadsheets.Values.Update(valueRange, spreadsheetId, updateRange);
@@ -59,6 +65,7 @@ namespace StockPrizeSenderService.GoogleSheets
             await updateRequest.ExecuteAsync();
 
             _logger.LogInformation("[SHEETS] ✓ Værdi {value} skrevet til {range}", totalValue, updateRange);
-        }
+            return dayBeforeValue;
+		}
     }
 }
