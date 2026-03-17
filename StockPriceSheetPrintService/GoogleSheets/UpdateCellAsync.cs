@@ -42,9 +42,17 @@ namespace StockPrizeSenderService.GoogleSheets
 			var lastRow = existingValues.LastOrDefault();
 			var rawValue = lastRow?[1]?.ToString();
 
-			var dayBeforeValue = rawValue is not null
-	            ? decimal.Parse(rawValue, NumberStyles.Any, CultureInfo.InvariantCulture)
-	            : 0m;
+			var dayBeforeValue = 0m;
+			if (rawValue is not null)
+			{
+				// Fjern "kr " præfiks og eventuelle mellemrum
+				var cleanValue = rawValue.Replace("kr", "").Replace(" ", "").Trim();
+
+				// Håndter dansk formatering: punktum som tusindtalsseparator, komma som decimalseparator
+				cleanValue = cleanValue.Replace(".", "").Replace(",", ".");
+
+				dayBeforeValue = decimal.Parse(cleanValue, NumberStyles.Any, CultureInfo.InvariantCulture);
+			}
 			int nextRow = existingValues.Count + 1;
 			_logger.LogInformation("[SHEETS] Skriver til række {row}", nextRow);
 

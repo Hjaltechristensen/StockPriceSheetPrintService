@@ -137,7 +137,7 @@ namespace StockPrizeSenderService
 			}
 		}
 
-		public async Task RunJobAsync(CancellationToken stoppingToken)
+		public async Task RunJobAsync(CancellationToken stoppingToken, bool sendDiscordImmediately = false)
 		{
 			_logger.LogInformation("╔═══════════════════════════════════════════╗");
 			_logger.LogInformation("║  JOB KØRSEL STARTER - {time:HH:mm:ss}            ║", DateTime.Now);
@@ -222,43 +222,61 @@ namespace StockPrizeSenderService
 						var trimmed = System.Text.RegularExpressions.Regex.Replace(part, @"(\,\d{10})\d+", "$1");
 						return decimal.Parse(trimmed, daDK);
 					});
-				TimeZoneInfo localZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
-
-				TimeSpan targetTime = new(7, 0, 0); // 07:00 lokal tid
-
-				// Nuværende tidspunkt i din tidszone
-				DateTime nowLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, localZone);
-				DateTime todayTargetLocal = nowLocal.Date + targetTime;
-
-				if (nowLocal > todayTargetLocal)
+				if (sendDiscordImmediately)
 				{
-					todayTargetLocal = todayTargetLocal.AddDays(1);
-				}
-
-				// Konverter tilbage til UTC for delay-beregning
-				DateTime todayTargetUtc = TimeZoneInfo.ConvertTimeToUtc(todayTargetLocal, localZone);
-				TimeSpan delay = todayTargetUtc - DateTime.UtcNow;
-
-				_logger.LogInformation("[DISCORD] Discord notifikation planlagt til kl. 07:00 (om {hours:F1} timer)", delay.TotalHours);
-
-				// Start baggrunds-task til Discord-publicering – IKKE await her
-				_ = Task.Run(async () =>
-				{
+					// Manuel trigger - send Discord notifikation med det samme
+					_logger.LogInformation("[DISCORD] Manuel trigger - sender Discord notifikation nu");
 					try
 					{
-						await Task.Delay(delay, CancellationToken.None);
-						await _discordNotifier.SendMorningReportAsync(saxoBalance, stockValue, fundValue, total, dayBeforeValue, CancellationToken.None);
+						await _discordNotifier.SendMorningReportAsync(saxoBalance, stockValue, fundValue, total, dayBeforeValue, stoppingToken);
 						_logger.LogInformation("[DISCORD] Morning report sendt kl. {time}", DateTime.Now);
-					}
-					catch (OperationCanceledException)
-					{
-						_logger.LogInformation("[DISCORD] Task annulleret før publicering");
 					}
 					catch (Exception ex)
 					{
 						_logger.LogError(ex, "[DISCORD] Fejl ved afsendelse af morning report");
 					}
-				}, CancellationToken.None);
+				}
+				else
+				{
+					// Automatisk kørsel - vent til kl. 07:00
+					TimeZoneInfo localZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+
+					TimeSpan targetTime = new(7, 0, 0); // 07:00 lokal tid
+
+					// Nuværende tidspunkt i din tidszone
+					DateTime nowLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, localZone);
+					DateTime todayTargetLocal = nowLocal.Date + targetTime;
+
+					if (nowLocal > todayTargetLocal)
+					{
+						todayTargetLocal = todayTargetLocal.AddDays(1);
+					}
+
+					// Konverter tilbage til UTC for delay-beregning
+					DateTime todayTargetUtc = TimeZoneInfo.ConvertTimeToUtc(todayTargetLocal, localZone);
+					TimeSpan delay = todayTargetUtc - DateTime.UtcNow;
+
+					_logger.LogInformation("[DISCORD] Discord notifikation planlagt til kl. 07:00 (om {hours:F1} timer)", delay.TotalHours);
+
+					// Start baggrunds-task til Discord-publicering – IKKE await her
+					_ = Task.Run(async () =>
+					{
+						try
+						{
+							await Task.Delay(delay, CancellationToken.None);
+							await _discordNotifier.SendMorningReportAsync(saxoBalance, stockValue, fundValue, total, dayBeforeValue, CancellationToken.None);
+							_logger.LogInformation("[DISCORD] Morning report sendt kl. {time}", DateTime.Now);
+						}
+						catch (OperationCanceledException)
+						{
+							_logger.LogInformation("[DISCORD] Task annulleret før publicering");
+						}
+						catch (Exception ex)
+						{
+							_logger.LogError(ex, "[DISCORD] Fejl ved afsendelse af morning report");
+						}
+					}, CancellationToken.None);
+				}
 
 				string totalLine = $"║  Total værdi: {total:F2} DKK";
 				int boxWidth = 45;

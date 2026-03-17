@@ -212,7 +212,7 @@ namespace StockPriceSheetPrintService.Controllers
 		public async Task<IActionResult> TriggerJob([FromServices] StockprizeWorker worker, CancellationToken ct)
 		{
 			_logger.LogInformation("Manuel trigger aktiveret via HTTP.");
-			await worker.RunJobAsync(ct);
+			await worker.RunJobAsync(ct, sendDiscordImmediately: true);
 			return Ok(new { Message = "Kørsel gennemført." });
 		}
 
