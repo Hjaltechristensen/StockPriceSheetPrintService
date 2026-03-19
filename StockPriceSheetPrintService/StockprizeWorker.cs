@@ -151,7 +151,7 @@ namespace StockPrizeSenderService
 
 			try
 			{
-				decimal nordnetCash = 1116m;
+				decimal nordnetCash = 1176m;
 				decimal saxoBalance = 0m;
 				decimal stockValue = 0m;
 				decimal fundValue = 0m;
