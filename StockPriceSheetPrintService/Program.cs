@@ -1,12 +1,7 @@
 using Serilog;
-using StockPriceSheetPrintService.Outbound.DiscordUpdates;
-using StockPriceSheetPrintService.Outbound.Filesystem;
-using StockPriceSheetPrintService.Outbound.GoogleSheets;
-using StockPriceSheetPrintService.Outbound.Saxo;
-using StockPriceSheetPrintService.Service;
-using StockPriceSheetPrintService.Service.Application;
-using StockPriceSheetPrintService.Service.Helpers;
-using StockPriceSheetPrintService.Service.Ports;
+using StockPriceSheetPrintService.DiscordUpdates;
+using StockPrizeSenderService;
+using StockPrizeSenderService.GoogleSheets;
 
 Log.Logger = new LoggerConfiguration()
 	.Enrich.FromLogContext()
@@ -25,16 +20,11 @@ builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
-builder.Services.AddHostedService<StockpriceWorker>();
-builder.Services.AddHttpClient<DiscordNotifier>();
+builder.Services.AddHostedService<StockprizeWorker>();
+builder.Services.AddSingleton<StockprizeWorker>();
 builder.Services.AddSingleton<HtmlScraper>();
 builder.Services.AddSingleton<UpdateCellAsync>();
-builder.Services.AddSingleton<ExecutionGuard>();
-builder.Services.AddScoped<PortfolioCalculator>();
-builder.Services.AddScoped<IPortfolioJobRunner, PortfolioJobRunner>();
-builder.Services.AddScoped<ITokenStore, EncryptedFileTokenStore>();
-builder.Services.AddScoped<ISaxoAuthService, SaxoAuthService>();
-builder.Services.AddScoped<ISaxoTokenService, SaxoTokenService>();
+builder.Services.AddHttpClient<DiscordNotifier>();
 
 builder.Services.AddHttpClient("StockApi", client =>
 {

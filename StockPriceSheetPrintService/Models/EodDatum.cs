@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace StockPriceSheetPrintService.Service.Models
+namespace StockPrizeSenderService.Models
 {
 	public class EodDatum
 	{

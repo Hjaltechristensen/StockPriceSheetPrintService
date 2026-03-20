@@ -1,4 +1,4 @@
-﻿namespace StockPriceSheetPrintService.Service.Models
+﻿namespace StockPrizeSenderService.Models
 {
 	public class FundPrice
 	{
