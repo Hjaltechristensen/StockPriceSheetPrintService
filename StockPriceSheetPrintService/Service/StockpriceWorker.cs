@@ -20,10 +20,6 @@ namespace StockPriceSheetPrintService.Service
 
 		protected override async Task ExecuteAsync(CancellationToken ct)
 		{
-			_logger.LogWarning("Test af Discord warning notifikation");
-			await Task.Delay(TimeSpan.FromSeconds(10), ct);
-			_logger.LogError("✓ Error Test notifikation sendt");
-
 			_logger.LogInformation("╔═══════════════════════════════════════════╗");
 			_logger.LogInformation("║  STOCKPRIZE WORKER STARTET                ║");
 			_logger.LogInformation("╚═══════════════════════════════════════════╝");
