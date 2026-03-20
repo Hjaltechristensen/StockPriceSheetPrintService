@@ -1,0 +1,112 @@
+using StockPriceSheetPrintService.Service.Ports;
+
+namespace StockPriceSheetPrintService.Service
+{
+	public class StockpriceWorker(
+		ILogger<StockpriceWorker> logger,
+		ISaxoTokenService saxoTokenService,
+		ISaxoAuthService saxoAuthService,
+		ITokenStore tokenStore,
+		IPortfolioJobRunner jobRunner) : BackgroundService
+	{
+		private readonly ILogger<StockpriceWorker> _logger = logger;
+		private readonly ISaxoTokenService _saxoTokenService = saxoTokenService;
+		private readonly ISaxoAuthService _saxoAuthService = saxoAuthService;
+		private readonly ITokenStore _tokenStore = tokenStore;
+		private readonly IPortfolioJobRunner _jobRunner = jobRunner;
+
+		private static readonly TimeZoneInfo TimeZone =
+			TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+
+		protected override async Task ExecuteAsync(CancellationToken ct)
+		{
+			_logger.LogInformation("╔═══════════════════════════════════════════╗");
+			_logger.LogInformation("║  STOCKPRIZE WORKER STARTET                ║");
+			_logger.LogInformation("╚═══════════════════════════════════════════╝");
+
+			ManualLoginIfNeeded();
+
+			_logger.LogInformation("[STARTUP] Udfører initial token refresh...");
+			await _saxoTokenService.GetAccessTokenAsync(ct);
+			_logger.LogInformation("[STARTUP] ✓ Initial token refresh gennemført");
+
+			while (!ct.IsCancellationRequested)
+			{
+				try
+				{
+					var utcNow = DateTimeOffset.UtcNow;
+					var nextRunUtc = GetNextRunTime(3, 30);
+					var nextRunLocal = TimeZoneInfo.ConvertTime(nextRunUtc, TimeZone);
+
+					while (nextRunLocal.DayOfWeek == DayOfWeek.Sunday || nextRunLocal.DayOfWeek == DayOfWeek.Monday)
+					{
+						nextRunUtc = nextRunUtc.AddDays(1);
+						nextRunLocal = TimeZoneInfo.ConvertTime(nextRunUtc, TimeZone);
+					}
+
+					var delay = nextRunUtc - utcNow;
+					if (delay < TimeSpan.Zero) delay = TimeSpan.Zero;
+
+					_logger.LogInformation("[SCHEDULER] Næste kørsel planlagt til: {nextRun:dd/MM/yyyy HH:mm} (om {hours:F1} timer)",
+						nextRunLocal, delay.TotalHours);
+
+					while (DateTimeOffset.UtcNow < nextRunUtc && !ct.IsCancellationRequested)
+					{
+						var timeUntilJob = nextRunUtc - DateTimeOffset.UtcNow;
+						var refreshDelay = TimeSpan.FromMinutes(45);
+
+						if (refreshDelay > timeUntilJob) break;
+
+						_logger.LogInformation("[SCHEDULER] Session refresh om 45 min for at holde token i live...");
+						await Task.Delay(refreshDelay, ct);
+						_logger.LogInformation("[SCHEDULER] Udfører token refresh...");
+						await _saxoTokenService.GetAccessTokenAsync(ct);
+					}
+
+					var finalDelay = nextRunUtc - DateTimeOffset.UtcNow;
+					if (finalDelay > TimeSpan.Zero)
+						await Task.Delay(finalDelay, ct);
+
+					await _jobRunner.RunJobAsync(ct);
+				}
+				catch (OperationCanceledException)
+				{
+					_logger.LogInformation("[SCHEDULER] ✓ Worker stopper normalt...");
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "[SCHEDULER] ✗ UVENTET FEJL i scheduleren!");
+				}
+			}
+		}
+
+		private void ManualLoginIfNeeded()
+		{
+			if (_tokenStore.TokenExists())
+			{
+				_logger.LogInformation("Refresh token fundet – springer manuel login over.");
+				return;
+			}
+
+			var authUrl = _saxoAuthService.BuildLoginUrl();
+			_logger.LogWarning("Ingen refresh token fundet – manuel login kræves.");
+			Console.WriteLine("\n************************************************************");
+			Console.WriteLine("KOPIÉR DETTE LINK TIL DIN BROWSER FOR AT GIVE ADGANG:");
+			Console.WriteLine(authUrl);
+			Console.WriteLine("************************************************************\n");
+		}
+
+		public DateTimeOffset GetNextRunTime(int hour, int minute)
+		{
+			var utcNow = DateTimeOffset.UtcNow;
+			var localNow = TimeZoneInfo.ConvertTime(utcNow, TimeZone);
+
+			var nextLocal = new DateTime(localNow.Year, localNow.Month, localNow.Day, hour, minute, 0, DateTimeKind.Unspecified);
+
+			if (nextLocal <= localNow.DateTime)
+				nextLocal = nextLocal.AddDays(1);
+
+			return new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(nextLocal, TimeZone), TimeSpan.Zero);
+		}
+	}
+}

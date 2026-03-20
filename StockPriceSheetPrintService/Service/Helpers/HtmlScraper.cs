@@ -1,11 +1,11 @@
-﻿using System.Globalization;
-using System.Xml;
-using HtmlAgilityPack;
-using StockPrizeSenderService.Models;
+﻿using HtmlAgilityPack;
+using StockPriceSheetPrintService.Service.Models;
+using StockPriceSheetPrintService.Service.Ports;
+using System.Globalization;
 
-namespace StockPrizeSenderService
+namespace StockPriceSheetPrintService.Service.Helpers
 {
-	public class HtmlScraper
+	public class HtmlScraper : IFundPriceProvider
 	{
 		public async Task<FundPrice?> GetFundNavAsync(string url, CancellationToken token)
 		{
