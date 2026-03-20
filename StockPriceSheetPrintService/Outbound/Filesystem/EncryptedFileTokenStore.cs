@@ -3,18 +3,12 @@ using StockPriceSheetPrintService.Service.Ports;
 
 namespace StockPriceSheetPrintService.Outbound.Filesystem
 {
-	public class EncryptedFileTokenStore : ITokenStore
+	public class EncryptedFileTokenStore(IConfiguration configuration, ILogger<EncryptedFileTokenStore> logger) : ITokenStore
 	{
 		private const string TokenPath = "/app/data/refresh_token.bin";
-		private readonly string _encryptionKey;
-		private readonly ILogger<EncryptedFileTokenStore> _logger;
-
-		public EncryptedFileTokenStore(IConfiguration configuration, ILogger<EncryptedFileTokenStore> logger)
-		{
-			_encryptionKey = configuration["Saxo:EncryptionKey"]
+		private readonly ILogger<EncryptedFileTokenStore> _logger = logger;
+		private readonly string _encryptionKey = configuration["Saxo:EncryptionKey"]
 				?? throw new InvalidOperationException("Saxo:EncryptionKey missing");
-			_logger = logger;
-		}
 
 		public bool TokenExists() => File.Exists(TokenPath);
 

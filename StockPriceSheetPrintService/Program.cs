@@ -1,4 +1,5 @@
 using Serilog;
+using Serilog.Events;
 using StockPriceSheetPrintService.Outbound.DiscordUpdates;
 using StockPriceSheetPrintService.Outbound.Filesystem;
 using StockPriceSheetPrintService.Outbound.GoogleSheets;
@@ -8,9 +9,13 @@ using StockPriceSheetPrintService.Service.Application;
 using StockPriceSheetPrintService.Service.Helpers;
 using StockPriceSheetPrintService.Service.Ports;
 
+var errorWebhook = Environment.GetEnvironmentVariable("Discord__WebhookError")
+	?? throw new InvalidOperationException("Discord:WebhookError missing");
+
 Log.Logger = new LoggerConfiguration()
 	.Enrich.FromLogContext()
 	.WriteTo.Console(new Serilog.Formatting.Json.JsonFormatter())
+	.WriteTo.Sink(new DiscordSink(errorWebhook), LogEventLevel.Warning)
 	.CreateLogger();
 
 
@@ -19,10 +24,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
 builder.Host.UseSerilog();
 
-// Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 builder.Services.AddHostedService<StockpriceWorker>();
@@ -54,16 +56,12 @@ builder.WebHost.ConfigureKestrel(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
 	app.MapOpenApi();
 }
 
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.Run();
