@@ -1,6 +1,8 @@
-﻿namespace StockPriceSheetPrintService.Service.Application
+﻿using StockPriceSheetPrintService.Service.Ports;
+
+namespace StockPriceSheetPrintService.Service.Application
 {
-	public class ExecutionGuard
+	public class ExecutionGuard : IExecutionGuard
 	{
 		private readonly ILogger<ExecutionGuard> _logger;
 		private readonly string _executionLogPath = "execution_log.txt";

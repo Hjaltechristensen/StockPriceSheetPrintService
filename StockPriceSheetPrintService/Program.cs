@@ -26,15 +26,15 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 builder.Services.AddHostedService<StockpriceWorker>();
-builder.Services.AddHttpClient<DiscordNotifier>();
-builder.Services.AddSingleton<HtmlScraper>();
-builder.Services.AddSingleton<UpdateCellAsync>();
-builder.Services.AddSingleton<ExecutionGuard>();
+builder.Services.AddHttpClient<IDiscordNotifier, DiscordNotifier>();
 builder.Services.AddScoped<PortfolioCalculator>();
 builder.Services.AddScoped<IPortfolioJobRunner, PortfolioJobRunner>();
 builder.Services.AddScoped<ITokenStore, EncryptedFileTokenStore>();
 builder.Services.AddScoped<ISaxoAuthService, SaxoAuthService>();
-builder.Services.AddScoped<ISaxoTokenService, SaxoTokenService>();
+builder.Services.AddScoped<ISaxoTokenService, SaxoTokenService>(); 
+builder.Services.AddSingleton<IFundPriceProvider, HtmlScraper>();
+builder.Services.AddSingleton<IGoogleSheetsClient, UpdateCellAsync>();
+builder.Services.AddSingleton<IExecutionGuard, ExecutionGuard>();
 
 builder.Services.AddHttpClient("StockApi", client =>
 {
