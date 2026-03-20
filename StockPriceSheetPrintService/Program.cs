@@ -46,7 +46,6 @@ builder.Services.AddHttpClient("NationalbankApi", c =>
 	c.BaseAddress = new Uri("https://www.nationalbanken.dk/");
 });
 
-
 builder.WebHost.ConfigureKestrel(options =>
 {
 	options.ListenAnyIP(5151);
