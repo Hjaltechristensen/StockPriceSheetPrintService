@@ -1,4 +1,4 @@
-﻿namespace StockPriceSheetPrintService.Models
+﻿namespace StockPriceSheetPrintService.Service.Models
 {
 	public class SaxoBalanceResponse
 	{

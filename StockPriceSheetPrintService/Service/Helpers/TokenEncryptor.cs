@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using System.Security.Cryptography;
 
-namespace StockPriceSheetPrintService.Krypto
+namespace StockPriceSheetPrintService.Service.Helpers
 {
 	public class TokenEncryptor
 	{
@@ -9,7 +9,7 @@ namespace StockPriceSheetPrintService.Krypto
 		{
 			var iv = new byte[16];
 			using var aes = Aes.Create();
-			aes.Key = Encoding.UTF8.GetBytes(key.PadRight(32).Substring(0, 32));
+			aes.Key = Encoding.UTF8.GetBytes(key.PadRight(32)[..32]);
 			aes.IV = iv;
 
 			using var encryptor = aes.CreateEncryptor();
@@ -20,7 +20,7 @@ namespace StockPriceSheetPrintService.Krypto
 		public static string Decrypt(string cipherText, string key)
 		{
 			using var aes = Aes.Create();
-			aes.Key = Encoding.UTF8.GetBytes(key.PadRight(32).Substring(0, 32));
+			aes.Key = Encoding.UTF8.GetBytes(key.PadRight(32)[..32]);
 			aes.IV = new byte[16];
 
 			using var decryptor = aes.CreateDecryptor();

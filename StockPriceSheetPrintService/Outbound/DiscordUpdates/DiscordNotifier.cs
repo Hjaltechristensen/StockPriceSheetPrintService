@@ -1,8 +1,9 @@
+using StockPriceSheetPrintService.Service.Ports;
 using System.Globalization;
 
-namespace StockPriceSheetPrintService.DiscordUpdates
+namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 {
-	public class DiscordNotifier
+	public class DiscordNotifier : IDiscordNotifier
 	{
 		private readonly HttpClient _httpClient;
 		private readonly IConfiguration _configuration;
