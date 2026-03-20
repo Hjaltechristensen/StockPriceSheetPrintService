@@ -10,7 +10,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		IHttpClientFactory httpClientFactory,
 		ILogger<PortfolioJobRunner> logger,
 		IConfiguration configuration,
-		ExecutionGuard executionGuard,
+		IExecutionGuard executionGuard,
 		PortfolioCalculator portfolioCalculator,
 		IGoogleSheetsClient googleSheetsClient,
 		IDiscordNotifier discordNotifier,
@@ -19,7 +19,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 		private readonly ILogger<PortfolioJobRunner> _logger = logger;
 		private readonly IConfiguration _configuration = configuration;
-		private readonly ExecutionGuard _executionGuard = executionGuard;
+		private readonly IExecutionGuard _executionGuard = executionGuard;
 		private readonly PortfolioCalculator _portfolioCalculator = portfolioCalculator;
 		private readonly IGoogleSheetsClient _googleSheetsClient = googleSheetsClient;
 		private readonly IDiscordNotifier _discordNotifier = discordNotifier;
