@@ -15,9 +15,6 @@ namespace StockPriceSheetPrintService.Service
 		private readonly ITokenStore _tokenStore = tokenStore;
 		private readonly IPortfolioJobRunner _jobRunner = jobRunner;
 
-		private static readonly TimeZoneInfo TimeZone =
-			TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
-
 		protected override async Task ExecuteAsync(CancellationToken ct)
 		{
 			_logger.LogInformation("╔═══════════════════════════════════════════╗");
@@ -36,19 +33,17 @@ namespace StockPriceSheetPrintService.Service
 				{
 					var utcNow = DateTimeOffset.UtcNow;
 					var nextRunUtc = GetNextRunTime(3, 30);
-					var nextRunLocal = TimeZoneInfo.ConvertTime(nextRunUtc, TimeZone);
 
-					while (nextRunLocal.DayOfWeek == DayOfWeek.Sunday || nextRunLocal.DayOfWeek == DayOfWeek.Monday)
+					while (nextRunUtc.DayOfWeek == DayOfWeek.Sunday || nextRunUtc.DayOfWeek == DayOfWeek.Monday)
 					{
 						nextRunUtc = nextRunUtc.AddDays(1);
-						nextRunLocal = TimeZoneInfo.ConvertTime(nextRunUtc, TimeZone);
 					}
 
 					var delay = nextRunUtc - utcNow;
 					if (delay < TimeSpan.Zero) delay = TimeSpan.Zero;
 
-					_logger.LogInformation("[SCHEDULER] Næste kørsel planlagt til: {nextRun:dd/MM/yyyy HH:mm} (om {hours:F1} timer)",
-						nextRunLocal, delay.TotalHours);
+					_logger.LogInformation("[SCHEDULER] Næste kørsel planlagt til: {nextRun:dd/MM/yyyy HH:mm} UTC (om {hours:F1} timer)",
+						nextRunUtc, delay.TotalHours);
 
 					while (DateTimeOffset.UtcNow < nextRunUtc && !ct.IsCancellationRequested)
 					{
@@ -99,14 +94,12 @@ namespace StockPriceSheetPrintService.Service
 		public DateTimeOffset GetNextRunTime(int hour, int minute)
 		{
 			var utcNow = DateTimeOffset.UtcNow;
-			var localNow = TimeZoneInfo.ConvertTime(utcNow, TimeZone);
+			var nextRun = new DateTimeOffset(utcNow.Year, utcNow.Month, utcNow.Day, hour, minute, 0, TimeSpan.Zero);
 
-			var nextLocal = new DateTime(localNow.Year, localNow.Month, localNow.Day, hour, minute, 0, DateTimeKind.Unspecified);
+			if (nextRun <= utcNow)
+				nextRun = nextRun.AddDays(1);
 
-			if (nextLocal <= localNow.DateTime)
-				nextLocal = nextLocal.AddDays(1);
-
-			return new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(nextLocal, TimeZone), TimeSpan.Zero);
+			return nextRun;
 		}
 	}
 }

@@ -34,7 +34,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		public async Task RunJobAsync(CancellationToken ct, bool sendDiscordImmediately = false)
 		{
 			_logger.LogInformation("╔═══════════════════════════════════════════╗");
-			_logger.LogInformation("║  JOB KØRSEL STARTER - {time:HH:mm:ss}            ║", DateTime.Now);
+			_logger.LogInformation("║  JOB KØRSEL STARTER - {time:HH:mm:ss} UTC        ║", DateTime.UtcNow);
 			_logger.LogInformation("╚═══════════════════════════════════════════╝");
 
 			if (!_executionGuard.IsExecutionSafe())
@@ -187,7 +187,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				try
 				{
 					await _discordNotifier.SendMorningReportAsync(saxoBalance, stockValue, fundValue, total, dayBeforeValue, ct);
-					_logger.LogInformation("[DISCORD] Morning report sendt kl. {time}", DateTime.Now);
+					_logger.LogInformation("[DISCORD] Morning report sendt kl. {time} UTC", DateTime.UtcNow);
 				}
 				catch (Exception ex)
 				{
@@ -212,7 +212,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				{
 					await Task.Delay(delay, CancellationToken.None);
 					await _discordNotifier.SendMorningReportAsync(saxoBalance, stockValue, fundValue, total, dayBeforeValue, CancellationToken.None);
-					_logger.LogInformation("[DISCORD] Morning report sendt kl. {time}", DateTime.Now);
+					_logger.LogInformation("[DISCORD] Morning report sendt kl. {time} UTC", DateTime.UtcNow);
 				}
 				catch (OperationCanceledException)
 				{

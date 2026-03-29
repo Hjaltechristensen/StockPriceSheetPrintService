@@ -46,7 +46,7 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 					new
 					{
 						title = "🌅 Morning Market Report",
-						description = "For " + DateTime.Now.AddDays(-1).ToString("dddd dd MMMM yyyy"),
+						description = "For " + DateTime.UtcNow.AddDays(-1).ToString("dddd dd MMMM yyyy"),
 						color = embedColor,
 						fields = new[]
 						{

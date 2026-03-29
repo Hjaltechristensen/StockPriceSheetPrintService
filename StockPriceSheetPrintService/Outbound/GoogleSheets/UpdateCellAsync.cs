@@ -56,7 +56,7 @@ namespace StockPriceSheetPrintService.Outbound.GoogleSheets
 				Values =
 				[
 					[
-						DateOnly.FromDateTime(DateTime.Now.AddDays(-1)).ToString("dd/MM/yyyy"),
+						DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1)).ToString("dd/MM/yyyy"),
 						totalValue
 					]
 				]
