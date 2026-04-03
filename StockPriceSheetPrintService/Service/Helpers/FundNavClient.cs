@@ -6,9 +6,8 @@ using System.Text.RegularExpressions;
 
 namespace StockPriceSheetPrintService.Service.Helpers
 {
-	public class FundNavClient(HttpClient client, IConfiguration configuration)
+	public class FundNavClient(HttpClient client)
 	{
-		private readonly IConfiguration _configuration = configuration;
 		public async Task<FundPrice?> GetFundNavAsync(string url, CancellationToken token)
 		{
 			var html = await client.GetStringAsync(url, token);
