@@ -37,19 +37,27 @@ namespace StockPriceSheetPrintService.Service.Application
 			_exchangeRateCache = null;
 			var rates = await GetExchangeRatesAsync(ct);
 
-			data.Data.ForEach(d =>
+			foreach (var d in data.Data)
 			{
-				if (AllTickers.Symbols.TryGetValue(d.Symbol, out decimal multiplier))
-				{
-					var effectiveCurrency = !string.IsNullOrEmpty(d.PriceCurrency) ? d.PriceCurrency
-						: (ExchangeCurrencyFallback.TryGetValue(d.Exchange ?? "", out var fb) ? fb : "?");
+				if (!AllTickers.Symbols.TryGetValue(d.Symbol, out decimal multiplier))
+					continue;
 
-					var priceInDkk = ConvertCurrencyToDkk(d.Close, d.PriceCurrency, d.Exchange, rates);
-					_logger.LogInformation("[JOB] {multiplier} x {symbol} closed at: {close} {currency} = {dkk:F4} DKK, total: {total:F2} DKK",
-						multiplier, d.Symbol, d.Close, effectiveCurrency, priceInDkk, multiplier * priceInDkk);
-					totalPrice += priceInDkk * multiplier;
+				var effectiveCurrency = !string.IsNullOrEmpty(d.PriceCurrency) ? d.PriceCurrency
+					: (ExchangeCurrencyFallback.TryGetValue(d.Exchange ?? "", out var fb) ? fb : "?");
+
+				if (d.Close == 0.0m)
+				{
+					_logger.LogWarning("Closing price was 0.0 for {Symbol} - Redirecting to YahooFinance", d.Symbol);
+					var yahooData = await _fundPriceProvider.GetFromYahooApiAsync(d.Symbol, ct);
+					d.Date = yahooData?.Date ?? d.Date;
+					d.Close = yahooData?.Nav ?? d.Close;
 				}
-			});
+
+				var priceInDkk = ConvertCurrencyToDkk(d.Close, d.PriceCurrency, d.Exchange, rates);
+				_logger.LogInformation("[JOB] {Multiplier} x {Symbol} closed at: {Close} {Currency} = {Dkk:F4} DKK, total: {Total:F2} DKK",
+					multiplier, d.Symbol, d.Close, effectiveCurrency, priceInDkk, multiplier * priceInDkk);
+				totalPrice += priceInDkk * multiplier;
+			}
 
 			_logger.LogInformation("[JOB] Total aktieværdi: {totalPrice:F2} DKK", totalPrice);
 			return totalPrice;
