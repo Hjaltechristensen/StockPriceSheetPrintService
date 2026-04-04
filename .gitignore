@@ -6,6 +6,7 @@ Secrets/
 *.json.secret
 appsettings.*.secret.json
 refresh_token.txt
+saxo_data/
 *.pem
 *.key
 *.crt

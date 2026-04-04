@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portefølje Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f1117;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-bottom: 2rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: #1e2330;
+      border: 1px solid #2d3748;
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+    }
+
+    .stat-card .label {
+      font-size: 0.75rem;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-card .value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+
+    .stat-card .sub {
+      font-size: 0.85rem;
+      margin-top: 0.3rem;
+    }
+
+    .positive { color: #4ade80; }
+    .negative { color: #f87171; }
+    .neutral  { color: #94a3b8; }
+
+    .chart-container {
+      background: #1e2330;
+      border: 1px solid #2d3748;
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .period-buttons {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .period-buttons button {
+      background: #2d3748;
+      border: 1px solid #374151;
+      color: #94a3b8;
+      border-radius: 6px;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .period-buttons button:hover,
+    .period-buttons button.active {
+      background: #3b82f6;
+      border-color: #3b82f6;
+      color: #fff;
+    }
+
+    canvas { width: 100% !important; }
+
+    #error {
+      display: none;
+      color: #f87171;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Portefølje Dashboard</h1>
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="label">Seneste total</div>
+      <div class="value" id="latestValue">—</div>
+      <div class="sub neutral" id="latestDate">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Ændring (1 dag)</div>
+      <div class="value" id="dayChange">—</div>
+      <div class="sub" id="dayChangePct">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">YTD ændring</div>
+      <div class="value" id="ytdChange">—</div>
+      <div class="sub" id="ytdChangePct">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Datapunkter</div>
+      <div class="value" id="dataPoints">—</div>
+      <div class="sub neutral" id="dataRange">—</div>
+    </div>
+  </div>
+
+  <div class="chart-container">
+    <div class="period-buttons">
+      <button data-days="90">3M</button>
+      <button data-days="180">6M</button>
+      <button data-days="365">1Å</button>
+      <button data-days="0" class="active">Alt</button>
+    </div>
+    <canvas id="chart"></canvas>
+  </div>
+
+  <p id="error"></p>
+
+  <script>
+    const fmt = new Intl.NumberFormat("da-DK", { style: "currency", currency: "DKK", maximumFractionDigits: 0 });
+    const fmtPct = v => (v >= 0 ? "+" : "") + v.toFixed(2) + " %";
+
+    function colorClass(v) { return v > 0 ? "positive" : v < 0 ? "negative" : "neutral"; }
+
+    function setText(id, text, cls) {
+      const el = document.getElementById(id);
+      el.textContent = text;
+      if (cls) { el.className = "sub " + cls; }
+    }
+
+    let allEntries = [];
+    let chart = null;
+
+    function buildChart(entries) {
+      const labels = entries.map(e => e.date);
+      const values = entries.map(e => e.value);
+
+      const gradient = chart
+        ? null
+        : (() => {
+            const ctx = document.getElementById("chart").getContext("2d");
+            const g = ctx.createLinearGradient(0, 0, 0, 400);
+            g.addColorStop(0, "rgba(59,130,246,0.35)");
+            g.addColorStop(1, "rgba(59,130,246,0)");
+            return g;
+          })();
+
+      if (chart) {
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = values;
+        chart.update();
+        return;
+      }
+
+      const ctx = document.getElementById("chart").getContext("2d");
+      chart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [{
+            label: "Porteføljeværdi",
+            data: values,
+            borderColor: "#3b82f6",
+            backgroundColor: gradient,
+            borderWidth: 2,
+            pointRadius: entries.length > 100 ? 0 : 3,
+            pointHoverRadius: 5,
+            fill: true,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true,
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => fmt.format(ctx.parsed.y)
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: "#64748b", maxTicksLimit: 8 },
+              grid: { color: "#1a2233" }
+            },
+            y: {
+              ticks: {
+                color: "#64748b",
+                callback: v => fmt.format(v)
+              },
+              grid: { color: "#1a2233" }
+            }
+          }
+        }
+      });
+    }
+
+    function filterAndRender(days) {
+      let entries = allEntries;
+      if (days > 0) {
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - days);
+        const cutoffStr = cutoff.toISOString().slice(0, 10);
+        entries = allEntries.filter(e => e.date >= cutoffStr);
+      }
+      buildChart(entries);
+    }
+
+    function populateStats(entries) {
+      if (entries.length === 0) return;
+
+      const latest = entries[entries.length - 1];
+      const prev = entries.length >= 2 ? entries[entries.length - 2] : null;
+
+      setText("latestValue", fmt.format(latest.value));
+      setText("latestDate", latest.date, "neutral");
+
+      if (prev) {
+        const diff = latest.value - prev.value;
+        const pct = (diff / prev.value) * 100;
+        document.getElementById("dayChange").textContent = fmt.format(diff);
+        document.getElementById("dayChange").className = "value " + colorClass(diff);
+        setText("dayChangePct", fmtPct(pct), colorClass(pct));
+      }
+
+      const now = new Date();
+      const ytdStart = `${now.getFullYear()}-01-01`;
+      const firstOfYear = entries.find(e => e.date >= ytdStart);
+      if (firstOfYear) {
+        const ytdDiff = latest.value - firstOfYear.value;
+        const ytdPct = (ytdDiff / firstOfYear.value) * 100;
+        document.getElementById("ytdChange").textContent = fmt.format(ytdDiff);
+        document.getElementById("ytdChange").className = "value " + colorClass(ytdDiff);
+        setText("ytdChangePct", fmtPct(ytdPct), colorClass(ytdPct));
+      }
+
+      setText("dataPoints", entries.length.toString());
+      setText("dataRange", entries[0].date + " → " + latest.date, "neutral");
+    }
+
+    async function init() {
+      try {
+        const res = await fetch("/dashboard/data");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        allEntries = await res.json();
+        populateStats(allEntries);
+        filterAndRender(0);
+      } catch (e) {
+        const el = document.getElementById("error");
+        el.textContent = "Kunne ikke hente data: " + e.message;
+        el.style.display = "block";
+      }
+    }
+
+    document.querySelectorAll(".period-buttons button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".period-buttons button").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        filterAndRender(parseInt(btn.dataset.days, 10));
+      });
+    });
+
+    init();
+  </script>
+</body>
+</html>
