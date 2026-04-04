@@ -16,21 +16,61 @@ namespace StockPriceSheetPrintService.Outbound.GoogleSheets
 		private const string CredentialsPath = "Secrets/stockprizeservice-59bc4ea3961d.json";
 		private const string ApplicationName = "HomeServerBackend";
 
-		public async Task<decimal> UpdateGoogleSheetsCellAsync(string spreadsheetId, string sheetName, string totalValue, CancellationToken ct)
+		private async Task<SheetsService> CreateServiceAsync(CancellationToken ct)
 		{
 			var credential = (await CredentialFactory.FromFileAsync<ServiceAccountCredential>(CredentialsPath, ct))
 				.ToGoogleCredential()
 				.CreateScoped(SheetsService.Scope.Spreadsheets);
 
-			var service = new SheetsService(new BaseClientService.Initializer
+			return new SheetsService(new BaseClientService.Initializer
 			{
 				HttpClientInitializer = credential,
 				ApplicationName = ApplicationName
 			});
+		}
+
+		public async Task<List<(DateOnly Date, decimal Value)>> GetHistoricalDataAsync(string spreadsheetId, string sheetName, CancellationToken ct)
+		{
+			var service = await CreateServiceAsync(ct);
+
+			var getRequest = service.Spreadsheets.Values.Get(spreadsheetId, $"'{sheetName}'!{DateColumn}:{ValueColumn}");
+			getRequest.ValueRenderOption = SpreadsheetsResource.ValuesResource.GetRequest.ValueRenderOptionEnum.UNFORMATTEDVALUE;
+			var response = await getRequest.ExecuteAsync(ct);
+			var rows = response.Values ?? [];
+
+			// Google Sheets epoch: dage siden 30. december 1899
+			var sheetsEpoch = new DateOnly(1899, 12, 30);
+
+			var result = new List<(DateOnly, decimal)>();
+			foreach (var row in rows)
+			{
+				if (row.Count < 2) continue;
+				var dateStr = row[0]?.ToString();
+				var valueStr = row[1]?.ToString();
+				if (dateStr is null || valueStr is null) continue;
+
+				// Med UNFORMATTED_VALUE returneres datoer som serienumre (double)
+				DateOnly date;
+				if (!DateOnly.TryParseExact(dateStr, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out date))
+				{
+					if (!double.TryParse(dateStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var serial))
+						continue;
+					date = sheetsEpoch.AddDays((int)serial);
+				}
+
+				if (!decimal.TryParse(valueStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var value)) continue;
+				result.Add((date, value));
+			}
+			return result;
+		}
+
+		public async Task<decimal> UpdateGoogleSheetsCellAsync(string spreadsheetId, string sheetName, string totalValue, CancellationToken ct)
+		{
+			var service = await CreateServiceAsync(ct);
 
 			// Hent hele kolonnen og find næste tomme række
 			var getRequest = service.Spreadsheets.Values.Get(spreadsheetId, $"'{sheetName}'!{DateColumn}:{ValueColumn}");
-			var getResponse = await getRequest.ExecuteAsync();
+			var getResponse = await getRequest.ExecuteAsync(ct);
 			var existingValues = getResponse.Values ?? [];
 
 			var lastRow = existingValues.LastOrDefault();
