@@ -38,6 +38,9 @@ namespace StockPriceSheetPrintService.Outbound.GoogleSheets
 			var response = await getRequest.ExecuteAsync(ct);
 			var rows = response.Values ?? [];
 
+			// Google Sheets epoch: dage siden 30. december 1899
+			var sheetsEpoch = new DateOnly(1899, 12, 30);
+
 			var result = new List<(DateOnly, decimal)>();
 			foreach (var row in rows)
 			{
@@ -45,7 +48,16 @@ namespace StockPriceSheetPrintService.Outbound.GoogleSheets
 				var dateStr = row[0]?.ToString();
 				var valueStr = row[1]?.ToString();
 				if (dateStr is null || valueStr is null) continue;
-				if (!DateOnly.TryParseExact(dateStr, "dd/MM/yyyy", out var date)) continue;
+
+				// Med UNFORMATTED_VALUE returneres datoer som serienumre (double)
+				DateOnly date;
+				if (!DateOnly.TryParseExact(dateStr, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out date))
+				{
+					if (!double.TryParse(dateStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var serial))
+						continue;
+					date = sheetsEpoch.AddDays((int)serial);
+				}
+
 				if (!decimal.TryParse(valueStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var value)) continue;
 				result.Add((date, value));
 			}
