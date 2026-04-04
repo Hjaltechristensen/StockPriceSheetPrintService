@@ -8,12 +8,12 @@ namespace StockPriceSheetPrintService.Service.Application
 	public class PortfolioCalculator(
 		IHttpClientFactory httpClientFactory,
 		ILogger<PortfolioCalculator> logger,
-		IFundPriceProvider fundPriceProvider,
+		IHtmlScraper htmlScraper,
 		IConfiguration configuration)
 	{
 		private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 		private readonly ILogger<PortfolioCalculator> _logger = logger;
-		private readonly IFundPriceProvider _fundPriceProvider = fundPriceProvider;
+		private readonly IHtmlScraper _htmlScraper = htmlScraper;
 		private readonly IConfiguration _configuration = configuration;
 		private const decimal NordnetFxMargin = 0.0025m;
 		private Dictionary<string, decimal>? _exchangeRateCache;
@@ -48,7 +48,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				if (d.Close == 0.0m)
 				{
 					_logger.LogWarning("Closing price was 0.0 for {Symbol} - Redirecting to YahooFinance", d.Symbol);
-					var yahooData = await _fundPriceProvider.GetFromYahooApiAsync(d.Symbol, ct);
+					var yahooData = await _htmlScraper.GetFromYahooApiAsync(d.Symbol, ct);
 					d.Date = yahooData?.Date ?? d.Date;
 					d.Close = yahooData?.Nav ?? d.Close;
 				}
@@ -63,19 +63,19 @@ namespace StockPriceSheetPrintService.Service.Application
 			return totalPrice;
 		}
 
-		public async Task<decimal> FindTotalFundValueAsync(CancellationToken ct)
+		public async Task<decimal> FindTotalJuneValueAsync(CancellationToken ct)
 		{
 			decimal shareAmount = 708.4689m;
-			decimal totalFundValue = 0m;
+			decimal totalJuneValue = 0m;
 
-			var fundPrice = await _fundPriceProvider.GetFundNavAsync(_configuration["JuneUrl"] ?? string.Empty, ct);
-			if (fundPrice != null)
+			var junePrice = await _htmlScraper.GetJuneNavAsync(_configuration["JuneUrl"] ?? string.Empty, ct);
+			if (junePrice != null)
 			{
-				_logger.LogInformation("Todays June price: {nav} pr. {date}", fundPrice.Nav, fundPrice.Date.ToString("dd/MM/yyyy"));
-				totalFundValue = fundPrice.Nav * shareAmount;
+				_logger.LogInformation("Todays June price: {nav} pr. {date}", junePrice.Nav, junePrice.Date.ToString("dd/MM/yyyy"));
+				totalJuneValue = junePrice.Nav * shareAmount;
 			}
 
-			return totalFundValue;
+			return totalJuneValue;
 		}
 
 		private decimal ConvertCurrencyToDkk(decimal price, string? currency, string? exchange, Dictionary<string, decimal> rates)

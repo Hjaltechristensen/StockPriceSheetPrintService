@@ -48,7 +48,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				decimal nordnetCash = 1176m;
 				decimal saxoBalance = 0m;
 				decimal stockValue = 0m;
-				decimal fundValue = 0m;
+				decimal juneValue = 0m;
 				string runningTotal = "=";
 
 				// --- 1. SAXO BALANCE ---
@@ -82,9 +82,9 @@ namespace StockPriceSheetPrintService.Service.Application
 
 				// --- 3. FONDE ---
 				_logger.LogInformation("[JOB] [3/4] Starter hentning af fondsværdi...");
-				fundValue = await _portfolioCalculator.FindTotalFundValueAsync(ct);
-				runningTotal += "+" + fundValue.ToString(new CultureInfo("da-DK"));
-				_logger.LogInformation("[JOB] ✓ Fondsværdi: {val:F2} DKK", fundValue);
+				juneValue = await _portfolioCalculator.FindTotalJuneValueAsync(ct);
+				runningTotal += "+" + juneValue.ToString(new CultureInfo("da-DK"));
+				_logger.LogInformation("[JOB] ✓ Fondsværdi: {val:F2} DKK", juneValue);
 
 				// --- 4. GOOGLE SHEETS ---
 				_logger.LogInformation("[JOB] [4/4] TOTAL værdi: {total} DKK - Sendes til Google Sheets...", runningTotal);
@@ -103,7 +103,7 @@ namespace StockPriceSheetPrintService.Service.Application
 
 				var total = ParseRunningTotal(runningTotal);
 
-				await HandleDiscordNotificationAsync(saxoBalance, stockValue, fundValue, total, dayBeforeValue, sendDiscordImmediately, ct);
+				await HandleDiscordNotificationAsync(saxoBalance, stockValue, juneValue, total, dayBeforeValue, sendDiscordImmediately, ct);
 
 				LogJobCompleted(total);
 			}
@@ -177,7 +177,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		}
 
 		private async Task HandleDiscordNotificationAsync(
-			decimal saxoBalance, decimal stockValue, decimal fundValue,
+			decimal saxoBalance, decimal stockValue, decimal juneValue,
 			decimal total, decimal dayBeforeValue,
 			bool sendDiscordImmediately, CancellationToken ct)
 		{
@@ -186,7 +186,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				_logger.LogInformation("[DISCORD] Manuel trigger - sender Discord notifikation nu");
 				try
 				{
-					await _discordNotifier.SendMorningReportAsync(saxoBalance, stockValue, fundValue, total, dayBeforeValue, ct);
+					await _discordNotifier.SendMorningReportAsync(saxoBalance, stockValue, juneValue, total, dayBeforeValue, ct);
 					_logger.LogInformation("[DISCORD] Morning report sendt kl. {time} UTC", DateTime.UtcNow);
 				}
 				catch (Exception ex)
@@ -211,7 +211,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				try
 				{
 					await Task.Delay(delay, CancellationToken.None);
-					await _discordNotifier.SendMorningReportAsync(saxoBalance, stockValue, fundValue, total, dayBeforeValue, CancellationToken.None);
+					await _discordNotifier.SendMorningReportAsync(saxoBalance, stockValue, juneValue, total, dayBeforeValue, CancellationToken.None);
 					_logger.LogInformation("[DISCORD] Morning report sendt kl. {time} UTC", DateTime.UtcNow);
 				}
 				catch (OperationCanceledException)

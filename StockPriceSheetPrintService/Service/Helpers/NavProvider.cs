@@ -6,9 +6,9 @@ using System.Text.RegularExpressions;
 
 namespace StockPriceSheetPrintService.Service.Helpers
 {
-	public class FundNavClient(HttpClient client)
+	public class NavProvider(HttpClient client)
 	{
-		public async Task<FundPrice?> GetFundNavAsync(string url, CancellationToken token)
+		public async Task<JuneData?> GetJuneNavAsync(string url, CancellationToken token)
 		{
 			var html = await client.GetStringAsync(url, token);
 
@@ -38,10 +38,10 @@ namespace StockPriceSheetPrintService.Service.Helpers
 			if (!DateTime.TryParseExact(dateMatch.Value, "dd.MM.yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
 				return null;
 
-			return new FundPrice { Nav = nav, Date = date };
+			return new JuneData { Nav = nav, Date = date };
 		}
 
-		public async Task<FundPrice?> GetFromYahooApiAsync(string ticker, CancellationToken token)
+		public async Task<JuneData?> GetFromYahooApiAsync(string ticker, CancellationToken token)
 		{
 			var url = $"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}";
 			var json = await client.GetStringAsync(url, token);
@@ -63,7 +63,7 @@ namespace StockPriceSheetPrintService.Service.Helpers
 
 			var date = DateTimeOffset.FromUnixTimeSeconds(timestamp).LocalDateTime;
 
-			return new FundPrice { Nav = price, Date = date };
+			return new JuneData { Nav = price, Date = date };
 		}
 	}
 }

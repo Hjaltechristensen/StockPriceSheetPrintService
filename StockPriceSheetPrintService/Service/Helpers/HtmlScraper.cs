@@ -3,16 +3,16 @@ using StockPriceSheetPrintService.Service.Ports;
 
 namespace StockPriceSheetPrintService.Service.Helpers
 {
-	public class HtmlScraper(FundNavClient fundNavClient) : IFundPriceProvider
+	public class HtmlScraper(NavProvider navProvider) : IHtmlScraper
 	{
-		public async Task<FundPrice?> GetFundNavAsync(string url, CancellationToken token)
+		public async Task<JuneData?> GetJuneNavAsync(string url, CancellationToken token)
 		{
-			return await fundNavClient.GetFundNavAsync(url, token);
+			return await navProvider.GetJuneNavAsync(url, token);
 		}
 
-		public async Task<FundPrice?> GetFromYahooApiAsync(string ticker, CancellationToken token)
+		public async Task<JuneData?> GetFromYahooApiAsync(string ticker, CancellationToken token)
 		{
-			return await fundNavClient.GetFromYahooApiAsync(ticker, token);
+			return await navProvider.GetFromYahooApiAsync(ticker, token);
 		}
 	}
 }

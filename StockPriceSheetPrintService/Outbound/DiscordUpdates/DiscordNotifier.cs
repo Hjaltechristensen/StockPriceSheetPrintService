@@ -16,9 +16,9 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 			_webhookUrl = _configuration["Discord:Webhook"] ?? string.Empty;
 		}
 
-		public async Task SendMorningReportAsync(decimal saxoBalance, decimal stockValue, decimal fundValue, decimal total, decimal dayBeforeValue, CancellationToken stoppingToken)
+		public async Task SendMorningReportAsync(decimal saxoBalance, decimal stockValue, decimal juneValue, decimal total, decimal dayBeforeValue, CancellationToken stoppingToken)
 		{
-			var payload = BuildPayload(saxoBalance, stockValue, fundValue, total, dayBeforeValue);
+			var payload = BuildPayload(saxoBalance, stockValue, juneValue, total, dayBeforeValue);
 			await _httpClient.PostAsJsonAsync(_webhookUrl, payload, cancellationToken: stoppingToken);
 		}
 
@@ -27,7 +27,7 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 			return value.ToString("N2", CultureInfo.GetCultureInfo("da-DK"));
 		}
 
-		private object BuildPayload(decimal saxoBalance, decimal stockValue, decimal fundValue, decimal total, decimal dayBeforeValue)
+		private object BuildPayload(decimal saxoBalance, decimal stockValue, decimal juneValue, decimal total, decimal dayBeforeValue)
 		{
 			var change = total - dayBeforeValue;
 			var changePct = Math.Round((change / dayBeforeValue) * 100, 2);
@@ -35,9 +35,9 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 			var embedColor = change >= 0 ? 3066993 : 15158332;
 			var changeSinceYesterdayString = change >= 0 ? "📈 Change Since Yesterday" : "📉 Change Since Yesterday";
 
-			var portfolioValue = "```" + $"Saxo    {Dkk(saxoBalance),12} DKK\nNordnet {Dkk(stockValue),12} DKK\nJune    {Dkk(fundValue),12} DKK\n" + "```";
+			var portfolioValue = "```" + $"Saxo    {Dkk(saxoBalance),12} DKK\nNordnet {Dkk(stockValue),12} DKK\nJune    {Dkk(juneValue),12} DKK\n" + "```";
 			var changeValue = "```diff\n" + $"{sign}{Dkk(change)} DKK ({sign}{changePct}%)" + "\n```";
-			var distributionValue = "```" + $"Saxo    {Math.Round((saxoBalance / total) * 100, 1),6}%\nNordnet {Math.Round((stockValue / total) * 100, 1),6}%\nJune    {Math.Round((fundValue / total) * 100, 1),6}%" + "```";
+			var distributionValue = "```" + $"Saxo    {Math.Round((saxoBalance / total) * 100, 1),6}%\nNordnet {Math.Round((stockValue / total) * 100, 1),6}%\nJune    {Math.Round((juneValue / total) * 100, 1),6}%" + "```";
 
 			return new
 			{

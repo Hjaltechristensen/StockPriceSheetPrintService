@@ -36,8 +36,8 @@ builder.Services.AddScoped<ISaxoAuthService, SaxoAuthService>();
 builder.Services.AddScoped<ISaxoTokenService, SaxoTokenService>(); 
 builder.Services.AddSingleton<IGoogleSheetsClient, UpdateCellAsync>();
 builder.Services.AddSingleton<IExecutionGuard, ExecutionGuard>();
-builder.Services.AddScoped<IFundPriceProvider, HtmlScraper>();
-builder.Services.AddHttpClient<FundNavClient>(client =>
+builder.Services.AddScoped<IHtmlScraper, HtmlScraper>();
+builder.Services.AddHttpClient<NavProvider>(client =>
 {
 	client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
 	client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
