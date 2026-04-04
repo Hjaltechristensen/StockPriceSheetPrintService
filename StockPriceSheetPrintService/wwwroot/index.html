@@ -101,6 +101,28 @@
       margin-top: 1rem;
       font-size: 0.9rem;
     }
+
+    @media (max-width: 600px) {
+      body { padding: 1rem; }
+
+      h1 { font-size: 1.1rem; margin-bottom: 1.25rem; }
+
+      .stats { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+
+      .stat-card { padding: 0.9rem 1rem; }
+
+      .stat-card .value { font-size: 1.15rem; }
+
+      .stat-card .sub { font-size: 0.75rem; }
+
+      .chart-container { padding: 1rem; }
+
+      .period-buttons button {
+        flex: 1;
+        padding: 0.6rem 0;
+        font-size: 0.85rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -144,6 +166,11 @@
   <script>
     const fmt = new Intl.NumberFormat("da-DK", { style: "currency", currency: "DKK", maximumFractionDigits: 0 });
     const fmtPct = v => (v >= 0 ? "+" : "") + v.toFixed(2) + " %";
+    const fmtAxis = v => {
+      if (Math.abs(v) >= 1e6) return (v / 1e6).toLocaleString("da-DK", { maximumFractionDigits: 1 }) + "M";
+      if (Math.abs(v) >= 1e3) return (v / 1e3).toLocaleString("da-DK", { maximumFractionDigits: 0 }) + "k";
+      return v.toString();
+    };
 
     function colorClass(v) { return v > 0 ? "positive" : v < 0 ? "negative" : "neutral"; }
 
@@ -213,7 +240,7 @@
             y: {
               ticks: {
                 color: "#64748b",
-                callback: v => fmt.format(v)
+                callback: v => fmtAxis(v)
               },
               grid: { color: "#1a2233" }
             }
