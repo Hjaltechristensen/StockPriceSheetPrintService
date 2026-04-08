@@ -7,13 +7,13 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 	[Route("saxo")]
 	public class SaxoAuthController : ControllerBase
 	{
-		private readonly ISaxoAuthService _saxoAuthService;
+		private readonly ISaxoService _saxoAuthService;
 		private readonly ITokenStore _tokenStore;
 		private readonly ISaxoTokenService _saxoTokenService;
 		private readonly IPortfolioJobRunner _jobRunner;
 		private readonly ILogger<SaxoAuthController> _logger;
 
-		public SaxoAuthController(ISaxoAuthService saxoAuthService, ITokenStore tokenStore, ISaxoTokenService saxoTokenService, IPortfolioJobRunner jobRunner, ILogger<SaxoAuthController> logger)
+		public SaxoAuthController(ISaxoService saxoAuthService, ITokenStore tokenStore, ISaxoTokenService saxoTokenService, IPortfolioJobRunner jobRunner, ILogger<SaxoAuthController> logger)
 		{
 			_saxoAuthService = saxoAuthService;
 			_tokenStore = tokenStore;
