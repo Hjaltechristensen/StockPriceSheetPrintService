@@ -22,7 +22,7 @@ namespace StockPriceSheetPrintService.Outbound.Filesystem
 			return entries.Select(e => e.BookingId).ToHashSet();
 		}
 
-		public async Task SaveAsync(HashSet<string> existingIds, IEnumerable<string> newIds, CancellationToken ct)
+		public async Task SaveAsync(IEnumerable<string> newIds, CancellationToken ct)
 		{
 			var cutoff = DateTime.UtcNow - Retention;
 

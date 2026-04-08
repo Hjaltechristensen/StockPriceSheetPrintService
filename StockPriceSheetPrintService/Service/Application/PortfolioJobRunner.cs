@@ -1,5 +1,4 @@
-﻿using StockPriceSheetPrintService.Outbound.Filesystem;
-using StockPriceSheetPrintService.Service.Models;
+﻿using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Ports;
 using System.Globalization;
 using System.Text.Json;
@@ -75,7 +74,14 @@ namespace StockPriceSheetPrintService.Service.Application
 					
 					if (IsInTransferWindow())
 					{
-						newTransfers = await CheckForNewTransfersAsync(saxoToken, ct);
+						try
+						{
+							newTransfers = await CheckForNewTransfersAsync(saxoToken, ct);
+						}
+						catch (Exception ex)
+						{
+							_logger.LogWarning(ex, "[TRANSFERS] Kunne ikke hente transfers, fortsætter uden.");
+						}
 					}
 				}
 				else
@@ -147,7 +153,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				.ToList();
 
 			if (newTransfers.Count > 0)
-				await _seenTransferStore.SaveAsync(seenIds, newTransfers.Select(t => t.BookingId), ct);
+				await _seenTransferStore.SaveAsync(newTransfers.Select(t => t.BookingId), ct);
 
 			return newTransfers;
 		}
@@ -206,7 +212,7 @@ namespace StockPriceSheetPrintService.Service.Application
 			decimal total, decimal dayBeforeValue,
 			bool sendDiscordImmediately, List<SaxoTransaction> newTransfers, CancellationToken ct)
 		{
-			var transferAmount = newTransfers?.Any() == true ? newTransfers.Sum(t => t.BookedAmount) : (decimal?)null;
+			var transferAmount = newTransfers.Count > 0 ? newTransfers.Sum(t => t.BookedAmount) : (decimal?)null;
 
 			if (sendDiscordImmediately)
 			{

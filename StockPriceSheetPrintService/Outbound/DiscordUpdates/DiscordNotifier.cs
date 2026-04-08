@@ -39,7 +39,7 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 			var portfolioValue = "```" + $"Saxo    {Dkk(saxoBalance),12} DKK\nNordnet {Dkk(stockValue),12} DKK\nJune    {Dkk(juneValue),12} DKK\n" + "```";
 			var changeValue = "```diff\n" + $"{sign}{Dkk(change)} DKK ({sign}{changePct}%)" + "\n```";
 			if (lastTransferAmount.HasValue)
-				changeValue += $"*⚠️ Inkluderer seneste indskud på {Dkk(lastTransferAmount.Value)} DKK*";
+				changeValue += $"\n*⚠️ Inkluderer seneste indskud på {Dkk(lastTransferAmount.Value)} DKK*";
 
 			var distributionValue = "```" + $"Saxo    {Math.Round((saxoBalance / total) * 100, 1),6}%\nNordnet {Math.Round((stockValue / total) * 100, 1),6}%\nJune    {Math.Round((juneValue / total) * 100, 1),6}%" + "```";
 

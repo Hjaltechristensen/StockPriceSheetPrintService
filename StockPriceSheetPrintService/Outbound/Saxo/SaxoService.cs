@@ -119,7 +119,8 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 			}
 
 			using var doc = JsonDocument.Parse(json);
-			_clientKey = doc.RootElement.GetProperty("ClientKey").GetString();
+			_clientKey = doc.RootElement.GetProperty("ClientKey").GetString()
+				?? throw new InvalidOperationException("ClientKey mangler i Saxo /clients/me response.");
 			return _clientKey;
 		}
 	}
