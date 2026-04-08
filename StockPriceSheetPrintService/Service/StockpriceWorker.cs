@@ -5,13 +5,13 @@ namespace StockPriceSheetPrintService.Service
 	public class StockpriceWorker(
 		ILogger<StockpriceWorker> logger,
 		ISaxoTokenService saxoTokenService,
-		ISaxoAuthService saxoAuthService,
+		ISaxoService saxoAuthService,
 		ITokenStore tokenStore,
 		IPortfolioJobRunner jobRunner) : BackgroundService
 	{
 		private readonly ILogger<StockpriceWorker> _logger = logger;
 		private readonly ISaxoTokenService _saxoTokenService = saxoTokenService;
-		private readonly ISaxoAuthService _saxoAuthService = saxoAuthService;
+		private readonly ISaxoService _saxoAuthService = saxoAuthService;
 		private readonly ITokenStore _tokenStore = tokenStore;
 		private readonly IPortfolioJobRunner _jobRunner = jobRunner;
 

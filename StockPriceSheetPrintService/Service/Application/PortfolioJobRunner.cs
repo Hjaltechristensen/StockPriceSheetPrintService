@@ -14,7 +14,9 @@ namespace StockPriceSheetPrintService.Service.Application
 		PortfolioCalculator portfolioCalculator,
 		IGoogleSheetsClient googleSheetsClient,
 		IDiscordNotifier discordNotifier,
-		ISaxoTokenService saxoTokenService) : IPortfolioJobRunner
+		ISaxoTokenService saxoTokenService,
+		ISaxoService saxoService,
+		ISeenTransferStore seenTransferStore) : IPortfolioJobRunner
 	{
 		private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 		private readonly ILogger<PortfolioJobRunner> _logger = logger;
@@ -24,12 +26,21 @@ namespace StockPriceSheetPrintService.Service.Application
 		private readonly IGoogleSheetsClient _googleSheetsClient = googleSheetsClient;
 		private readonly IDiscordNotifier _discordNotifier = discordNotifier;
 		private readonly ISaxoTokenService _saxoTokenService = saxoTokenService;
+		private readonly ISaxoService _saxoService = saxoService;
+		private readonly ISeenTransferStore _seenTransferStore = seenTransferStore;
 
 		private static readonly JsonSerializerOptions JsonOptions = new()
 		{
 			PropertyNameCaseInsensitive = true,
 			Converters = { new FlexibleDateTimeOffsetConverter() }
 		};
+
+		private static bool IsInTransferWindow()
+		{
+			var today = DateTime.UtcNow;
+			return today.Day >= 28 || today.Day <= 10;
+		}
+
 
 		public async Task RunJobAsync(CancellationToken ct, bool sendDiscordImmediately = false)
 		{
@@ -50,6 +61,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				decimal stockValue = 0m;
 				decimal juneValue = 0m;
 				string runningTotal = "=";
+				List<SaxoTransaction> newTransfers = [];
 
 				// --- 1. SAXO BALANCE ---
 				_logger.LogInformation("[JOB] [1/4] Starter Saxo balance hentning...");
@@ -59,6 +71,18 @@ namespace StockPriceSheetPrintService.Service.Application
 					saxoBalance = await GetSaxoBalanceAsync(saxoToken, ct);
 					runningTotal += "+" + saxoBalance.ToString(new CultureInfo("da-DK"));
 					_logger.LogInformation("[JOB] ✓ Saxo balance: {val:F2} DKK", saxoBalance);
+					
+					if (IsInTransferWindow())
+					{
+						try
+						{
+							newTransfers = await CheckForNewTransfersAsync(saxoToken, ct);
+						}
+						catch (Exception ex)
+						{
+							_logger.LogWarning(ex, "[TRANSFERS] Kunne ikke hente transfers, fortsætter uden.");
+						}
+					}
 				}
 				else
 				{
@@ -103,7 +127,7 @@ namespace StockPriceSheetPrintService.Service.Application
 
 				var total = ParseRunningTotal(runningTotal);
 
-				await HandleDiscordNotificationAsync(saxoBalance, stockValue, juneValue, total, dayBeforeValue, sendDiscordImmediately, ct);
+				await HandleDiscordNotificationAsync(saxoBalance, stockValue, juneValue, total, dayBeforeValue, sendDiscordImmediately, newTransfers, ct);
 
 				LogJobCompleted(total);
 			}
@@ -116,27 +140,34 @@ namespace StockPriceSheetPrintService.Service.Application
 			}
 		}
 
+		private async Task<List<SaxoTransaction>> CheckForNewTransfersAsync(string accessToken, CancellationToken ct)
+		{
+			var fromDate = DateTime.UtcNow.AddDays(-14);
+			var toDate = DateTime.UtcNow;
+
+			var response = await _saxoService.GetSaxoTransactionsAsync(accessToken, fromDate, toDate, ct);
+			var seenIds = await _seenTransferStore.LoadAsync(ct);
+
+			var newTransfers = response.Data
+				.Where(t => !seenIds.Contains(t.BookingId))
+				.ToList();
+
+			if (newTransfers.Count > 0)
+				await _seenTransferStore.SaveAsync(newTransfers.Select(t => t.BookingId), ct);
+
+			return newTransfers;
+		}
 		private async Task<decimal> GetSaxoBalanceAsync(string accessToken, CancellationToken ct)
 		{
 			try
 			{
-				var client = _httpClientFactory.CreateClient();
-				client.DefaultRequestHeaders.Authorization =
-					new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
-
-				var response = await client.GetAsync("https://gateway.saxobank.com/openapi/port/v1/balances/me", ct);
-
-				if (response.IsSuccessStatusCode)
+				var response = await _saxoService.GetBalanceAsync(accessToken, ct);
+				
+				if (response is not null)
 				{
-					var json = await response.Content.ReadAsStringAsync(ct);
-					using var doc = JsonDocument.Parse(json);
-					return doc.RootElement.GetProperty("TotalValue").GetDecimal();
+					return response.TotalValue;
 				}
-
-				var errorContent = await response.Content.ReadAsStringAsync(ct);
-				_logger.LogError("[SAXO-BALANCE] ✗ Status: {status}, Response: {response}",
-					(int)response.StatusCode, errorContent);
-				return 0;
+				return 0m;
 			}
 			catch (Exception ex)
 			{
@@ -179,14 +210,16 @@ namespace StockPriceSheetPrintService.Service.Application
 		private async Task HandleDiscordNotificationAsync(
 			decimal saxoBalance, decimal stockValue, decimal juneValue,
 			decimal total, decimal dayBeforeValue,
-			bool sendDiscordImmediately, CancellationToken ct)
+			bool sendDiscordImmediately, List<SaxoTransaction> newTransfers, CancellationToken ct)
 		{
+			var transferAmount = newTransfers.Count > 0 ? newTransfers.Sum(t => t.BookedAmount) : (decimal?)null;
+
 			if (sendDiscordImmediately)
 			{
 				_logger.LogInformation("[DISCORD] Manuel trigger - sender Discord notifikation nu");
 				try
 				{
-					await _discordNotifier.SendMorningReportAsync(saxoBalance, stockValue, juneValue, total, dayBeforeValue, ct);
+					await _discordNotifier.SendMorningReportAsync(saxoBalance, stockValue, juneValue, total, dayBeforeValue, transferAmount, ct);
 					_logger.LogInformation("[DISCORD] Morning report sendt kl. {time} UTC", DateTime.UtcNow);
 				}
 				catch (Exception ex)
@@ -211,7 +244,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				try
 				{
 					await Task.Delay(delay, CancellationToken.None);
-					await _discordNotifier.SendMorningReportAsync(saxoBalance, stockValue, juneValue, total, dayBeforeValue, CancellationToken.None);
+					await _discordNotifier.SendMorningReportAsync(saxoBalance, stockValue, juneValue, total, dayBeforeValue, transferAmount, CancellationToken.None);
 					_logger.LogInformation("[DISCORD] Morning report sendt kl. {time} UTC", DateTime.UtcNow);
 				}
 				catch (OperationCanceledException)
