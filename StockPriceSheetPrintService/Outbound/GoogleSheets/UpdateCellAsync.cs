@@ -50,8 +50,7 @@ namespace StockPriceSheetPrintService.Outbound.GoogleSheets
 				if (dateStr is null || valueStr is null) continue;
 
 				// Med UNFORMATTED_VALUE returneres datoer som serienumre (double)
-				DateOnly date;
-				if (!DateOnly.TryParseExact(dateStr, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out date))
+				if (!DateOnly.TryParseExact(dateStr, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out DateOnly date))
 				{
 					if (!double.TryParse(dateStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var serial))
 						continue;
@@ -104,7 +103,7 @@ namespace StockPriceSheetPrintService.Outbound.GoogleSheets
 
 			var updateRequest = service.Spreadsheets.Values.Update(valueRange, spreadsheetId, updateRange);
 			updateRequest.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.USERENTERED;
-			await updateRequest.ExecuteAsync();
+			await updateRequest.ExecuteAsync(ct);
 
 			_logger.LogInformation("[SHEETS] ✓ Værdi {value} skrevet til {range}", totalValue, updateRange);
 			return dayBeforeValue;

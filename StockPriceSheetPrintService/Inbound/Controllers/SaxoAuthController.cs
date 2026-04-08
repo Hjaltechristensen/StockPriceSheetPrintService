@@ -71,5 +71,14 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 			await _saxoTokenService.GetAccessTokenAsync(ct);
 			return Ok(new { Message = "Token refresh gennemført." });
 		}
+
+		[HttpPost("getAccessToken")]
+		public async Task<IActionResult> GetAccessTokenAsync(CancellationToken ct)
+		{
+			var accessToken = await _saxoTokenService.GetAccessTokenAsync(ct);
+			if (accessToken == null)
+				return NotFound(new { Message = "Ingen gyldig access token fundet. Log ind via /saxo/login" });
+			return Ok(new { AccessToken = accessToken });
+		}
 	}
 }
