@@ -7,15 +7,26 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 	{
 		private readonly HttpClient _httpClient;
 		private readonly IConfiguration _configuration;
+		private readonly ILogger<DiscordNotifier> _logger;
 		private readonly string _webhookUrl;
 		private readonly string _webhookUrlLogin;
 
-		public DiscordNotifier(HttpClient httpClient, IConfiguration configuration)
+		private const int EmbedColorPositive = 3066993; // Green
+		private const int EmbedColorNegative = 15158332; // Red
+		private const int EmbedColorStats = 10181046; // Purple
+
+		public DiscordNotifier(HttpClient httpClient, IConfiguration configuration, ILogger<DiscordNotifier> logger)
 		{
 			_httpClient = httpClient;
 			_configuration = configuration;
+			_logger = logger;
 			_webhookUrl = _configuration["Discord:Webhook"] ?? string.Empty;
 			_webhookUrlLogin = _configuration["Discord:WebhookLogin"] ?? string.Empty;
+
+			if (string.IsNullOrEmpty(_webhookUrl))
+				_logger.LogWarning("[DISCORD] Discord:Webhook configuration missing");
+			if (string.IsNullOrEmpty(_webhookUrlLogin))
+				_logger.LogWarning("[DISCORD] Discord:WebhookLogin configuration missing");
 		}
 
 		public async Task SendMorningReportAsync(decimal saxoBalance, decimal stockValue, decimal juneValue, decimal total, decimal dayBeforeValue, decimal? lastTransferAmount, CancellationToken stoppingToken)
@@ -26,13 +37,32 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 
 		private async Task PublishDiscordMessage(string webhook, object payload, CancellationToken stoppingToken)
 		{
-			if (string.IsNullOrWhiteSpace(webhook))
-				return;
+if (string.IsNullOrWhiteSpace(webhook))
+{
+    _logger.LogWarning("[DISCORD] Webhook URL is empty, skipping message");
+    return;
+}
 
-			await _httpClient.PostAsJsonAsync(webhook, payload, cancellationToken: stoppingToken);
+try
+{
+    await _httpClient.PostAsJsonAsync(webhook, payload, cancellationToken: stoppingToken);
+    _logger.LogInformation("[DISCORD] Message sent successfully");
+}
+catch (HttpRequestException ex)
+{
+    _logger.LogError(ex, "[DISCORD] Failed to send message to Discord API");
+}
+catch (OperationCanceledException ex)
+{
+    _logger.LogError(ex, "[DISCORD] Message send was cancelled");
+}
+catch (Exception ex)
+{
+    _logger.LogError(ex, "[DISCORD] Unexpected error while sending message");
+}
 		}
 
-		public async Task BuildLoginUrlAsync(string loginUrl, CancellationToken stoppingToken)
+		public async Task SendLoginUrlAsync(string loginUrl, CancellationToken stoppingToken)
 		{
 			var payload = new
 			{
@@ -62,7 +92,7 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 			var change = total - dayBeforeValue;
 			var changePct = Math.Round((change / dayBeforeValue) * 100, 2);
 			var sign = change >= 0 ? "+" : "";
-			var embedColor = change >= 0 ? 3066993 : 15158332;
+			var embedColor = change >= 0 ? EmbedColorPositive : EmbedColorNegative;
 			var changeSinceYesterdayString = change >= 0 ? "📈 Change Since Yesterday" : "📉 Change Since Yesterday";
 
 			var portfolioValue = "```" + $"Saxo    {Dkk(saxoBalance),12} DKK\nNordnet {Dkk(stockValue),12} DKK\nJune    {Dkk(juneValue),12} DKK\n" + "```";
@@ -87,12 +117,12 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 							new { name = "💰 Total Value", value = $"||**{Dkk(total)} DKK**||", inline = false },
 							new { name = changeSinceYesterdayString, value = changeValue, inline = false }
 						},
-						timestamp = DateTime.UtcNow
+						timestamp = DateTime.UtcNow.ToString("o")
 					},
 					new
 					{
 						title = "📊 Portfolio Stats",
-						color = 10181046,
+						color = EmbedColorStats,
 						fields = new[]
 						{
 							new { name = "Distribution", value = distributionValue, inline = false }

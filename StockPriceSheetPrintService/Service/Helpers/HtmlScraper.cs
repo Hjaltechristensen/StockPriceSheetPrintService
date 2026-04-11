@@ -1,5 +1,5 @@
 ﻿using StockPriceSheetPrintService.Service.Models;
-using StockPriceSheetPrintService.Service.Ports;
+using StockPriceSheetPrintService.Service.Ports.Outbound;
 
 namespace StockPriceSheetPrintService.Service.Helpers
 {

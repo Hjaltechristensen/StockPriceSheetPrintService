@@ -8,9 +8,9 @@ using StockPriceSheetPrintService.Outbound.Saxo;
 using StockPriceSheetPrintService.Service;
 using StockPriceSheetPrintService.Service.Application;
 using StockPriceSheetPrintService.Service.Helpers;
-using StockPriceSheetPrintService.Service.Ports;
 using StockPriceSheetPrintService.Service.Ports.Inbound;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
+using StockPriceSheetPrintService.Service.Ports.Persistence;
 
 var errorWebhook = Environment.GetEnvironmentVariable("Discord__WebhookError")
 	?? throw new InvalidOperationException("Discord:WebhookError missing");
@@ -34,9 +34,12 @@ builder.Services.AddHostedService<StockpriceWorker>();
 builder.Services.AddHttpClient<IDiscordNotifier, DiscordNotifier>();
 builder.Services.AddScoped<PortfolioCalculator>();
 builder.Services.AddScoped<IPortfolioJobRunner, PortfolioJobRunner>();
+builder.Services.AddScoped<IPortfolioDataFetcher, PortfolioDataFetcher>();
+builder.Services.AddScoped<IPortfolioReporter, PortfolioReporter>();
 builder.Services.AddScoped<ITokenStore, EncryptedFileTokenStore>();
 builder.Services.AddScoped<ISeenTransferStore, SeenTransferStore>();
-builder.Services.AddScoped<ISaxoService, SaxoService>();
+builder.Services.AddScoped<ISaxoAuthService, SaxoService>();
+builder.Services.AddScoped<ISaxoAccountService, SaxoService>();
 builder.Services.AddScoped<ISaxoTokenService, SaxoTokenService>(); 
 builder.Services.AddSingleton<IGoogleSheetsClient, UpdateCellAsync>();
 builder.Services.AddSingleton<IExecutionGuard, ExecutionGuard>();

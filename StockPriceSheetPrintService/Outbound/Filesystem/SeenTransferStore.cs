@@ -1,4 +1,4 @@
-﻿using StockPriceSheetPrintService.Service.Ports;
+﻿using StockPriceSheetPrintService.Service.Ports.Persistence;
 using System.Text.Json;
 
 namespace StockPriceSheetPrintService.Outbound.Filesystem
