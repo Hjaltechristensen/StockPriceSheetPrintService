@@ -1,12 +1,11 @@
 ﻿using StockPriceSheetPrintService.Service.Models;
-using StockPriceSheetPrintService.Service.Ports;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Net.Http.Headers;
 using System.Text.Json;
 
 namespace StockPriceSheetPrintService.Outbound.Saxo
 {
-	public class SaxoService(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<SaxoService> logger, IDiscordNotifier discordNotifier) : ISaxoService
+	public class SaxoService(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<SaxoService> logger, IDiscordNotifier discordNotifier) : ISaxoAuthService, ISaxoAccountService
 	{
 		private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 		private readonly ILogger<SaxoService> _logger = logger;
@@ -27,7 +26,7 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 		public async Task<string> BuildLoginUrl()
 		{
 			var loginUrl = $"{_authEndpoint}?client_id={_appKey}&response_type=code&redirect_uri={Uri.EscapeDataString(_redirectUrl)}";
-			await _discordNotifier.BuildLoginUrlAsync(loginUrl, CancellationToken.None);
+			await _discordNotifier.SendLoginUrlAsync(loginUrl, CancellationToken.None);
 			return loginUrl;
 		}
 

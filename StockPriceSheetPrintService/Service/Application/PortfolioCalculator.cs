@@ -1,5 +1,5 @@
 ﻿using StockPriceSheetPrintService.Service.Models;
-using StockPriceSheetPrintService.Service.Ports;
+using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Globalization;
 using System.Xml.Linq;
 

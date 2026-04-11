@@ -1,18 +1,19 @@
-using StockPriceSheetPrintService.Service.Ports;
 using StockPriceSheetPrintService.Service.Ports.Inbound;
+using StockPriceSheetPrintService.Service.Ports.Outbound;
+using StockPriceSheetPrintService.Service.Ports.Persistence;
 
 namespace StockPriceSheetPrintService.Service
 {
 	public class StockpriceWorker(
 		ILogger<StockpriceWorker> logger,
 		ISaxoTokenService saxoTokenService,
-		ISaxoService saxoAuthService,
+		ISaxoAuthService saxoAuthService,
 		ITokenStore tokenStore,
 		IPortfolioJobRunner jobRunner) : BackgroundService
 	{
 		private readonly ILogger<StockpriceWorker> _logger = logger;
 		private readonly ISaxoTokenService _saxoTokenService = saxoTokenService;
-		private readonly ISaxoService _saxoAuthService = saxoAuthService;
+		private readonly ISaxoAuthService _saxoAuthService = saxoAuthService;
 		private readonly ITokenStore _tokenStore = tokenStore;
 		private readonly IPortfolioJobRunner _jobRunner = jobRunner;
 

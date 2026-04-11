@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using StockPriceSheetPrintService.Service.Ports;
 using StockPriceSheetPrintService.Service.Ports.Inbound;
+using StockPriceSheetPrintService.Service.Ports.Outbound;
+using StockPriceSheetPrintService.Service.Ports.Persistence;
 
 namespace StockPriceSheetPrintService.Inbound.Controllers
 {
@@ -8,15 +9,17 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 	[Route("saxo")]
 	public class SaxoAuthController : ControllerBase
 	{
-		private readonly ISaxoService _saxoAuthService;
+		private readonly ISaxoAuthService _saxoAuthService;
+		private readonly ISaxoAccountService _saxoAccountService;
 		private readonly ITokenStore _tokenStore;
 		private readonly ISaxoTokenService _saxoTokenService;
 		private readonly IPortfolioJobRunner _jobRunner;
 		private readonly ILogger<SaxoAuthController> _logger;
 
-		public SaxoAuthController(ISaxoService saxoAuthService, ITokenStore tokenStore, ISaxoTokenService saxoTokenService, IPortfolioJobRunner jobRunner, ILogger<SaxoAuthController> logger)
+		public SaxoAuthController(ISaxoAuthService saxoAuthService, ISaxoAccountService saxoAccountService, ITokenStore tokenStore, ISaxoTokenService saxoTokenService, IPortfolioJobRunner jobRunner, ILogger<SaxoAuthController> logger)
 		{
 			_saxoAuthService = saxoAuthService;
+			_saxoAccountService = saxoAccountService;
 			_tokenStore = tokenStore;
 			_saxoTokenService = saxoTokenService;
 			_jobRunner = jobRunner;
@@ -42,13 +45,13 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 			{
 				var tokens = await _saxoAuthService.ExchangeCodeForTokensAsync(code, ct);
 				await _tokenStore.SaveRefreshTokenAsync(tokens.RefreshToken, ct);
-				var balance = await _saxoAuthService.GetBalanceAsync(tokens.AccessToken, ct);
+				var balance = await _saxoAccountService.GetBalanceAsync(tokens.AccessToken, ct);
 
 				return Ok(new
 				{
 					Message = "Alt er sat op! Din worker vil nu køre automatisk.",
-					Værdi = balance.TotalValue,
-					Valuta = balance.Currency,
+					Værdi = balance?.TotalValue,
+					Valuta = balance?.Currency,
 					NextRunTime = "Check logs for næste planlagte kørsel"
 				});
 			}
@@ -69,7 +72,8 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 		[HttpPost("refreshToken")]
 		public async Task<IActionResult> RefreshSaxoAccessTokenAsync(CancellationToken ct)
 		{
-			await _saxoTokenService.GetAccessTokenAsync(ct);
+			var accessToken = await _saxoTokenService.GetAccessTokenAsync(ct);
+			if (accessToken == null) return NotFound(new { Message = "Ingen gyldig access token fundet. Log ind via /saxo/login" });
 			return Ok(new { Message = "Token refresh gennemført." });
 		}
 

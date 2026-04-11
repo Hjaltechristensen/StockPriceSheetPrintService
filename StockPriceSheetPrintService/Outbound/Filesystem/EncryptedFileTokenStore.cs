@@ -1,5 +1,5 @@
 ﻿using StockPriceSheetPrintService.Service.Helpers;
-using StockPriceSheetPrintService.Service.Ports;
+using StockPriceSheetPrintService.Service.Ports.Persistence;
 
 namespace StockPriceSheetPrintService.Outbound.Filesystem
 {

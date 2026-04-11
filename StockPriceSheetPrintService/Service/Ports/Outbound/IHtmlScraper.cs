@@ -1,6 +1,6 @@
-﻿using StockPriceSheetPrintService.Service.Models;
+using StockPriceSheetPrintService.Service.Models;
 
-namespace StockPriceSheetPrintService.Service.Ports
+namespace StockPriceSheetPrintService.Service.Ports.Outbound
 {
 	public interface IHtmlScraper
 	{
