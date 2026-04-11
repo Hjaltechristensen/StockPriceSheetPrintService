@@ -50,17 +50,17 @@ namespace StockPriceSheetPrintService.Service.Application
 
 				_ = Task.Run(async () =>
 				{
-					await Task.Delay(delayUntilReport, ct);
+					await Task.Delay(delayUntilReport, CancellationToken.None);
 					try
 					{
-						await _discordNotifier.SendMorningReportAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, transferAmount, ct);
+						await _discordNotifier.SendMorningReportAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, transferAmount, CancellationToken.None);
 						_logger.LogInformation("[REPORTER] Morning report sent at {time} UTC", DateTime.UtcNow);
 					}
 					catch (Exception ex)
 					{
 						_logger.LogError(ex, "[REPORTER] Failed to send scheduled report");
 					}
-				}, ct);
+				}, CancellationToken.None);
 			}
 			catch (Exception ex)
 			{
@@ -72,12 +72,12 @@ namespace StockPriceSheetPrintService.Service.Application
 		{
 			try
 			{
-				var spreadsheetId = _configuration["GoogleSheets:SpreadsheetId"];
-				var sheetName = _configuration["GoogleSheets:SheetName"];
+				var spreadsheetId = _configuration["SheetsApi:SheetsKey"];
+				const string sheetName = "Daily";
 
-				if (string.IsNullOrEmpty(spreadsheetId) || string.IsNullOrEmpty(sheetName))
+				if (string.IsNullOrEmpty(spreadsheetId))
 				{
-					_logger.LogWarning("[REPORTER] Google Sheets configuration missing, skipping update");
+					_logger.LogWarning("[REPORTER] SheetsApi:SheetsKey configuration missing, skipping update");
 					return;
 				}
 

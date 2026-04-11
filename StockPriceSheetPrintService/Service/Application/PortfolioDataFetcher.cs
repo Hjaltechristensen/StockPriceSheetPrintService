@@ -144,12 +144,12 @@ namespace StockPriceSheetPrintService.Service.Application
 		{
 			try
 			{
-				var spreadsheetId = _configuration["GoogleSheets:SpreadsheetId"];
-				var sheetName = _configuration["GoogleSheets:SheetName"];
+				var spreadsheetId = _configuration["SheetsApi:SheetsKey"];
+				const string sheetName = "Daily";
 
-				if (string.IsNullOrEmpty(spreadsheetId) || string.IsNullOrEmpty(sheetName))
+				if (string.IsNullOrEmpty(spreadsheetId))
 				{
-					_logger.LogWarning("[FETCHER] Google Sheets configuration missing, cannot fetch previous day value");
+					_logger.LogWarning("[FETCHER] SheetsApi:SheetsKey configuration missing, cannot fetch previous day value");
 					return 0m;
 				}
 
