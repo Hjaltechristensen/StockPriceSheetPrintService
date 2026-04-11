@@ -59,6 +59,7 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 			catch (Exception ex)
 			{
 				_logger.LogError(ex, "[SAXO-TOKEN] Uventet fejl under token refresh");
+				await _service.BuildLoginUrl();
 				return null;
 			}
 		}
