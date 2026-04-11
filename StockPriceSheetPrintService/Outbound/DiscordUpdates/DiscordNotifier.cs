@@ -26,6 +26,9 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 
 		private async Task PublishDiscordMessage(string webhook, object payload, CancellationToken stoppingToken)
 		{
+			if (string.IsNullOrWhiteSpace(webhook))
+				return;
+
 			await _httpClient.PostAsJsonAsync(webhook, payload, cancellationToken: stoppingToken);
 		}
 

@@ -21,7 +21,16 @@ namespace StockPriceSheetPrintService.Outbound.Filesystem
 			}
 
 			var encrypted = await File.ReadAllTextAsync(TokenPath, ct);
-			return TokenEncryptor.Decrypt(encrypted, _encryptionKey);
+			try
+			{
+				return TokenEncryptor.Decrypt(encrypted, _encryptionKey);
+			}
+			catch (FormatException ex)
+			{
+				_logger.LogWarning(ex, "[TOKEN-STORE] Korrupt token-fil (ugyldig base64) – sletter og kræver nyt login");
+				File.Delete(TokenPath);
+				return null;
+			}
 		}
 
 		public async Task SaveRefreshTokenAsync(string refreshToken, CancellationToken ct)
