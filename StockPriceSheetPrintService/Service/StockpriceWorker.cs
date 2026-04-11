@@ -7,14 +7,10 @@ namespace StockPriceSheetPrintService.Service
 	public class StockpriceWorker(
 		ILogger<StockpriceWorker> logger,
 		ISaxoTokenService saxoTokenService,
-		ISaxoAuthService saxoAuthService,
-		ITokenStore tokenStore,
 		IPortfolioJobRunner jobRunner) : BackgroundService
 	{
 		private readonly ILogger<StockpriceWorker> _logger = logger;
 		private readonly ISaxoTokenService _saxoTokenService = saxoTokenService;
-		private readonly ISaxoAuthService _saxoAuthService = saxoAuthService;
-		private readonly ITokenStore _tokenStore = tokenStore;
 		private readonly IPortfolioJobRunner _jobRunner = jobRunner;
 
 		protected override async Task ExecuteAsync(CancellationToken ct)
@@ -22,8 +18,6 @@ namespace StockPriceSheetPrintService.Service
 			_logger.LogInformation("╔═══════════════════════════════════════════╗");
 			_logger.LogInformation("║  STOCKPRIZE WORKER STARTET                ║");
 			_logger.LogInformation("╚═══════════════════════════════════════════╝");
-
-			ManualLoginIfNeeded();
 
 			_logger.LogInformation("[STARTUP] Udfører initial token refresh...");
 			await _saxoTokenService.GetAccessTokenAsync(ct);
@@ -75,22 +69,6 @@ namespace StockPriceSheetPrintService.Service
 					_logger.LogError(ex, "[SCHEDULER] ✗ UVENTET FEJL i scheduleren!");
 				}
 			}
-		}
-
-		private void ManualLoginIfNeeded()
-		{
-			if (_tokenStore.TokenExists())
-			{
-				_logger.LogInformation("Refresh token fundet – springer manuel login over.");
-				return;
-			}
-
-			var authUrl = _saxoAuthService.BuildLoginUrl();
-			_logger.LogWarning("Ingen refresh token fundet – manuel login kræves.");
-			Console.WriteLine("\n************************************************************");
-			Console.WriteLine("KOPIÉR DETTE LINK TIL DIN BROWSER FOR AT GIVE ADGANG:");
-			Console.WriteLine(authUrl);
-			Console.WriteLine("************************************************************\n");
 		}
 
 		public DateTimeOffset GetNextRunTime(int hour, int minute)

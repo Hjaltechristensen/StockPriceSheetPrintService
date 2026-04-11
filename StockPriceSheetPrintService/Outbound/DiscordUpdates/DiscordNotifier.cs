@@ -37,29 +37,29 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 
 		private async Task PublishDiscordMessage(string webhook, object payload, CancellationToken stoppingToken)
 		{
-			if (string.IsNullOrEmpty(webhook))
-			{
-				_logger.LogWarning("[DISCORD] Webhook URL is empty, skipping message");
-				return;
-			}
+if (string.IsNullOrWhiteSpace(webhook))
+{
+    _logger.LogWarning("[DISCORD] Webhook URL is empty, skipping message");
+    return;
+}
 
-			try
-			{
-				await _httpClient.PostAsJsonAsync(webhook, payload, cancellationToken: stoppingToken);
-				_logger.LogInformation("[DISCORD] Message sent successfully");
-			}
-			catch (HttpRequestException ex)
-			{
-				_logger.LogError(ex, "[DISCORD] Failed to send message to Discord API");
-			}
-			catch (OperationCanceledException ex)
-			{
-				_logger.LogError(ex, "[DISCORD] Message send was cancelled");
-			}
-			catch (Exception ex)
-			{
-				_logger.LogError(ex, "[DISCORD] Unexpected error while sending message");
-			}
+try
+{
+    await _httpClient.PostAsJsonAsync(webhook, payload, cancellationToken: stoppingToken);
+    _logger.LogInformation("[DISCORD] Message sent successfully");
+}
+catch (HttpRequestException ex)
+{
+    _logger.LogError(ex, "[DISCORD] Failed to send message to Discord API");
+}
+catch (OperationCanceledException ex)
+{
+    _logger.LogError(ex, "[DISCORD] Message send was cancelled");
+}
+catch (Exception ex)
+{
+    _logger.LogError(ex, "[DISCORD] Unexpected error while sending message");
+}
 		}
 
 		public async Task SendLoginUrlAsync(string loginUrl, CancellationToken stoppingToken)
