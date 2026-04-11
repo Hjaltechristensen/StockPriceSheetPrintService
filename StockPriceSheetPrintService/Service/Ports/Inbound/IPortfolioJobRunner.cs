@@ -1,4 +1,4 @@
-﻿namespace StockPriceSheetPrintService.Service.Ports
+﻿namespace StockPriceSheetPrintService.Service.Ports.Inbound
 {
 	public interface IPortfolioJobRunner
 	{

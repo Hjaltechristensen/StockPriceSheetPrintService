@@ -3,11 +3,14 @@ using Serilog.Events;
 using StockPriceSheetPrintService.Outbound.DiscordUpdates;
 using StockPriceSheetPrintService.Outbound.Filesystem;
 using StockPriceSheetPrintService.Outbound.GoogleSheets;
+using StockPriceSheetPrintService.Outbound.MarketStack;
 using StockPriceSheetPrintService.Outbound.Saxo;
 using StockPriceSheetPrintService.Service;
 using StockPriceSheetPrintService.Service.Application;
 using StockPriceSheetPrintService.Service.Helpers;
 using StockPriceSheetPrintService.Service.Ports;
+using StockPriceSheetPrintService.Service.Ports.Inbound;
+using StockPriceSheetPrintService.Service.Ports.Outbound;
 
 var errorWebhook = Environment.GetEnvironmentVariable("Discord__WebhookError")
 	?? throw new InvalidOperationException("Discord:WebhookError missing");
@@ -38,6 +41,7 @@ builder.Services.AddScoped<ISaxoTokenService, SaxoTokenService>();
 builder.Services.AddSingleton<IGoogleSheetsClient, UpdateCellAsync>();
 builder.Services.AddSingleton<IExecutionGuard, ExecutionGuard>();
 builder.Services.AddScoped<IHtmlScraper, HtmlScraper>();
+builder.Services.AddScoped<IMarketStackService, MarketStackService>();
 builder.Services.AddHttpClient<NavProvider>(client =>
 {
 	client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");

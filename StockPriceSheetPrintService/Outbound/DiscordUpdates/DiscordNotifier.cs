@@ -1,5 +1,4 @@
-using StockPriceSheetPrintService.Service.Models;
-using StockPriceSheetPrintService.Service.Ports;
+using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Globalization;
 
 namespace StockPriceSheetPrintService.Outbound.DiscordUpdates

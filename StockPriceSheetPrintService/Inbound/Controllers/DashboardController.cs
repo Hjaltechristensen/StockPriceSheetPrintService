@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using StockPriceSheetPrintService.Service.Ports;
+using StockPriceSheetPrintService.Service.Ports.Outbound;
 
 namespace StockPriceSheetPrintService.Inbound.Controllers
 {

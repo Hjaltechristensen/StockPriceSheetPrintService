@@ -2,7 +2,7 @@
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
 using Google.Apis.Sheets.v4.Data;
-using StockPriceSheetPrintService.Service.Ports;
+using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Globalization;
 
 namespace StockPriceSheetPrintService.Outbound.GoogleSheets
