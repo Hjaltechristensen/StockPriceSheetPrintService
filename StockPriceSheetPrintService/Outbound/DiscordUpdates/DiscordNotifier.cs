@@ -8,18 +8,45 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 		private readonly HttpClient _httpClient;
 		private readonly IConfiguration _configuration;
 		private readonly string _webhookUrl;
+		private readonly string _webhookUrlLogin;
 
 		public DiscordNotifier(HttpClient httpClient, IConfiguration configuration)
 		{
 			_httpClient = httpClient;
 			_configuration = configuration;
 			_webhookUrl = _configuration["Discord:Webhook"] ?? string.Empty;
+			_webhookUrlLogin = _configuration["Discord:WebhookLogin"] ?? string.Empty;
 		}
 
 		public async Task SendMorningReportAsync(decimal saxoBalance, decimal stockValue, decimal juneValue, decimal total, decimal dayBeforeValue, decimal? lastTransferAmount, CancellationToken stoppingToken)
 		{
 			var payload = BuildPayload(saxoBalance, stockValue, juneValue, total, dayBeforeValue, lastTransferAmount);
-			await _httpClient.PostAsJsonAsync(_webhookUrl, payload, cancellationToken: stoppingToken);
+			await PublishDiscordMessage(_webhookUrl, payload, stoppingToken);
+		}
+
+		private async Task PublishDiscordMessage(string webhook, object payload, CancellationToken stoppingToken)
+		{
+			await _httpClient.PostAsJsonAsync(webhook, payload, cancellationToken: stoppingToken);
+		}
+
+		public async Task BuildLoginUrlAsync(string loginUrl, CancellationToken stoppingToken)
+		{
+			var payload = new
+			{
+				embeds = new[]
+				{
+					new
+					{
+						title = "Saxo token udløbet",
+						description = $"Refresh token er blevet invalideret — sandsynligvis pga. Saxo vedligeholdelse. Manuel genautentificering er påkrævet.\n\n[**› Log ind hos Saxo**]({loginUrl})",
+						color = 0xED4245,
+						footer = new { text = "StockPriceSheetPrintService" },
+						timestamp = DateTime.UtcNow.ToString("o")
+					}
+				}
+			};
+
+			await PublishDiscordMessage(_webhookUrlLogin, payload, stoppingToken);
 		}
 
 		static string Dkk(decimal value)

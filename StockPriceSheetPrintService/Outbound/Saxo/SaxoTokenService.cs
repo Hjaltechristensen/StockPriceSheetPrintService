@@ -3,11 +3,12 @@ using System.Text.Json;
 
 namespace StockPriceSheetPrintService.Outbound.Saxo
 {
-	public class SaxoTokenService(ILogger<SaxoTokenService> logger, IConfiguration configuration, IHttpClientFactory httpClientFactory, ITokenStore tokenStore) : ISaxoTokenService
+	public class SaxoTokenService(ILogger<SaxoTokenService> logger, IConfiguration configuration, IHttpClientFactory httpClientFactory, ITokenStore tokenStore, ISaxoService saxoService) : ISaxoTokenService
 	{
 		private readonly ILogger<SaxoTokenService> _logger = logger;
 		private readonly ITokenStore _tokenStore = tokenStore;
 		private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
+		private readonly ISaxoService _service = saxoService;
 		private readonly string _appKey = configuration["Saxo:AppKey"] ?? throw new InvalidOperationException("Saxo:AppKey missing");
 		private readonly string _appSecret = configuration["Saxo:AppSecret"] ?? throw new InvalidOperationException("Saxo:AppSecret missing");
 		private readonly string _tokenEndpoint = configuration["Saxo:TokenEndpoint"] ?? throw new InvalidOperationException("Saxo:TokenEndpoint missing");
@@ -17,6 +18,7 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 			if (!_tokenStore.TokenExists())
 			{
 				_logger.LogWarning("[SAXO-TOKEN] Ingen refresh token fundet – log ind via /saxo/login");
+				await _service.BuildLoginUrl();
 				return null;
 			}
 
@@ -41,6 +43,7 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 				{
 					_logger.LogError("[SAXO-TOKEN] Saxo afviste refresh token. Status: {status}, Body: {body}",
 						(int)response.StatusCode, responseBody);
+					await _service.BuildLoginUrl();
 					return null;
 				}
 

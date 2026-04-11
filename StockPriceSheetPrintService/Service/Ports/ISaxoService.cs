@@ -7,6 +7,6 @@ namespace StockPriceSheetPrintService.Service.Ports
 		Task<SaxoTokenResult> ExchangeCodeForTokensAsync(string code, CancellationToken ct);
 		Task<SaxoBalanceResponse?> GetBalanceAsync(string accessToken, CancellationToken ct);
 		Task<SaxoTransactionsResponse> GetSaxoTransactionsAsync(string accessToken, DateTime fromDate, DateTime toDate, CancellationToken ct);
-		string BuildLoginUrl();
+		Task<string> BuildLoginUrl();
 	}
 }
