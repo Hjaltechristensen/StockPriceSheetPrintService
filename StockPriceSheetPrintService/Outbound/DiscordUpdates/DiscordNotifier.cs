@@ -37,29 +37,29 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 
 		private async Task PublishDiscordMessage(string webhook, object payload, CancellationToken stoppingToken)
 		{
-if (string.IsNullOrWhiteSpace(webhook))
-{
-    _logger.LogWarning("[DISCORD] Webhook URL is empty, skipping message");
-    return;
-}
+			if (string.IsNullOrWhiteSpace(webhook))
+			{
+				_logger.LogWarning("[DISCORD] Webhook URL is empty, skipping message");
+				return;
+			}
 
-try
-{
-    await _httpClient.PostAsJsonAsync(webhook, payload, cancellationToken: stoppingToken);
-    _logger.LogInformation("[DISCORD] Message sent successfully");
-}
-catch (HttpRequestException ex)
-{
-    _logger.LogError(ex, "[DISCORD] Failed to send message to Discord API");
-}
-catch (OperationCanceledException ex)
-{
-    _logger.LogError(ex, "[DISCORD] Message send was cancelled");
-}
-catch (Exception ex)
-{
-    _logger.LogError(ex, "[DISCORD] Unexpected error while sending message");
-}
+			try
+			{
+				await _httpClient.PostAsJsonAsync(webhook, payload, cancellationToken: stoppingToken);
+				_logger.LogInformation("[DISCORD] Message sent successfully");
+			}
+			catch (HttpRequestException ex)
+			{
+				_logger.LogError(ex, "[DISCORD] Failed to send message to Discord API");
+			}
+			catch (OperationCanceledException ex)
+			{
+				_logger.LogError(ex, "[DISCORD] Message send was cancelled");
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[DISCORD] Unexpected error while sending message");
+			}
 		}
 
 		public async Task SendLoginUrlAsync(string loginUrl, CancellationToken stoppingToken)
@@ -70,10 +70,13 @@ catch (Exception ex)
 				{
 					new
 					{
-						title = "Saxo token udløbet",
-						description = $"Refresh token er blevet invalideret — sandsynligvis pga. Saxo vedligeholdelse. Manuel genautentificering er påkrævet.\n\n[**› Log ind hos Saxo**]({loginUrl})",
+						title = "Saxo token expired",
+						description = $"Refresh token has been invalidated — probably because of Saxo maintenance. Manual re-authentication is required.\n\n[**› Log in to Saxo**]({loginUrl})",
 						color = 0xED4245,
-						footer = new { text = "StockPriceSheetPrintService" },
+						fields = new[]
+						{
+							new { name = "❗VPN Required", value = $"Remember to be on VPN when you login", inline = false }
+						},
 						timestamp = DateTime.UtcNow.ToString("o")
 					}
 				}
