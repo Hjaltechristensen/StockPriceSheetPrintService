@@ -74,7 +74,7 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 						description = $"Refresh token er blevet invalideret — sandsynligvis pga. Saxo vedligeholdelse. Manuel genautentificering er påkrævet.\n\n[**› Log ind hos Saxo**]({loginUrl})",
 						color = 0xED4245,
 						footer = new { text = "StockPriceSheetPrintService" },
-						timestamp = DateTime.UtcNow
+						timestamp = DateTime.UtcNow.ToString("o")
 					}
 				}
 			};
@@ -117,7 +117,7 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 							new { name = "💰 Total Value", value = $"||**{Dkk(total)} DKK**||", inline = false },
 							new { name = changeSinceYesterdayString, value = changeValue, inline = false }
 						},
-						timestamp = DateTime.UtcNow
+						timestamp = DateTime.UtcNow.ToString("o")
 					},
 					new
 					{
