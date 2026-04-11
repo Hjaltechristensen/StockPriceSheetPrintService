@@ -24,9 +24,9 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 		}
 
 		[HttpGet("login")]
-		public IActionResult GetLoginUrl()
+		public async Task<IActionResult> GetLoginUrl()
 		{
-			var url = _saxoAuthService.BuildLoginUrl();
+			var url = await _saxoAuthService.BuildLoginUrl();
 			return Content(url);
 		}
 
