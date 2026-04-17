@@ -1,24 +1,17 @@
-﻿using StockPriceSheetPrintService.Service.Models;
-using StockPriceSheetPrintService.Service.Ports.Inbound;
+﻿using StockPriceSheetPrintService.Service.Ports.Inbound;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using StockPriceSheetPrintService.Service.Ports.Persistence;
-using System.Globalization;
-using System.Text.RegularExpressions;
 
 namespace StockPriceSheetPrintService.Service.Application
 {
 	public class PortfolioJobRunner(
 		ILogger<PortfolioJobRunner> logger,
-		IConfiguration configuration,
 		IExecutionGuard executionGuard,
-		IPortfolioCalculator portfolioCalculator,
 		IPortfolioDataFetcher dataFetcher,
 		IPortfolioReporter reporter) : IPortfolioJobRunner
 	{
 		private readonly ILogger<PortfolioJobRunner> _logger = logger;
-		private readonly IConfiguration _configuration = configuration;
 		private readonly IExecutionGuard _executionGuard = executionGuard;
-		private readonly IPortfolioCalculator _portfolioCalculator = portfolioCalculator;
 		private readonly IPortfolioDataFetcher _dataFetcher = dataFetcher;
 		private readonly IPortfolioReporter _reporter = reporter;
 
