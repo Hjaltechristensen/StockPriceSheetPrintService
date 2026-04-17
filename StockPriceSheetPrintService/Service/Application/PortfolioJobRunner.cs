@@ -11,14 +11,14 @@ namespace StockPriceSheetPrintService.Service.Application
 		ILogger<PortfolioJobRunner> logger,
 		IConfiguration configuration,
 		IExecutionGuard executionGuard,
-		PortfolioCalculator portfolioCalculator,
+		IPortfolioCalculator portfolioCalculator,
 		IPortfolioDataFetcher dataFetcher,
 		IPortfolioReporter reporter) : IPortfolioJobRunner
 	{
 		private readonly ILogger<PortfolioJobRunner> _logger = logger;
 		private readonly IConfiguration _configuration = configuration;
 		private readonly IExecutionGuard _executionGuard = executionGuard;
-		private readonly PortfolioCalculator _portfolioCalculator = portfolioCalculator;
+		private readonly IPortfolioCalculator _portfolioCalculator = portfolioCalculator;
 		private readonly IPortfolioDataFetcher _dataFetcher = dataFetcher;
 		private readonly IPortfolioReporter _reporter = reporter;
 
