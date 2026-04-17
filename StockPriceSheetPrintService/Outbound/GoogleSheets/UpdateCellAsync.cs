@@ -7,9 +7,9 @@ using System.Globalization;
 
 namespace StockPriceSheetPrintService.Outbound.GoogleSheets
 {
-	public class UpdateCellAsync(ILogger<UpdateCellAsync> logger) : IGoogleSheetsClient
+	public class GoogleSheetsClientImpl(ILogger<GoogleSheetsClientImpl> logger) : IGoogleSheetsClient
 	{
-		private readonly ILogger<UpdateCellAsync> _logger = logger;
+		private readonly ILogger<GoogleSheetsClientImpl> _logger = logger;
 
 		private const string DateColumn = "A";
 		private const string ValueColumn = "B";

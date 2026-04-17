@@ -9,7 +9,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		IHttpClientFactory httpClientFactory,
 		ILogger<PortfolioCalculator> logger,
 		IHtmlScraper htmlScraper,
-		IConfiguration configuration)
+		IConfiguration configuration) : IPortfolioCalculator
 	{
 		private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 		private readonly ILogger<PortfolioCalculator> _logger = logger;

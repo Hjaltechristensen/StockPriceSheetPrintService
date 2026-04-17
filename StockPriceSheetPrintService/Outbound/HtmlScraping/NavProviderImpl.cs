@@ -1,12 +1,13 @@
-﻿using HtmlAgilityPack;
+using HtmlAgilityPack;
 using StockPriceSheetPrintService.Service.Models;
+using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace StockPriceSheetPrintService.Service.Helpers
+namespace StockPriceSheetPrintService.Outbound.HtmlScraping
 {
-	public class NavProvider(HttpClient client)
+	public class NavProviderImpl(HttpClient client) : IHtmlScraper
 	{
 		public async Task<JuneData?> GetJuneNavAsync(string url, CancellationToken token)
 		{

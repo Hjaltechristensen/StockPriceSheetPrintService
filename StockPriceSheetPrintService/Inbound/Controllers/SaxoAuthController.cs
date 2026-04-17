@@ -9,6 +9,7 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 	[Route("saxo")]
 	public class SaxoAuthController : ControllerBase
 	{
+		private readonly ISaxoLoginService _saxoLoginService;
 		private readonly ISaxoAuthService _saxoAuthService;
 		private readonly ISaxoAccountService _saxoAccountService;
 		private readonly ITokenStore _tokenStore;
@@ -16,8 +17,9 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 		private readonly IPortfolioJobRunner _jobRunner;
 		private readonly ILogger<SaxoAuthController> _logger;
 
-		public SaxoAuthController(ISaxoAuthService saxoAuthService, ISaxoAccountService saxoAccountService, ITokenStore tokenStore, ISaxoTokenService saxoTokenService, IPortfolioJobRunner jobRunner, ILogger<SaxoAuthController> logger)
+		public SaxoAuthController(ISaxoLoginService saxoLoginService, ISaxoAuthService saxoAuthService, ISaxoAccountService saxoAccountService, ITokenStore tokenStore, ISaxoTokenService saxoTokenService, IPortfolioJobRunner jobRunner, ILogger<SaxoAuthController> logger)
 		{
+			_saxoLoginService = saxoLoginService;
 			_saxoAuthService = saxoAuthService;
 			_saxoAccountService = saxoAccountService;
 			_tokenStore = tokenStore;
@@ -27,9 +29,9 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 		}
 
 		[HttpGet("login")]
-		public async Task<IActionResult> GetLoginUrl()
+		public async Task<IActionResult> GetLoginUrl(CancellationToken ct)
 		{
-			var url = await _saxoAuthService.BuildLoginUrl();
+			var url = await _saxoLoginService.GetLoginUrlAsync(ct);
 			return Content(url);
 		}
 

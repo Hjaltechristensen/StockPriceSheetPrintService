@@ -11,7 +11,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		ISaxoAccountService saxoAccountService,
 		IMarketStackService marketStackService,
 		IGoogleSheetsClient googleSheetsClient,
-		PortfolioCalculator portfolioCalculator,
+		IPortfolioCalculator portfolioCalculator,
 		ISeenTransferStore seenTransferStore) : IPortfolioDataFetcher
 	{
 		private readonly ILogger<PortfolioDataFetcher> _logger = logger;
@@ -20,7 +20,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		private readonly ISaxoAccountService _saxoAccountService = saxoAccountService;
 		private readonly IMarketStackService _marketStackService = marketStackService;
 		private readonly IGoogleSheetsClient _googleSheetsClient = googleSheetsClient;
-		private readonly PortfolioCalculator _portfolioCalculator = portfolioCalculator;
+		private readonly IPortfolioCalculator _portfolioCalculator = portfolioCalculator;
 		private readonly ISeenTransferStore _seenTransferStore = seenTransferStore;
 
 		private const decimal NordnetCash = 1176m;

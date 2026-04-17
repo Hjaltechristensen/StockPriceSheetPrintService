@@ -5,11 +5,10 @@ using System.Text.Json;
 
 namespace StockPriceSheetPrintService.Outbound.Saxo
 {
-	public class SaxoService(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<SaxoService> logger, IDiscordNotifier discordNotifier) : ISaxoAuthService, ISaxoAccountService
+	public class SaxoService(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<SaxoService> logger) : ISaxoAuthService, ISaxoAccountService
 	{
 		private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 		private readonly ILogger<SaxoService> _logger = logger;
-		private readonly IDiscordNotifier _discordNotifier = discordNotifier;
 		private readonly string _tokenEndpoint = configuration["Saxo:TokenEndpoint"] ?? throw new InvalidOperationException("TokenEndpoint missing");
 		private readonly string _redirectUrl = configuration["Saxo:RedirectUrl"] ?? throw new InvalidOperationException("RedirectUrl missing");
 		private readonly string _appKey = configuration["Saxo:AppKey"] ?? throw new InvalidOperationException("Saxo:AppKey missing");
@@ -23,11 +22,10 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 			PropertyNameCaseInsensitive = true
 		};
 
-		public async Task<string> BuildLoginUrl()
+		public Task<string> BuildLoginUrl()
 		{
 			var loginUrl = $"{_authEndpoint}?client_id={_appKey}&response_type=code&redirect_uri={Uri.EscapeDataString(_redirectUrl)}";
-			await _discordNotifier.SendLoginUrlAsync(loginUrl, CancellationToken.None);
-			return loginUrl;
+			return Task.FromResult(loginUrl);
 		}
 
 		public async Task<SaxoTokenResult> ExchangeCodeForTokensAsync(string code, CancellationToken ct)
