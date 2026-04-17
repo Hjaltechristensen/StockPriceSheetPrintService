@@ -23,7 +23,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		private readonly IPortfolioCalculator _portfolioCalculator = portfolioCalculator;
 		private readonly ISeenTransferStore _seenTransferStore = seenTransferStore;
 
-		private const decimal NordnetCash = 1176m;
+		private const decimal NordnetCash = 1234m;
 
 		public async Task<decimal> GetSaxoBalanceAsync(CancellationToken ct)
 		{
