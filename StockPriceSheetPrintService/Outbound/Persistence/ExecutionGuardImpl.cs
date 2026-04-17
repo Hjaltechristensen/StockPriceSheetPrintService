@@ -1,10 +1,10 @@
-﻿using StockPriceSheetPrintService.Service.Ports.Persistence;
+using StockPriceSheetPrintService.Service.Ports.Persistence;
 
-namespace StockPriceSheetPrintService.Service.Application
+namespace StockPriceSheetPrintService.Outbound.Persistence
 {
-	public class ExecutionGuard : IExecutionGuard
+	public class ExecutionGuardImpl : IExecutionGuard
 	{
-		private readonly ILogger<ExecutionGuard> _logger;
+		private readonly ILogger<ExecutionGuardImpl> _logger;
 		private readonly string _executionLogPath = "execution_log.txt";
 		private const int MaxExecutionsPerHour = 3;
 		private const int MaxExecutionsPerMonth = 100;
@@ -13,7 +13,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		private readonly object _cacheLock = new();
 		private DateTimeOffset _lastFileSyncTime = DateTimeOffset.UtcNow;
 
-		public ExecutionGuard(ILogger<ExecutionGuard> logger)
+		public ExecutionGuardImpl(ILogger<ExecutionGuardImpl> logger)
 		{
 			_logger = logger;
 			LoadExecutionHistoryFromFile();

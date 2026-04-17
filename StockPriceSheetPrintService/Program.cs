@@ -3,11 +3,12 @@ using Serilog.Events;
 using StockPriceSheetPrintService.Outbound.DiscordUpdates;
 using StockPriceSheetPrintService.Outbound.Filesystem;
 using StockPriceSheetPrintService.Outbound.GoogleSheets;
+using StockPriceSheetPrintService.Outbound.HtmlScraping;
 using StockPriceSheetPrintService.Outbound.MarketStack;
+using StockPriceSheetPrintService.Outbound.Persistence;
 using StockPriceSheetPrintService.Outbound.Saxo;
 using StockPriceSheetPrintService.Service;
 using StockPriceSheetPrintService.Service.Application;
-using StockPriceSheetPrintService.Service.Helpers;
 using StockPriceSheetPrintService.Service.Ports.Inbound;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using StockPriceSheetPrintService.Service.Ports.Persistence;
@@ -32,20 +33,20 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddHostedService<StockpriceWorker>();
 builder.Services.AddHttpClient<IDiscordNotifier, DiscordNotifier>();
-builder.Services.AddScoped<PortfolioCalculator>();
+builder.Services.AddScoped<IPortfolioCalculator, PortfolioCalculator>();
 builder.Services.AddScoped<IPortfolioJobRunner, PortfolioJobRunner>();
+builder.Services.AddScoped<ISaxoLoginService, SaxoLoginServiceImpl>();
 builder.Services.AddScoped<IPortfolioDataFetcher, PortfolioDataFetcher>();
 builder.Services.AddScoped<IPortfolioReporter, PortfolioReporter>();
 builder.Services.AddScoped<ITokenStore, EncryptedFileTokenStore>();
 builder.Services.AddScoped<ISeenTransferStore, SeenTransferStore>();
 builder.Services.AddScoped<ISaxoAuthService, SaxoService>();
 builder.Services.AddScoped<ISaxoAccountService, SaxoService>();
-builder.Services.AddScoped<ISaxoTokenService, SaxoTokenService>(); 
-builder.Services.AddSingleton<IGoogleSheetsClient, UpdateCellAsync>();
-builder.Services.AddSingleton<IExecutionGuard, ExecutionGuard>();
-builder.Services.AddScoped<IHtmlScraper, HtmlScraper>();
+builder.Services.AddScoped<ISaxoTokenService, SaxoTokenService>();
+builder.Services.AddSingleton<IGoogleSheetsClient, GoogleSheetsClientImpl>();
+builder.Services.AddSingleton<IExecutionGuard, ExecutionGuardImpl>();
 builder.Services.AddScoped<IMarketStackService, MarketStackService>();
-builder.Services.AddHttpClient<NavProvider>(client =>
+builder.Services.AddHttpClient<IHtmlScraper, NavProviderImpl>(client =>
 {
 	client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
 	client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
