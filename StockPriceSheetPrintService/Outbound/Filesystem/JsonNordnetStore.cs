@@ -30,8 +30,8 @@ namespace StockPriceSheetPrintService.Outbound.Filesystem
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Fejl ved læsning til NordnetCash fil");
-				throw new NordnetStoreException("Kunne ikke gemme kontantbeløb.", ex);
+				_logger.LogError(ex, "Error reading NordnetCash file");
+				throw new NordnetStoreException("Could not get cash amount.", ex);
 			}
 		}
 
@@ -49,12 +49,12 @@ namespace StockPriceSheetPrintService.Outbound.Filesystem
 				await File.WriteAllTextAsync(tempFile, JsonSerializer.Serialize(entries));
 				File.Move(tempFile, _filePath, overwrite: true);
 
-				_logger.LogInformation("Nordnet cash opdateret til {Amount}", newAmount);
+				_logger.LogInformation("Nordnet cash updated - Value: {Amount}", newAmount);
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Fejl ved skrivning til NordnetCash fil");
-				throw new NordnetStoreException("Kunne ikke gemme kontantbeløb.", ex);
+				_logger.LogError(ex, "Error writing to NordnetCash file");
+				throw new NordnetStoreException("Could not save cash amount.", ex);
 			}
 		}
 	}
