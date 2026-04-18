@@ -1,24 +1,18 @@
 ﻿using Discord;
 using Discord.WebSocket;
+using StockPriceSheetPrintService.Service.Ports.Inbound;
 
 namespace StockPriceSheetPrintService.Inbound.Listener
 {
-	public class DiscordBotListener : IHostedService
+	public class DiscordBotListener(IDiscordBotMessageReceiver discordBotMessageReciver, IConfiguration configuration) : IHostedService
 	{
 
-		private readonly DiscordSocketClient _client;
-		private readonly HttpClient _http;
-		private readonly string _token;
-
-		public DiscordBotListener(IHttpClientFactory httpFactory, IConfiguration config)
+		private readonly DiscordSocketClient _client = new DiscordSocketClient(new DiscordSocketConfig
 		{
-			_client = new DiscordSocketClient(new DiscordSocketConfig
-			{
-				GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.MessageContent
-			});
-			_http = httpFactory.CreateClient();
-			_token = config["Discord:BotToken"] ?? throw new InvalidOperationException("Discord:BotToken mangler");
-		}
+			GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.MessageContent
+		});
+		private readonly IDiscordBotMessageReceiver _botMessageReciver = discordBotMessageReciver;
+		private readonly string _token = configuration["Discord:BotToken"] ?? throw new InvalidOperationException("Discord:BotToken is missing");
 
 		public async Task StartAsync(CancellationToken ct)
 		{
@@ -29,26 +23,17 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 		public async Task StopAsync(CancellationToken ct)
 		{
 			await _client.StopAsync();
+			_client.Dispose();
 		}
 
 		private async Task OnMessageReceived(SocketMessage msg)
 		{
 			if (msg.Author.IsBot) return;
-			if (msg.Content.Trim() != "!refreshToken") return;
 			if (msg.Channel.Id != 1495010067538247880) return;
-
-			try
-			{
-				var response = await _http.PostAsync("http://192.168.1.239:5151/saxo/refreshToken", null);
-				if (response.IsSuccessStatusCode)
-					await msg.Channel.SendMessageAsync("✅ Token refreshed.");
-				else
-					await msg.Channel.SendMessageAsync($"❌ Fejl: {response.StatusCode}");
-			}
-			catch (Exception ex)
-			{
-				await msg.Channel.SendMessageAsync($"❌ Exception: {ex.Message}");
-			}
+			
+			var reply = await _botMessageReciver.DispatchMessageAsync(msg);
+			if (!string.IsNullOrEmpty(reply))
+				await msg.Channel.SendMessageAsync(reply);
 		}
 	}
 }
