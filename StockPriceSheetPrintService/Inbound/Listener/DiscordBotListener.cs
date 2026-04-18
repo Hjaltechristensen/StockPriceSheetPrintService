@@ -17,7 +17,7 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 				GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.MessageContent
 			});
 			_http = httpFactory.CreateClient();
-			_token = config["Discord:BotToken"] ?? string.Empty;
+			_token = config["Discord:BotToken"] ?? throw new InvalidOperationException("Discord:BotToken mangler");
 		}
 
 		public async Task StartAsync(CancellationToken ct)
