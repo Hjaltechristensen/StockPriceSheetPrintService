@@ -4,7 +4,7 @@ namespace StockPriceSheetPrintService.Service.Ports.Outbound
 {
 	public interface IJuneStore
 	{
-		Task<JuneAmountData> GetJuneSharesAmount();
-		Task SetJuneSharesAmount(decimal amount);
+		Task<JuneAmountData> GetJuneSharesAmountAsync();
+		Task SetJuneSharesAmountAsync(decimal amount);
 	}
 }

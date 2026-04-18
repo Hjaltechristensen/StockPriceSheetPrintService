@@ -4,11 +4,16 @@ using System.Text.Json;
 
 namespace StockPriceSheetPrintService.Outbound.MarketStack
 {
-	public class MarketStackService(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<MarketStackService> logger) : IMarketStackService
+	public class MarketStackService(
+		IHttpClientFactory httpClientFactory, 
+		IConfiguration configuration, 
+		ILogger<MarketStackService> logger,
+		INordnetSymbolStore nordnetSymbolStore) : IMarketStackService
 	{
 		private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 		private readonly IConfiguration _configuration = configuration;
 		private readonly ILogger<MarketStackService> _logger = logger;
+		private readonly INordnetSymbolStore _nordnetSymbolStore = nordnetSymbolStore;
 
 		private const string StockApiClientName = "StockApi";
 		private const string EodLatestEndpoint = "v2/eod/latest";
@@ -26,7 +31,8 @@ namespace StockPriceSheetPrintService.Outbound.MarketStack
 		public async Task<EodResponse?> GetStockPricesAsync(CancellationToken ct)
 		{
 			var client = _httpClientFactory.CreateClient(StockApiClientName);
-			var symbolsQuery = string.Join(",", AllTickers.Symbols.Keys);
+			var nordnetSymbols = await _nordnetSymbolStore.GetSymbolsAsync();
+			var symbolsQuery = string.Join(",", nordnetSymbols.Keys);
 
 			var response = await GetStockPricesWithFallbackAsync(client, symbolsQuery, ct);
 

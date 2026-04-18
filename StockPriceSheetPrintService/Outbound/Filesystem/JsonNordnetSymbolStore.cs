@@ -92,8 +92,7 @@ namespace StockPriceSheetPrintService.Outbound.Filesystem
 
 		private async Task WriteToDiskAsync(Dictionary<string, decimal> symbols)
 		{
-			var json = JsonSerializer.Serialize(symbols, new JsonSerializerOptions { WriteIndented = true });
-			await JsonFileHelper.WriteAtomicAsync(_filePath, json);
+			await JsonFileHelper.WriteAtomicAsync(_filePath, symbols);
 		}
 	}
 }

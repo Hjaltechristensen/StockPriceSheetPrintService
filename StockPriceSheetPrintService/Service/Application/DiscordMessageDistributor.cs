@@ -67,10 +67,10 @@ namespace StockPriceSheetPrintService.Service.Application
 
         💰 **Nordnet**
         `!updateCash <balance>` — Update cash balance, e.g. `!updateCash 1000.50`
-        `!getSymbols` — Vis alle aktive symbols
+        `!getSymbols` — Show all active symbols
         `!getCash` — Show current Nordnet cash balance
-        `!addSymbol <ticker> <antal>` — Tilføj/opdater symbol, fx `!addSymbol 2B76.DE 218`
-        `!removeSymbol <ticker>` — Fjern symbol, fx `!removeSymbol O`
+        `!addSymbol <ticker> <amount>` — Add/update symbol, e.g. `!addSymbol 2B76.DE 218`
+        `!removeSymbol <ticker>` — Remove symbol, e.g. `!removeSymbol O`
 
         📊 **June**
         `!updateJune <amount>` — Update June share count, e.g. `!updateJune 710`
@@ -107,7 +107,7 @@ namespace StockPriceSheetPrintService.Service.Application
 
 			try
 			{
-				await _juneStore.SetJuneSharesAmount(amount);
+				await _juneStore.SetJuneSharesAmountAsync(amount);
 				return $"✅ June shares updated: {amount:N2} stk.";
 			}
 			catch (JuneStoreException ex)
@@ -133,7 +133,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		{
 			try
 			{
-				var result = await _juneStore.GetJuneSharesAmount();
+				var result = await _juneStore.GetJuneSharesAmountAsync();
 				return $"📊 June shares: {result.Amount:N4} stk. (Last updated: {result.LastUpdated:dd/MM/yyyy HH:mm})";
 			}
 			catch (JuneStoreException ex)
