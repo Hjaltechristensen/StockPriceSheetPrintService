@@ -4,14 +4,14 @@ using StockPriceSheetPrintService.Service.Ports.Inbound;
 
 namespace StockPriceSheetPrintService.Inbound.Listener
 {
-	public class DiscordBotListener(IDiscordBotMessageReciver discordBotMessageReciver, IHttpClientFactory httpFactory, IConfiguration configuration) : IHostedService
+	public class DiscordBotListener(IDiscordBotMessageReceiver discordBotMessageReciver, IConfiguration configuration) : IHostedService
 	{
 
 		private readonly DiscordSocketClient _client = new DiscordSocketClient(new DiscordSocketConfig
 		{
 			GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.MessageContent
 		});
-		private readonly IDiscordBotMessageReciver _botMessageReciver = discordBotMessageReciver;
+		private readonly IDiscordBotMessageReceiver _botMessageReciver = discordBotMessageReciver;
 		private readonly string _token = configuration["Discord:BotToken"] ?? throw new InvalidOperationException("Discord:BotToken is missing");
 
 		public async Task StartAsync(CancellationToken ct)
@@ -23,6 +23,7 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 		public async Task StopAsync(CancellationToken ct)
 		{
 			await _client.StopAsync();
+			_client.Dispose();
 		}
 
 		private async Task OnMessageReceived(SocketMessage msg)

@@ -2,7 +2,7 @@
 
 namespace StockPriceSheetPrintService.Service.Ports.Inbound
 {
-	public interface IDiscordBotMessageReciver
+	public interface IDiscordBotMessageReceiver
 	{
 		Task<string> DispatchMessageAsync(SocketMessage message);
 	}

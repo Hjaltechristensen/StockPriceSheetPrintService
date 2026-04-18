@@ -30,7 +30,7 @@ namespace StockPriceSheetPrintService.Outbound.Filesystem
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Fejl ved skrivning til NordnetCash fil");
+				_logger.LogError(ex, "Fejl ved læsning til NordnetCash fil");
 				throw new NordnetStoreException("Kunne ikke gemme kontantbeløb.", ex);
 			}
 		}

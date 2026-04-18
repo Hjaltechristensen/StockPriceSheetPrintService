@@ -65,7 +65,8 @@ namespace StockPriceSheetPrintService.Service.Application
 				}
 
 				var stockValue = await _portfolioCalculator.CalculateTotalStockValueAsync(eodResponse, ct);
-				var totalNordnetValue = stockValue + _nordnetStore.GetCashAmountAsync().Result.CashAmount;
+				var cash = await _nordnetStore.GetCashAmountAsync();
+				var totalNordnetValue = stockValue + cash.CashAmount;
 
 				_logger.LogInformation("[FETCHER] Nordnet value: {value:F2} DKK", totalNordnetValue);
 				return totalNordnetValue;

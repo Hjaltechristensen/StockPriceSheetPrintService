@@ -6,7 +6,7 @@ using System.Globalization;
 
 namespace StockPriceSheetPrintService.Service.Application
 {
-	public class DiscordMessageDistributer(INordnetStore nordnetStore) : IDiscordBotMessageReciver
+	public class DiscordMessageDistributor(INordnetStore nordnetStore) : IDiscordBotMessageReceiver
 	{
 		private readonly INordnetStore _nordnetStore = nordnetStore;
 		public async Task<string> DispatchMessageAsync(SocketMessage message)
