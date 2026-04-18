@@ -1,5 +1,6 @@
 using Serilog;
 using Serilog.Events;
+using StockPriceSheetPrintService.Inbound.Listener;
 using StockPriceSheetPrintService.Outbound.DiscordUpdates;
 using StockPriceSheetPrintService.Outbound.Filesystem;
 using StockPriceSheetPrintService.Outbound.GoogleSheets;
@@ -32,6 +33,7 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 builder.Services.AddHostedService<StockpriceWorker>();
+builder.Services.AddHostedService<DiscordBotListener>();
 builder.Services.AddHttpClient<IDiscordNotifier, DiscordNotifier>();
 builder.Services.AddScoped<IPortfolioCalculator, PortfolioCalculator>();
 builder.Services.AddScoped<IPortfolioJobRunner, PortfolioJobRunner>();
