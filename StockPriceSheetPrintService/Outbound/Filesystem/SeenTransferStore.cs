@@ -1,4 +1,5 @@
-﻿using StockPriceSheetPrintService.Service.Ports.Persistence;
+﻿using StockPriceSheetPrintService.Outbound.Filesystem.Helper;
+using StockPriceSheetPrintService.Service.Ports.Persistence;
 using System.Text.Json;
 
 namespace StockPriceSheetPrintService.Outbound.Filesystem
@@ -39,9 +40,7 @@ namespace StockPriceSheetPrintService.Outbound.Filesystem
 				entries.Add(new SeenEntry(id, DateTime.UtcNow));
 
 			// Write to a temp file and atomically replace the original to avoid corruption
-			var tempFile = Path.GetTempFileName();
-			await File.WriteAllTextAsync(tempFile, JsonSerializer.Serialize(entries), ct);
-			File.Move(tempFile, _filePath, overwrite: true);
+			await JsonFileHelper.WriteAtomicAsync(_filePath, entries, ct);
 		}
 
 		private record SeenEntry(string BookingId, DateTime SeenAt);

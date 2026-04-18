@@ -1,4 +1,5 @@
-﻿using StockPriceSheetPrintService.Service.Exceptions;
+﻿using StockPriceSheetPrintService.Outbound.Filesystem.Helper;
+using StockPriceSheetPrintService.Service.Exceptions;
 using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Text.Json;
@@ -9,21 +10,21 @@ namespace StockPriceSheetPrintService.Outbound.Filesystem
 	{
 		private readonly string _filePath = configuration["NordnetCash:FilePath"] ?? throw new InvalidOperationException("NordnetCash:FilePath is missing");
 		private readonly ILogger<JsonNordnetStore> _logger = logger;
-		public async Task<NordnetCashJson> GetCashAmountAsync()
+		public async Task<NordnetCashJson> GetNordnetCashAmountAsync()
 		{
 			try
 			{
 				if (!File.Exists(_filePath))
 				{
 					_logger.LogWarning("NordnetCash file not found at '{FilePath}. Returning defaults.", _filePath);
-					return new NordnetCashJson();
+					return new NordnetCashJson(0m, DateTime.Now);
 				}
 				var json = await File.ReadAllTextAsync(_filePath);
 				var entries = JsonSerializer.Deserialize<NordnetCashJson>(json);
 				if (entries == null)
 				{
 					_logger.LogWarning("Entries is null, returning decimal 0 and DateTime.Now");
-					return new NordnetCashJson();
+					return new NordnetCashJson(0m, DateTime.Now);
 				}
 
 				return entries;
@@ -35,21 +36,12 @@ namespace StockPriceSheetPrintService.Outbound.Filesystem
 			}
 		}
 
-		public async Task SetCashAmountAsync(decimal newAmount)
+		public async Task SetNordnetCashAmountAsync(decimal newAmount)
 		{
 			try
 			{
-				var entries = new NordnetCashJson
-				{
-					CashAmount = newAmount,
-					LastUpdated = DateTime.UtcNow
-				};
-
-				var tempFile = Path.GetTempFileName();
-				await File.WriteAllTextAsync(tempFile, JsonSerializer.Serialize(entries));
-				File.Move(tempFile, _filePath, overwrite: true);
-
-				_logger.LogInformation("Nordnet cash updated - Value: {Amount}", newAmount);
+				var entries = new NordnetCashJson(newAmount, DateTime.UtcNow);
+				await JsonFileHelper.WriteAtomicAsync(_filePath, entries);
 			}
 			catch (Exception ex)
 			{
@@ -57,5 +49,7 @@ namespace StockPriceSheetPrintService.Outbound.Filesystem
 				throw new NordnetStoreException("Could not save cash amount.", ex);
 			}
 		}
+
+		public record NordnetCashJson(decimal CashAmount, DateTime LastUpdated) { }
 	}
 }
