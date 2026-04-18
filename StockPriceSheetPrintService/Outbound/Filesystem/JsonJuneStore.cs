@@ -2,6 +2,7 @@
 using StockPriceSheetPrintService.Service.Exceptions;
 using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
+using System.Text.Json;
 
 namespace StockPriceSheetPrintService.Outbound.Filesystem
 {
@@ -20,7 +21,7 @@ namespace StockPriceSheetPrintService.Outbound.Filesystem
 					return new JuneAmountData(0m, DateTime.UtcNow);
 				}
 				var json = await File.ReadAllTextAsync(_filePath);
-				var entries = System.Text.Json.JsonSerializer.Deserialize<JuneAmountData>(json);
+				var entries = JsonSerializer.Deserialize<JuneAmountData>(json);
 				if (entries == null)
 				{
 					_logger.LogWarning("JuneSharesAmount deserialized as null, returning defaults.");
