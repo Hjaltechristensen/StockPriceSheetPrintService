@@ -34,7 +34,6 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddHostedService<StockpriceWorker>();
 builder.Services.AddHostedService<DiscordBotListener>();
-builder.Services.AddHttpClient<IDiscordNotifier, DiscordNotifier>();
 builder.Services.AddScoped<IPortfolioCalculator, PortfolioCalculator>();
 builder.Services.AddScoped<IPortfolioJobRunner, PortfolioJobRunner>();
 builder.Services.AddScoped<ISaxoLoginService, SaxoLoginServiceImpl>();
@@ -45,12 +44,14 @@ builder.Services.AddScoped<ISeenTransferStore, SeenTransferStore>();
 builder.Services.AddScoped<ISaxoAuthService, SaxoService>();
 builder.Services.AddScoped<ISaxoAccountService, SaxoService>();
 builder.Services.AddScoped<ISaxoTokenService, SaxoTokenService>();
+builder.Services.AddScoped<IMarketStackService, MarketStackService>();
 builder.Services.AddSingleton<IGoogleSheetsClient, GoogleSheetsClientImpl>();
 builder.Services.AddSingleton<IExecutionGuard, ExecutionGuardImpl>();
-builder.Services.AddScoped<IMarketStackService, MarketStackService>();
 builder.Services.AddSingleton<INordnetStore, JsonNordnetStore>();
 builder.Services.AddSingleton<IJuneStore, JsonJuneStore>();
 builder.Services.AddSingleton<IDiscordBotMessageReceiver, DiscordMessageDistributor>();
+builder.Services.AddSingleton<INordnetSymbolStore, JsonNordnetSymbolStore>();
+builder.Services.AddHttpClient<IDiscordNotifier, DiscordNotifier>();
 builder.Services.AddHttpClient<IHtmlScraper, NavProviderImpl>(client =>
 {
 	client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");

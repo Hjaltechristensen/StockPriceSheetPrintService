@@ -1,5 +1,4 @@
 ﻿using Discord.WebSocket;
-using Microsoft.Extensions.DependencyInjection;
 using StockPriceSheetPrintService.Service.Exceptions;
 using StockPriceSheetPrintService.Service.Ports.Inbound;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
@@ -10,12 +9,13 @@ namespace StockPriceSheetPrintService.Service.Application
 	public class DiscordMessageDistributor(
 		INordnetStore nordnetStore,
 		IJuneStore juneStore,
-		IServiceScopeFactory scopeFactory) : IDiscordBotMessageReceiver
+		IServiceScopeFactory scopeFactory,
+		INordnetSymbolStore nordnetSymbolStore) : IDiscordBotMessageReceiver
 	{
 		private readonly INordnetStore _nordnetStore = nordnetStore;
 		private readonly IJuneStore _juneStore = juneStore;
 		private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
-
+		private readonly INordnetSymbolStore _nordnetSymbolStore = nordnetSymbolStore;
 		public async Task<string> DispatchMessageAsync(SocketMessage message, CancellationToken ct)
 		{
 			switch (message.Content.Split(' ')[0])
@@ -29,8 +29,14 @@ namespace StockPriceSheetPrintService.Service.Application
 				case "!updateCash":
 					return await HandleUpdateNordnetCash(message);
 
-				case "!updateShares":
-					return await HandleUpdateNordnetShares(message);
+				case "!addSymbol":
+					return await HandleAddNordnetSymbol(message);
+
+				case "!removeSymbol":
+					return await HandleRemoveNordnetSymbol(message);
+
+				case "!getSymbols":
+					return await HandleGetNordnetSymbols();
 
 				case "!updateJune":
 					return await HandleUpdateJuneSharesAmount(message);
@@ -39,7 +45,7 @@ namespace StockPriceSheetPrintService.Service.Application
 					return HandleHelp();
 
 				case "!status":
-					return "⚠️ Not yet implemented";
+					return HandleStatus();
 
 				case "!getCash":
 					return await HandleGetNordnetCash();
@@ -61,8 +67,10 @@ namespace StockPriceSheetPrintService.Service.Application
 
         💰 **Nordnet**
         `!updateCash <balance>` — Update cash balance, e.g. `!updateCash 1000.50`
-        `!updateShares <ticker> <amount>` — Update share count, e.g. `!updateShares 2B76.DE 20`
+        `!getSymbols` — Show all active symbols
         `!getCash` — Show current Nordnet cash balance
+        `!addSymbol <ticker> <amount>` — Add/update symbol, e.g. `!addSymbol 2B76.DE 218`
+        `!removeSymbol <ticker>` — Remove symbol, e.g. `!removeSymbol O`
 
         📊 **June**
         `!updateJune <amount>` — Update June share count, e.g. `!updateJune 710`
@@ -99,7 +107,7 @@ namespace StockPriceSheetPrintService.Service.Application
 
 			try
 			{
-				await _juneStore.SetJuneSharesAmount(amount);
+				await _juneStore.SetJuneSharesAmountAsync(amount);
 				return $"✅ June shares updated: {amount:N2} stk.";
 			}
 			catch (JuneStoreException ex)
@@ -125,7 +133,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		{
 			try
 			{
-				var result = await _juneStore.GetJuneSharesAmount();
+				var result = await _juneStore.GetJuneSharesAmountAsync();
 				return $"📊 June shares: {result.Amount:N4} stk. (Last updated: {result.LastUpdated:dd/MM/yyyy HH:mm})";
 			}
 			catch (JuneStoreException ex)
@@ -159,9 +167,59 @@ namespace StockPriceSheetPrintService.Service.Application
 			}
 		}
 
-		private static Task<string> HandleUpdateNordnetShares(SocketMessage message)
+		private async Task<string> HandleAddNordnetSymbol(SocketMessage message)
 		{
-			return Task.FromResult("⚠️ Not yet implemented");
+			var parts = message.Content.Split(' ');
+			if (parts.Length != 3 || !decimal.TryParse(parts[2], NumberStyles.Any, CultureInfo.InvariantCulture, out var shares))
+				return "❌ Invalid format. Use: !addSymbol 2B76.DE 218";
+
+			var ticker = parts[1].ToUpperInvariant();
+			try
+			{
+				await _nordnetSymbolStore.AddOrUpdateSymbolAsync(ticker, shares);
+				return $"✅ Symbol updated: {ticker} = {shares:N0} stk.";
+			}
+			catch (NordnetSymbolStoreException ex)
+			{
+				return $"❌ Error updating symbol: {ex.Message}";
+			}
+		}
+
+		private async Task<string> HandleRemoveNordnetSymbol(SocketMessage message)
+		{
+			var parts = message.Content.Split(' ');
+			if (parts.Length != 2)
+				return "❌ Invalid format. Use: !removeSymbol 2B76.DE";
+
+			var ticker = parts[1].ToUpperInvariant();
+			try
+			{
+				await _nordnetSymbolStore.RemoveSymbolAsync(ticker);
+				return $"✅ Symbol removed: {ticker}";
+			}
+			catch (NordnetSymbolStoreException ex)
+			{
+				return $"❌ Error removing symbol: {ex.Message}";
+			}
+		}
+
+		private async Task<string> HandleGetNordnetSymbols()
+		{
+			try
+			{
+				var symbols = await _nordnetSymbolStore.GetSymbolsAsync();
+				var lines = symbols.Select(kvp => $"`{kvp.Key}` — {kvp.Value:N0} stk.");
+				return $"📈 **Nordnet symbols:**\n{string.Join('\n', lines)}";
+			}
+			catch (NordnetSymbolStoreException ex)
+			{
+				return $"❌ Error fetching symbols: {ex.Message}";
+			}
+		}
+
+		private static string HandleStatus()
+		{
+			return "⚠️ Not yet implemented";
 		}
 	}
 }

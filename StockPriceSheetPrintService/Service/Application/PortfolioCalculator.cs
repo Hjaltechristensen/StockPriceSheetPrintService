@@ -10,13 +10,15 @@ namespace StockPriceSheetPrintService.Service.Application
 		ILogger<PortfolioCalculator> logger,
 		IHtmlScraper htmlScraper,
 		IConfiguration configuration,
-		IJuneStore juneStore) : IPortfolioCalculator
+		IJuneStore juneStore,
+		INordnetSymbolStore nordnetSymbolStore) : IPortfolioCalculator
 	{
 		private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 		private readonly ILogger<PortfolioCalculator> _logger = logger;
 		private readonly IHtmlScraper _htmlScraper = htmlScraper;
 		private readonly IConfiguration _configuration = configuration;
 		private readonly IJuneStore _juneStore = juneStore;
+		private readonly INordnetSymbolStore _nordnetSymbolStore = nordnetSymbolStore;
 		private const decimal NordnetFxMargin = 0.0025m;
 		private Dictionary<string, decimal>? _exchangeRateCache;
 
@@ -39,9 +41,10 @@ namespace StockPriceSheetPrintService.Service.Application
 			_exchangeRateCache = null;
 			var rates = await GetExchangeRatesAsync(ct);
 
+			var nordnetSymbols = await _nordnetSymbolStore.GetSymbolsAsync();
 			foreach (var d in data.Data)
 			{
-				if (!AllTickers.Symbols.TryGetValue(d.Symbol, out decimal multiplier))
+				if (!nordnetSymbols.TryGetValue(d.Symbol, out decimal multiplier))
 					continue;
 
 				var effectiveCurrency = !string.IsNullOrEmpty(d.PriceCurrency) ? d.PriceCurrency
@@ -73,7 +76,7 @@ namespace StockPriceSheetPrintService.Service.Application
 			if (junePrice != null)
 			{
 				_logger.LogInformation("Todays June price: {nav} pr. {date}", junePrice.Nav, junePrice.Date.ToString("dd/MM/yyyy"));
-				var shareAmount = await _juneStore.GetJuneSharesAmount();
+				var shareAmount = await _juneStore.GetJuneSharesAmountAsync();
 				totalJuneValue = junePrice.Nav * shareAmount.Amount;
 			}
 

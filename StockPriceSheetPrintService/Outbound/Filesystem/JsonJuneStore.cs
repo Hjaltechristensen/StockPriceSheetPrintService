@@ -11,7 +11,7 @@ namespace StockPriceSheetPrintService.Outbound.Filesystem
 		private readonly string _filePath = configuration["JuneSharesAmount:FilePath"] ?? throw new InvalidOperationException("JuneSharesAmount:FilePath is missing");
 		private readonly ILogger<JsonJuneStore> _logger = logger;
 
-		public async Task<JuneAmountData> GetJuneSharesAmount()
+		public async Task<JuneAmountData> GetJuneSharesAmountAsync()
 		{
 			try
 			{
@@ -37,7 +37,7 @@ namespace StockPriceSheetPrintService.Outbound.Filesystem
 			}
 		}
 
-		public async Task SetJuneSharesAmount(decimal amount)
+		public async Task SetJuneSharesAmountAsync(decimal amount)
 		{
 			try
 			{
