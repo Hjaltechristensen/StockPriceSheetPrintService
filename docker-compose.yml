@@ -21,6 +21,7 @@ services:
       - Discord__Webhook=${DISCORD_WEBHOOK}
       - Discord__WebhookError=${DISCORD_WEBHOOK_ERRORS}
       - Discord__WebhookLogin=${DISCORD_WEBHOOK_LOGIN}
+      - Discord__BotToken=${DISCORD_BOT_TOKEN}
 
     volumes:
       - ./saxo_data:/app/data  # Her gemmes dit refresh_token.txt permanent på din Pi
