@@ -12,7 +12,8 @@ namespace StockPriceSheetPrintService.Service.Application
 		IMarketStackService marketStackService,
 		IGoogleSheetsClient googleSheetsClient,
 		IPortfolioCalculator portfolioCalculator,
-		ISeenTransferStore seenTransferStore) : IPortfolioDataFetcher
+		ISeenTransferStore seenTransferStore,
+		INordnetStore nordnetStore) : IPortfolioDataFetcher
 	{
 		private readonly ILogger<PortfolioDataFetcher> _logger = logger;
 		private readonly IConfiguration _configuration = configuration;
@@ -22,8 +23,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		private readonly IGoogleSheetsClient _googleSheetsClient = googleSheetsClient;
 		private readonly IPortfolioCalculator _portfolioCalculator = portfolioCalculator;
 		private readonly ISeenTransferStore _seenTransferStore = seenTransferStore;
-
-		private const decimal NordnetCash = 1234m;
+		private readonly INordnetStore _nordnetStore = nordnetStore;
 
 		public async Task<decimal> GetSaxoBalanceAsync(CancellationToken ct)
 		{
@@ -65,7 +65,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				}
 
 				var stockValue = await _portfolioCalculator.CalculateTotalStockValueAsync(eodResponse, ct);
-				var totalNordnetValue = stockValue + NordnetCash;
+				var totalNordnetValue = stockValue + _nordnetStore.GetCashAmountAsync().Result.CashAmount;
 
 				_logger.LogInformation("[FETCHER] Nordnet value: {value:F2} DKK", totalNordnetValue);
 				return totalNordnetValue;
