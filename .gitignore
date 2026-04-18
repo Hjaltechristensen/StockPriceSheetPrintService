@@ -32,3 +32,6 @@ execution_log.txt
 .env
 .env.local
 .env.*.local
+
+# Local deployment config (managed directly on server)
+docker-compose.yml
