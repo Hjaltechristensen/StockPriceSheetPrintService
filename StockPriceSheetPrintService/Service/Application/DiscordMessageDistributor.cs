@@ -55,16 +55,23 @@ namespace StockPriceSheetPrintService.Service.Application
 		private static string HandleHelp()
 		{
 			return """
-				**Available commands:**
-				`!refreshToken`                      Manually refresh Saxo access token
-				`!trigger`                           Manually trigger the full portfolio run
-				`!updateCash <balance>`              Update Nordnet cash balance, e.g. `!updateCash 1000.50`
-				`!updateShares <ticker> <amount>`    Update Nordnet share count, e.g. `!updateShares 2B76.DE 20`
-				`!updateJune <amount>`               Update June share count, e.g. `!updateJune 710`
-				`!getCash`                           Show current Nordnet cash balance
-				`!getJuneAmount`                     Show current June share count
-				`!help`                              Show this message
-				""";
+        📋 **Saxo & Portfolio**
+        `!refreshToken` — Manually refresh Saxo access token
+        `!trigger` — Manually trigger the full portfolio run
+
+        💰 **Nordnet**
+        `!updateCash <balance>` — Update cash balance, e.g. `!updateCash 1000.50`
+        `!updateShares <ticker> <amount>` — Update share count, e.g. `!updateShares 2B76.DE 20`
+        `!getCash` — Show current Nordnet cash balance
+
+        📊 **June**
+        `!updateJune <amount>` — Update June share count, e.g. `!updateJune 710`
+        `!getJuneAmount` — Show current June share count
+
+        ℹ️ **Andet**
+        `!status` — Show last run time and portfolio value
+        `!help` — Show this message
+        """;
 		}
 
 		private async Task<string> HandleUpdateNordnetCash(SocketMessage message)
