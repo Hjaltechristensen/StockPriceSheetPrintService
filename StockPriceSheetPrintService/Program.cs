@@ -48,6 +48,8 @@ builder.Services.AddScoped<ISaxoTokenService, SaxoTokenService>();
 builder.Services.AddSingleton<IGoogleSheetsClient, GoogleSheetsClientImpl>();
 builder.Services.AddSingleton<IExecutionGuard, ExecutionGuardImpl>();
 builder.Services.AddScoped<IMarketStackService, MarketStackService>();
+builder.Services.AddSingleton<INordnetStore, JsonNordnetStore>();
+builder.Services.AddSingleton<IDiscordBotMessageReceiver, DiscordMessageDistributor>();
 builder.Services.AddHttpClient<IHtmlScraper, NavProviderImpl>(client =>
 {
 	client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
