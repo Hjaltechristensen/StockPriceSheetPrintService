@@ -1,4 +1,4 @@
-﻿using static StockPriceSheetPrintService.Outbound.Filesystem.JsonJuneStore;
+﻿using StockPriceSheetPrintService.Service.Models;
 
 namespace StockPriceSheetPrintService.Service.Ports.Outbound
 {

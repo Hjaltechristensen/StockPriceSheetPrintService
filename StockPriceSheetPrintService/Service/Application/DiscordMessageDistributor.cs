@@ -1,4 +1,5 @@
 ﻿using Discord.WebSocket;
+using Microsoft.Extensions.DependencyInjection;
 using StockPriceSheetPrintService.Service.Exceptions;
 using StockPriceSheetPrintService.Service.Ports.Inbound;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
@@ -7,15 +8,14 @@ using System.Globalization;
 namespace StockPriceSheetPrintService.Service.Application
 {
 	public class DiscordMessageDistributor(
-		INordnetStore nordnetStore, 
-		ISaxoTokenService saxoTokenService,
-		IPortfolioJobRunner portfolioJobRunner,
-		IJuneStore juneStore) : IDiscordBotMessageReceiver
+		INordnetStore nordnetStore,
+		IJuneStore juneStore,
+		IServiceScopeFactory scopeFactory) : IDiscordBotMessageReceiver
 	{
 		private readonly INordnetStore _nordnetStore = nordnetStore;
-		private readonly ISaxoTokenService _saxoTokenService = saxoTokenService;
-		private readonly IPortfolioJobRunner _portfolioJobRunner = portfolioJobRunner;
 		private readonly IJuneStore _juneStore = juneStore;
+		private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
+
 		public async Task<string> DispatchMessageAsync(SocketMessage message, CancellationToken ct)
 		{
 			switch (message.Content.Split(' ')[0])
@@ -24,7 +24,7 @@ namespace StockPriceSheetPrintService.Service.Application
 					return await HandleRefreshToken(ct);
 
 				case "!trigger":
-					return await HandleManuelTrigger(ct);
+					return await HandleTrigger(ct);
 
 				case "!updateCash":
 					return await HandleUpdateNordnetCash(message);
@@ -36,10 +36,10 @@ namespace StockPriceSheetPrintService.Service.Application
 					return await HandleUpdateJuneSharesAmount(message);
 
 				case "!help":
-					return await HandleHelp();
+					return HandleHelp();
 
 				case "!status":
-					return await HandleStatus();
+					return "⚠️ Not yet implemented";
 
 				case "!getCash":
 					return await HandleGetNordnetCash();
@@ -52,22 +52,19 @@ namespace StockPriceSheetPrintService.Service.Application
 			}
 		}
 
-		private static Task<string> HandleHelp()
+		private static string HandleHelp()
 		{
-			var help = """
+			return """
 				**Available commands:**
-				`!refreshToken`						Manuelly update refreshToken for Saxo
-				`!trigger`							Manuelly trigger whole flow
-				`!updateCash <cash-balance>`		Update cash balance at Nordnet, e.g. `!updateCash 1000.50`
-				`!updateShares <ticker> <amount>`	Update Nordnet shares, e.g. `!updateShares 2B76.DE 20`
-				`!updateJune <amount>`				Update amount of June shares, e.g. `!updateJune 210`
-				`!getJuneAmount`					Show amount of june shares
-				`!status`							Show when job was last run and the lastest portfolio value from Google Sheet			
-				`!getCash`							Show current cash balance at Nordnet
-				`!help`								Show this message
+				`!refreshToken`                      Manually refresh Saxo access token
+				`!trigger`                           Manually trigger the full portfolio run
+				`!updateCash <balance>`              Update Nordnet cash balance, e.g. `!updateCash 1000.50`
+				`!updateShares <ticker> <amount>`    Update Nordnet share count, e.g. `!updateShares 2B76.DE 20`
+				`!updateJune <amount>`               Update June share count, e.g. `!updateJune 710`
+				`!getCash`                           Show current Nordnet cash balance
+				`!getJuneAmount`                     Show current June share count
+				`!help`                              Show this message
 				""";
-
-			return Task.FromResult(help);
 		}
 
 		private async Task<string> HandleUpdateNordnetCash(SocketMessage message)
@@ -79,11 +76,11 @@ namespace StockPriceSheetPrintService.Service.Application
 			try
 			{
 				await _nordnetStore.SetNordnetCashAmountAsync(amount);
-				return $"✅ Cash amount updated - Value: {amount:N2} DKK";
+				return $"✅ Cash amount updated: {amount:N2} DKK";
 			}
 			catch (NordnetStoreException ex)
 			{
-				return $"❌ Error while updating NordnetCash - Exception: {ex.Message}";
+				return $"❌ Error updating cash: {ex.Message}";
 			}
 		}
 
@@ -91,16 +88,16 @@ namespace StockPriceSheetPrintService.Service.Application
 		{
 			var parts = message.Content.Split(' ');
 			if (parts.Length != 2 || !decimal.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out var amount))
-				return "❌ Invalid format. Use: !updateJune 1000.50";
+				return "❌ Invalid format. Use: !updateJune 710";
 
 			try
 			{
 				await _juneStore.SetJuneSharesAmount(amount);
-				return $"✅ June shares amount updated - Value: {amount:N2} DKK";
+				return $"✅ June shares updated: {amount:N2} stk.";
 			}
 			catch (JuneStoreException ex)
 			{
-				return $"❌ Error while updating JuneSharesAmount - Exception: {ex.Message}";
+				return $"❌ Error updating June shares: {ex.Message}";
 			}
 		}
 
@@ -113,7 +110,7 @@ namespace StockPriceSheetPrintService.Service.Application
 			}
 			catch (NordnetStoreException ex)
 			{
-				return $"❌ Error while getting NordnetCash - Exception: {ex.Message}";
+				return $"❌ Error getting cash: {ex.Message}";
 			}
 		}
 
@@ -122,38 +119,42 @@ namespace StockPriceSheetPrintService.Service.Application
 			try
 			{
 				var result = await _juneStore.GetJuneSharesAmount();
-				return $"June shares amount: {result.Amount} DKK (Last updated: {result.LastUpdated})";
+				return $"📊 June shares: {result.Amount:N4} stk. (Last updated: {result.LastUpdated:dd/MM/yyyy HH:mm})";
 			}
 			catch (JuneStoreException ex)
 			{
-				return $"❌ Error while getting JuneSharesAmount - Exception: {ex.Message}";
+				return $"❌ Error getting June shares: {ex.Message}";
 			}
 		}
 
 		private async Task<string> HandleRefreshToken(CancellationToken ct)
 		{
-			var accessToken = await _saxoTokenService.GetAccessTokenAsync(ct);
-			if (accessToken == null)
+			await using var scope = _scopeFactory.CreateAsyncScope();
+			var saxoTokenService = scope.ServiceProvider.GetRequiredService<ISaxoTokenService>();
+			var accessToken = await saxoTokenService.GetAccessTokenAsync(ct);
+			return accessToken != null
+				? "✅ AccessToken successfully updated"
+				: "❌ Failed to update AccessToken";
+		}
+
+		private async Task<string> HandleTrigger(CancellationToken ct)
+		{
+			try
 			{
-				return "✅ AccessToken successfully updated";
+				await using var scope = _scopeFactory.CreateAsyncScope();
+				var jobRunner = scope.ServiceProvider.GetRequiredService<IPortfolioJobRunner>();
+				await jobRunner.RunJobAsync(ct, true);
+				return "✅ Portfolio run triggered successfully";
 			}
-			return "❌ Failed to update AccessToken";
+			catch (Exception ex)
+			{
+				return $"❌ Error triggering job: {ex.Message}";
+			}
 		}
 
-		private async Task<string> HandleManuelTrigger(CancellationToken ct)
+		private static Task<string> HandleUpdateNordnetShares(SocketMessage message)
 		{
-			await _portfolioJobRunner.RunJobAsync(ct, true);
-			return "✅ Run manuelly triggerd successful";
-		}
-
-		private async Task<string> HandleStatus()
-		{
-			throw new NotImplementedException();
-		}
-
-		private async Task<string> HandleUpdateNordnetShares(SocketMessage message)
-		{
-			throw new NotImplementedException();
+			return Task.FromResult("⚠️ Not yet implemented");
 		}
 	}
 }

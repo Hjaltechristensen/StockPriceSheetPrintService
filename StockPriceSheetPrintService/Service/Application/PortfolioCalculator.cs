@@ -67,7 +67,6 @@ namespace StockPriceSheetPrintService.Service.Application
 
 		public async Task<decimal> FindTotalJuneValueAsync(CancellationToken ct)
 		{
-			//decimal shareAmount = 708.4689m;
 			decimal totalJuneValue = 0m;
 
 			var junePrice = await _htmlScraper.GetJuneNavAsync(_configuration["JuneUrl"] ?? string.Empty, ct);

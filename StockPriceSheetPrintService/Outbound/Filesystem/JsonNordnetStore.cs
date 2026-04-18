@@ -10,6 +10,7 @@ namespace StockPriceSheetPrintService.Outbound.Filesystem
 	{
 		private readonly string _filePath = configuration["NordnetCash:FilePath"] ?? throw new InvalidOperationException("NordnetCash:FilePath is missing");
 		private readonly ILogger<JsonNordnetStore> _logger = logger;
+
 		public async Task<NordnetCashJson> GetNordnetCashAmountAsync()
 		{
 			try
@@ -17,14 +18,14 @@ namespace StockPriceSheetPrintService.Outbound.Filesystem
 				if (!File.Exists(_filePath))
 				{
 					_logger.LogWarning("NordnetCash file not found at '{FilePath}. Returning defaults.", _filePath);
-					return new NordnetCashJson(0m, DateTime.Now);
+					return new NordnetCashJson(0m, DateTime.UtcNow);
 				}
 				var json = await File.ReadAllTextAsync(_filePath);
 				var entries = JsonSerializer.Deserialize<NordnetCashJson>(json);
 				if (entries == null)
 				{
-					_logger.LogWarning("Entries is null, returning decimal 0 and DateTime.Now");
-					return new NordnetCashJson(0m, DateTime.Now);
+					_logger.LogWarning("NordnetCash deserialized as null, returning defaults.");
+					return new NordnetCashJson(0m, DateTime.UtcNow);
 				}
 
 				return entries;
@@ -40,8 +41,7 @@ namespace StockPriceSheetPrintService.Outbound.Filesystem
 		{
 			try
 			{
-				var entries = new NordnetCashJson(newAmount, DateTime.UtcNow);
-				await JsonFileHelper.WriteAtomicAsync(_filePath, entries);
+				await JsonFileHelper.WriteAtomicAsync(_filePath, new NordnetCashJson(newAmount, DateTime.UtcNow));
 			}
 			catch (Exception ex)
 			{
@@ -49,7 +49,5 @@ namespace StockPriceSheetPrintService.Outbound.Filesystem
 				throw new NordnetStoreException("Could not save cash amount.", ex);
 			}
 		}
-
-		public record NordnetCashJson(decimal CashAmount, DateTime LastUpdated) { }
 	}
 }
