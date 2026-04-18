@@ -9,12 +9,14 @@ namespace StockPriceSheetPrintService.Service.Application
 		IHttpClientFactory httpClientFactory,
 		ILogger<PortfolioCalculator> logger,
 		IHtmlScraper htmlScraper,
-		IConfiguration configuration) : IPortfolioCalculator
+		IConfiguration configuration,
+		IJuneStore juneStore) : IPortfolioCalculator
 	{
 		private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 		private readonly ILogger<PortfolioCalculator> _logger = logger;
 		private readonly IHtmlScraper _htmlScraper = htmlScraper;
 		private readonly IConfiguration _configuration = configuration;
+		private readonly IJuneStore _juneStore = juneStore;
 		private const decimal NordnetFxMargin = 0.0025m;
 		private Dictionary<string, decimal>? _exchangeRateCache;
 
@@ -65,14 +67,14 @@ namespace StockPriceSheetPrintService.Service.Application
 
 		public async Task<decimal> FindTotalJuneValueAsync(CancellationToken ct)
 		{
-			decimal shareAmount = 708.4689m;
 			decimal totalJuneValue = 0m;
 
 			var junePrice = await _htmlScraper.GetJuneNavAsync(_configuration["JuneUrl"] ?? string.Empty, ct);
 			if (junePrice != null)
 			{
 				_logger.LogInformation("Todays June price: {nav} pr. {date}", junePrice.Nav, junePrice.Date.ToString("dd/MM/yyyy"));
-				totalJuneValue = junePrice.Nav * shareAmount;
+				var shareAmount = await _juneStore.GetJuneSharesAmount();
+				totalJuneValue = junePrice.Nav * shareAmount.Amount;
 			}
 
 			return totalJuneValue;

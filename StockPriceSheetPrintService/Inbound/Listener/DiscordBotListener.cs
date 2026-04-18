@@ -31,7 +31,7 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 			if (msg.Author.IsBot) return;
 			if (msg.Channel.Id != 1495010067538247880) return;
 			
-			var reply = await _botMessageReciver.DispatchMessageAsync(msg);
+			var reply = await _botMessageReciver.DispatchMessageAsync(msg, CancellationToken.None);
 			if (!string.IsNullOrEmpty(reply))
 				await msg.Channel.SendMessageAsync(reply);
 		}

@@ -49,6 +49,7 @@ builder.Services.AddSingleton<IGoogleSheetsClient, GoogleSheetsClientImpl>();
 builder.Services.AddSingleton<IExecutionGuard, ExecutionGuardImpl>();
 builder.Services.AddScoped<IMarketStackService, MarketStackService>();
 builder.Services.AddSingleton<INordnetStore, JsonNordnetStore>();
+builder.Services.AddSingleton<IJuneStore, JsonJuneStore>();
 builder.Services.AddSingleton<IDiscordBotMessageReceiver, DiscordMessageDistributor>();
 builder.Services.AddHttpClient<IHtmlScraper, NavProviderImpl>(client =>
 {
