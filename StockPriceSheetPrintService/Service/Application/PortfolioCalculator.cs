@@ -41,10 +41,9 @@ namespace StockPriceSheetPrintService.Service.Application
 			_exchangeRateCache = null;
 			var rates = await GetExchangeRatesAsync(ct);
 
+			var nordnetSymbols = await _nordnetSymbolStore.GetSymbolsAsync();
 			foreach (var d in data.Data)
 			{
-				var nordnetSymbols = await _nordnetSymbolStore.GetSymbolsAsync();
-
 				if (!nordnetSymbols.TryGetValue(d.Symbol, out decimal multiplier))
 					continue;
 

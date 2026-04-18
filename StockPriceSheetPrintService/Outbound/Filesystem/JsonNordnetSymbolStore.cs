@@ -5,9 +5,10 @@ using System.Text.Json;
 
 namespace StockPriceSheetPrintService.Outbound.Filesystem
 {
-	public class JsonNordnetSymbolStore(IConfiguration configuration) : INordnetSymbolStore
+	public class JsonNordnetSymbolStore(IConfiguration configuration, ILogger<JsonNordnetSymbolStore> logger) : INordnetSymbolStore
 	{
 		private readonly string _filePath = configuration["NordnetSymbol:FilePath"] ?? throw new InvalidOperationException("NordnetSymbol:FilePath is missing");
+		private readonly ILogger<JsonNordnetSymbolStore> _logger = logger;
 		private readonly SemaphoreSlim _lock = new(1, 1);
 
 		public async Task AddOrUpdateSymbolAsync(string ticker, decimal shares)
@@ -35,7 +36,10 @@ namespace StockPriceSheetPrintService.Outbound.Filesystem
 			try
 			{
 				if (!File.Exists(_filePath))
+				{
+					_logger.LogWarning("NordnetSymbol file not found at '{FilePath}'. Returning defaults.", _filePath);
 					return GetDefaults();
+				}
 
 				var json = await File.ReadAllTextAsync(_filePath);
 				return JsonSerializer.Deserialize<Dictionary<string, decimal>>(json) ?? GetDefaults();
@@ -84,7 +88,10 @@ namespace StockPriceSheetPrintService.Outbound.Filesystem
 		private async Task<Dictionary<string, decimal>> ReadFromDiskAsync()
 		{
 			if (!File.Exists(_filePath))
+			{
+				_logger.LogWarning("NordnetSymbol file not found at '{FilePath}'. Returning defaults.", _filePath);
 				return GetDefaults();
+			}
 
 			var json = await File.ReadAllTextAsync(_filePath);
 			return JsonSerializer.Deserialize<Dictionary<string, decimal>>(json) ?? GetDefaults();
