@@ -152,44 +152,79 @@
                 padding: 0.6rem 0;
                 font-size: 0.85rem;
             }
+
+            .period-badge {
+                display: inline-block;
+                font-size: 0.65rem;
+                padding: 2px 6px;
+                border-radius: 4px;
+                margin-top: 0.4rem;
+                font-weight: 600;
+                letter-spacing: 0.05em;
+                background: #1e3a5f;
+                color: #60a5fa;
+            }
         }
     </style>
 </head>
 <body>
     <h1>Portefølje Dashboard</h1>
 
-    <div class="stats">
+    <div class="stats" id="statsRow1">
         <div class="stat-card">
-            <div class="label">Seneste total</div>
+            <div class="label">Latest total</div>
             <div class="value" id="latestValue">—</div>
             <div class="sub neutral" id="latestDate">—</div>
         </div>
         <div class="stat-card">
-            <div class="label">Ændring (1 dag)</div>
+            <div class="label">Change (1 day)</div>
             <div class="value" id="dayChange">—</div>
             <div class="sub" id="dayChangePct">—</div>
         </div>
         <div class="stat-card">
-            <div class="label">YTD ændring</div>
+            <div class="label">YTD change</div>
             <div class="value" id="ytdChange">—</div>
             <div class="sub" id="ytdChangePct">—</div>
         </div>
         <div class="stat-card">
-            <div class="label">Datapunkter</div>
+            <div class="label">Total data points</div>
             <div class="value" id="dataPoints">—</div>
             <div class="sub neutral" id="dataRange">—</div>
         </div>
     </div>
 
+    <div class="stats" id="statsRow2">
+        <div class="stat-card">
+            <div class="label">Change in the period</div>
+            <div class="value" id="periodChange">—</div>
+            <div class="sub" id="periodChangePct">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Data points in the period</div>
+            <div class="value" id="periodPoints">—</div>
+            <div class="sub neutral" id="periodPointsSub">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Best day in the period</div>
+            <div class="value" id="bestDayValue">—</div>
+            <div class="sub neutral" id="bestDayDate">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Volatility (std. dev.)</div>
+            <div class="value" id="volatility">—</div>
+            <div class="sub neutral" id="volatilitySub">—</div>
+        </div>
+    </div>
+
     <div class="chart-container">
         <div class="period-buttons">
-            <button data-days="7">1U</button>
+            <button data-days="7">1W</button>
             <button data-days="30">1M</button>
             <button data-days="90">3M</button>
             <button data-days="180">6M</button>
-            <button data-days="ytd">ÅTD</button>
-            <button data-days="365">1Å</button>
-            <button data-days="0" class="active">Alt</button>
+            <button data-days="ytd">YTD</button>
+            <button data-days="365">1Y</button>
+            <button data-days="0" class="active">All history</button>
         </div>
         <canvas id="chart"></canvas>
     </div>
@@ -311,18 +346,78 @@
             });
         }
 
+        function populatePeriodStats(entries, periodLabel) {
+            if (entries.length === 0) return;
+
+            const first = entries[0];
+            const last = entries[entries.length - 1];
+
+            // Ændring i perioden
+            const diff = last.value - first.value;
+            const pct = (diff / first.value) * 100;
+            document.getElementById("periodChange").textContent = fmt.format(diff);
+            document.getElementById("periodChange").className = "value " + colorClass(diff);
+            const pctEl = document.getElementById("periodChangePct");
+            pctEl.textContent = fmtPct(pct);
+            pctEl.className = "sub " + colorClass(pct);
+
+            // Datapunkter i periode
+            document.getElementById("periodPoints").textContent = entries.length;
+            document.getElementById("periodPointsSub").textContent =
+                `af ${allEntries.length} total · ${periodLabel}`;
+
+            // Bedste dag
+            let bestDiff = -Infinity;
+            let bestDate = "—";
+            for (let i = 1; i < entries.length; i++) {
+                const d = entries[i].value - entries[i - 1].value;
+                if (d > bestDiff) {
+                    bestDiff = d;
+                    bestDate = entries[i].date;
+                }
+            }
+            document.getElementById("bestDayValue").textContent =
+                bestDiff > -Infinity ? fmt.format(bestDiff) : "—";
+            document.getElementById("bestDayValue").className =
+                "value " + colorClass(bestDiff);
+            document.getElementById("bestDayDate").textContent = bestDate;
+
+            // Volatilitet — standardafvigelse på daglige ændringer
+            const dailyChanges = [];
+            for (let i = 1; i < entries.length; i++) {
+                dailyChanges.push(entries[i].value - entries[i - 1].value);
+            }
+            if (dailyChanges.length > 1) {
+                const mean = dailyChanges.reduce((a, b) => a + b, 0) / dailyChanges.length;
+                const variance = dailyChanges.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / dailyChanges.length;
+                const stdDev = Math.sqrt(variance);
+                document.getElementById("volatility").textContent = "±" + fmt.format(Math.round(stdDev));
+                document.getElementById("volatilitySub").textContent = "pr. dag i periode";
+            } else {
+                document.getElementById("volatility").textContent = "—";
+                document.getElementById("volatilitySub").textContent = "ikke nok data";
+            }
+        }
+
         function filterAndRender(days) {
             let entries = allEntries;
+            let periodLabel = "All history";
+
             if (days === "ytd") {
                 const ytdStart = `${new Date().getFullYear()}-01-01`;
                 entries = allEntries.filter(e => e.date >= ytdStart);
+                periodLabel = "YTD";
             } else if (days > 0) {
                 const cutoff = new Date();
                 cutoff.setDate(cutoff.getDate() - days);
                 const cutoffStr = cutoff.toISOString().slice(0, 10);
                 entries = allEntries.filter(e => e.date >= cutoffStr);
+                const labels = { 7: "1U", 30: "1M", 90: "3M", 180: "6M", 365: "1Å" };
+                periodLabel = labels[days] ?? `${days}d`;
             }
+
             buildChart(entries);
+            populatePeriodStats(entries, periodLabel);
         }
 
 
