@@ -115,13 +115,6 @@
             margin-top: 1rem;
             font-size: 0.9rem;
         }
-
-        .period-buttons button {
-            flex: 1;
-            padding: 0.6rem 0;
-            font-size: 0.85rem;
-        }
-
         @media (max-width: 600px) {
             body {
                 padding: 1rem;
@@ -151,6 +144,12 @@
 
             .chart-container {
                 padding: 1rem;
+            }
+
+            .period-buttons button {
+                flex: 1;
+                padding: 0.6rem 0;
+                font-size: 0.85rem;
             }
 
             .period-badge {
@@ -342,7 +341,7 @@
             bonds: 0.03,
         };
 
-        let showBenchmark = true;
+        let showBenchmark = false;
         let showTrend = true;
 
         function generateBenchmark(entries, annualRate) {
