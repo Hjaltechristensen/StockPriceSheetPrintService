@@ -61,14 +61,13 @@ namespace StockPriceSheetPrintService.Service.Application
 		private static string HandleHelp()
 		{
 			return """
-        📋 **Saxo & Portfolio**
+        📋 **Saxo**
         `!refreshToken` — Manually refresh Saxo access token
-        `!trigger` — Manually trigger the full portfolio run
 
         💰 **Nordnet**
-        `!updateCash <balance>` — Update cash balance, e.g. `!updateCash 1000.50`
         `!getSymbols` — Show all active symbols
         `!getCash` — Show current Nordnet cash balance
+        `!updateCash <balance>` — Update cash balance, e.g. `!updateCash 1000.50`
         `!addSymbol <ticker> <amount>` — Add/update symbol, e.g. `!addSymbol 2B76.DE 218`
         `!removeSymbol <ticker>` — Remove symbol, e.g. `!removeSymbol O`
 
@@ -77,6 +76,7 @@ namespace StockPriceSheetPrintService.Service.Application
         `!getJuneAmount` — Show current June share count
 
         ℹ️ **Andet**
+        `!trigger` — Manually trigger the full portfolio run
         `!status` — Show last run time and portfolio value
         `!help` — Show this message
         """;
