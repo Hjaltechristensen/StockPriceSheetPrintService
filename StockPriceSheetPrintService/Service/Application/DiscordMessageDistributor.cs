@@ -10,12 +10,14 @@ namespace StockPriceSheetPrintService.Service.Application
 		INordnetStore nordnetStore,
 		IJuneStore juneStore,
 		IServiceScopeFactory scopeFactory,
-		INordnetSymbolStore nordnetSymbolStore) : IDiscordBotMessageReceiver
+		INordnetSymbolStore nordnetSymbolStore,
+		ISchedulerStatus schedulerStatus) : IDiscordBotMessageReceiver
 	{
 		private readonly INordnetStore _nordnetStore = nordnetStore;
 		private readonly IJuneStore _juneStore = juneStore;
 		private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
 		private readonly INordnetSymbolStore _nordnetSymbolStore = nordnetSymbolStore;
+		private readonly ISchedulerStatus _schedulerStatus = schedulerStatus;
 		public async Task<string> DispatchMessageAsync(SocketMessage message, CancellationToken ct)
 		{
 			switch (message.Content.Split(' ')[0])
@@ -217,9 +219,33 @@ namespace StockPriceSheetPrintService.Service.Application
 			}
 		}
 
-		private static string HandleStatus()
+		private string HandleStatus()
 		{
-			return "⚠️ Not yet implemented";
+			var s = _schedulerStatus;
+
+			string Fmt(DateTimeOffset? t) => t is { } v
+				? $"<t:{v.ToUnixTimeSeconds()}:R>"
+				: "Ukendt";
+
+			string FmtAbsolute(DateTimeOffset? t) => t is { } v
+				? $"{v:dd/MM/yyyy HH:mm} UTC"
+				: "Aldrig";
+
+			var lastRunStatus = s.LastRunSucceeded switch
+			{
+				true => "✅ Success",
+				false => "❌ Fejl",
+				null => "Ukendt"
+			};
+
+			return $"""
+			📊 **Service Status**
+			⏳ **Næste job run:** {Fmt(s.NextRunAt)} ({FmtAbsolute(s.NextRunAt)})
+			🔑 **Næste token refresh:** {(s.NextTokenRefreshAt is not null ? Fmt(s.NextTokenRefreshAt) : "Ingen planlagt")}
+			🕐 **Sidste run:** {FmtAbsolute(s.LastRunAt)}
+			📋 **Sidste run status:** {lastRunStatus}
+			""";
 		}
+
 	}
 }

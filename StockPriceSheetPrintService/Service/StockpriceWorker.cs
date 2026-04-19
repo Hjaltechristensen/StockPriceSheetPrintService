@@ -6,11 +6,13 @@ namespace StockPriceSheetPrintService.Service
 	public class StockpriceWorker(
 		ILogger<StockpriceWorker> logger,
 		ISaxoTokenService saxoTokenService,
-		IPortfolioJobRunner jobRunner) : BackgroundService
+		IPortfolioJobRunner jobRunner,
+		SchedulerStatusStore statusStore) : BackgroundService
 	{
 		private readonly ILogger<StockpriceWorker> _logger = logger;
 		private readonly ISaxoTokenService _saxoTokenService = saxoTokenService;
 		private readonly IPortfolioJobRunner _jobRunner = jobRunner;
+		private readonly SchedulerStatusStore _statusStore = statusStore;
 
 		protected override async Task ExecuteAsync(CancellationToken ct)
 		{
@@ -26,30 +28,25 @@ namespace StockPriceSheetPrintService.Service
 			{
 				try
 				{
-					var utcNow = DateTimeOffset.UtcNow;
 					var nextRunUtc = GetNextRunTime(3, 30);
-
 					while (nextRunUtc.DayOfWeek == DayOfWeek.Sunday || nextRunUtc.DayOfWeek == DayOfWeek.Monday)
 					{
 						nextRunUtc = nextRunUtc.AddDays(1);
 					}
 
-					var delay = nextRunUtc - utcNow;
-					if (delay < TimeSpan.Zero) delay = TimeSpan.Zero;
-
+					_statusStore.SetNextRunAt(nextRunUtc);
 					_logger.LogInformation("[SCHEDULER] Next run scheduled for: {nextRun:dd/MM/yyyy HH:mm} UTC (in {hours:F1} hours)",
-						nextRunUtc, delay.TotalHours);
+						nextRunUtc, (nextRunUtc - DateTimeOffset.UtcNow).TotalHours);
 
 					while (DateTimeOffset.UtcNow < nextRunUtc && !ct.IsCancellationRequested)
 					{
 						var timeUntilJob = nextRunUtc - DateTimeOffset.UtcNow;
 						var refreshDelay = TimeSpan.FromMinutes(45);
-
 						if (refreshDelay > timeUntilJob) break;
 
-						_logger.LogInformation("[SCHEDULER] Session refresh in 45 min to keep token alive...");
+						_statusStore.SetNextTokenRefreshAt(DateTimeOffset.UtcNow.Add(refreshDelay));
 						await Task.Delay(refreshDelay, ct);
-						_logger.LogInformation("[SCHEDULER] Performing token refresh...");
+						_statusStore.SetNextTokenRefreshAt(null);
 						await _saxoTokenService.GetAccessTokenAsync(ct);
 					}
 
@@ -57,7 +54,16 @@ namespace StockPriceSheetPrintService.Service
 					if (finalDelay > TimeSpan.Zero)
 						await Task.Delay(finalDelay, ct);
 
-					await _jobRunner.RunJobAsync(ct);
+					try
+					{
+						await _jobRunner.RunJobAsync(ct);
+						_statusStore.SetLastRun(DateTimeOffset.UtcNow, true);
+					}
+					catch (Exception ex) when (ex is not OperationCanceledException)
+					{
+						_statusStore.SetLastRun(DateTimeOffset.UtcNow, false);
+						throw;
+					}
 				}
 				catch (OperationCanceledException)
 				{
