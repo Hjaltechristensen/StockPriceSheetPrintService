@@ -116,6 +116,72 @@
             font-size: 0.9rem;
         }
 
+        .period-buttons button {
+            flex: 1;
+            padding: 0.6rem 0;
+            font-size: 0.85rem;
+        }
+
+        .period-badge {
+            display: inline-block;
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-top: 0.4rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            background: #1e3a5f;
+            color: #60a5fa;
+        }
+
+        .chart-toolbar {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .toolbar-label {
+            font-size: 0.75rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .chart-toolbar select {
+            background: #2d3748;
+            border: 1px solid #374151;
+            color: #e2e8f0;
+            border-radius: 6px;
+            padding: 0.3rem 0.6rem;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        .toggle-btn {
+            background: #2d3748;
+            border: 1px solid #374151;
+            color: #94a3b8;
+            border-radius: 6px;
+            padding: 0.3rem 0.75rem;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+        }
+
+            .toggle-btn.active {
+                background: #3b82f6;
+                border-color: #3b82f6;
+                color: #fff;
+            }
+
         @media (max-width: 600px) {
             body {
                 padding: 1rem;
@@ -145,24 +211,6 @@
 
             .chart-container {
                 padding: 1rem;
-            }
-
-            .period-buttons button {
-                flex: 1;
-                padding: 0.6rem 0;
-                font-size: 0.85rem;
-            }
-
-            .period-badge {
-                display: inline-block;
-                font-size: 0.65rem;
-                padding: 2px 6px;
-                border-radius: 4px;
-                margin-top: 0.4rem;
-                font-weight: 600;
-                letter-spacing: 0.05em;
-                background: #1e3a5f;
-                color: #60a5fa;
             }
         }
     </style>
@@ -226,6 +274,23 @@
             <button data-days="ytd">YTD</button>
             <button data-days="0" class="active">All history</button>
         </div>
+        <div class="chart-toolbar">
+            <div class="toolbar-group">
+                <span class="toolbar-label">Benchmark</span>
+                <select id="benchmarkSelect">
+                    <option value="msci">MSCI World (~10% p.a.)</option>
+                    <option value="sp500">S&P 500 (~11% p.a.)</option>
+                    <option value="omxc25">OMXC25 (~8% p.a.)</option>
+                    <option value="inflation">Inflation (~2,5% p.a.)</option>
+                    <option value="bonds">Obligationer (~3% p.a.)</option>
+                </select>
+                <button class="toggle-btn active" id="benchmarkToggle">Fra</button>
+            </div>
+            <div class="toolbar-group">
+                <span class="toolbar-label">Trendlinje</span>
+                <button class="toggle-btn active" id="trendToggle">Fra</button>
+            </div>
+        </div>
         <canvas id="chart"></canvas>
     </div>
 
@@ -249,6 +314,7 @@
         }
 
         let allEntries = [];
+        let currentDays = 0;
         let chart = null;
 
         const crosshairPlugin = {
@@ -268,44 +334,109 @@
             }
         };
 
+        const benchmarkRates = {
+            msci: 0.10,
+            sp500: 0.11,
+            omxc25: 0.08,
+            inflation: 0.025,
+            bonds: 0.03,
+        };
+
+        let showBenchmark = true;
+        let showTrend = true;
+
+        function generateBenchmark(entries, annualRate) {
+            if (entries.length === 0) return [];
+            const base = entries[0].value;
+            const startDate = new Date(entries[0].date);
+            return entries.map(e => {
+                const days = (new Date(e.date) - startDate) / (1000 * 60 * 60 * 24);
+                return base * Math.pow(1 + annualRate, days / 365);
+            });
+        }
+
+        function generateTrend(entries) {
+            const n = entries.length;
+            if (n < 2) return [];
+            const xs = entries.map((_, i) => i);
+            const ys = entries.map(e => e.value);
+            const meanX = (n - 1) / 2;
+            const meanY = ys.reduce((a, b) => a + b, 0) / n;
+            const num = xs.reduce((sum, x, i) => sum + (x - meanX) * (ys[i] - meanY), 0);
+            const den = xs.reduce((sum, x) => sum + Math.pow(x - meanX, 2), 0);
+            const slope = num / den;
+            const intercept = meanY - slope * meanX;
+            return xs.map(x => Math.round(slope * x + intercept));
+        }
+
         function buildChart(entries) {
             const labels = entries.map(e => e.date);
             const values = entries.map(e => e.value);
-
-            const gradient = chart
-                ? null
-                : (() => {
-                    const ctx = document.getElementById("chart").getContext("2d");
-                    const g = ctx.createLinearGradient(0, 0, 0, 400);
-                    g.addColorStop(0, "rgba(59,130,246,0.35)");
-                    g.addColorStop(1, "rgba(59,130,246,0)");
-                    return g;
-                })();
+            const benchmarkKey = document.getElementById("benchmarkSelect").value;
+            const benchmarkData = benchmarkKey !== "none"
+                ? generateBenchmark(entries, benchmarkRates[benchmarkKey])
+                : [];
+            const trendData = generateTrend(entries);
 
             if (chart) {
                 chart.data.labels = labels;
                 chart.data.datasets[0].data = values;
+                chart.data.datasets[1].data = showBenchmark && benchmarkData.length ? benchmarkData : [];
+                chart.data.datasets[2].data = showTrend ? trendData : [];
                 chart.update();
                 return;
             }
 
             const ctx = document.getElementById("chart").getContext("2d");
+            const g = ctx.createLinearGradient(0, 0, 0, 400);
+            g.addColorStop(0, "rgba(59,130,246,0.35)");
+            g.addColorStop(1, "rgba(59,130,246,0)");
+
             chart = new Chart(ctx, {
                 plugins: [crosshairPlugin],
                 type: "line",
                 data: {
                     labels,
-                    datasets: [{
-                        label: "Porteføljeværdi",
-                        data: values,
-                        borderColor: "#3b82f6",
-                        backgroundColor: gradient,
-                        borderWidth: 2,
-                        pointRadius: entries.length > 100 ? 0 : 3,
-                        pointHoverRadius: 5,
-                        fill: true,
-                        tension: 0.3
-                    }]
+                    datasets: [
+                        {
+                            label: "Portefølje",
+                            data: values,
+                            borderColor: "#3b82f6",
+                            backgroundColor: g,
+                            borderWidth: 2,
+                            pointRadius: entries.length > 100 ? 0 : 3,
+                            pointHoverRadius: 5,
+                            fill: true,
+                            tension: 0.3,
+                            order: 1,
+                        },
+                        {
+                            label: "Benchmark",
+                            data: showBenchmark && benchmarkData.length ? benchmarkData : [],
+                            borderColor: "#f59e0b",
+                            backgroundColor: "transparent",
+                            borderWidth: 1.5,
+                            borderDash: [5, 4],
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            fill: false,
+                            tension: 0.3,
+                            order: 2,
+                        },
+                        {
+                            label: "Trend",
+                            data: showTrend ? trendData : [],
+                            borderColor: "rgba(168,85,247,0.7)",
+                            backgroundColor: "transparent",
+                            borderWidth: 1.5,
+                            borderDash: [3, 3],
+                            pointRadius: 0,
+                            pointHoverRadius: 0,
+                            fill: false,
+                            tension: 0,
+                            order: 3,
+                        },
+                    ]
                 },
                 options: {
                     onHover(evt, items, chart) {
@@ -321,7 +452,7 @@
                         legend: { display: false },
                         tooltip: {
                             callbacks: {
-                                label: ctx => fmt.format(ctx.parsed.y)
+                                label: ctx => `${ctx.dataset.label}: ${fmt.format(ctx.parsed.y)}`
                             }
                         }
                     },
@@ -340,9 +471,10 @@
                     }
                 }
             });
-            document.getElementById('chart').addEventListener('mouseleave', () => {
+
+            document.getElementById("chart").addEventListener("mouseleave", () => {
                 chart._hoverY = null;
-                chart.update('none');
+                chart.update("none");
             });
         }
 
@@ -400,6 +532,7 @@
         }
 
         function filterAndRender(days) {
+            currentDays = days;
             let entries = allEntries;
             let periodLabel = "All history";
 
@@ -473,6 +606,24 @@
                 btn.classList.add("active");
                 filterAndRender(btn.dataset.days === "ytd" ? "ytd" : parseInt(btn.dataset.days, 10));
             });
+        });
+
+        document.getElementById("benchmarkToggle").addEventListener("click", function () {
+            showBenchmark = !showBenchmark;
+            this.textContent = showBenchmark ? "Til" : "Fra";
+            this.classList.toggle("active", showBenchmark);
+            filterAndRender(currentDays);
+        });
+
+        document.getElementById("trendToggle").addEventListener("click", function () {
+            showTrend = !showTrend;
+            this.textContent = showTrend ? "Til" : "Fra";
+            this.classList.toggle("active", showTrend);
+            filterAndRender(currentDays);
+        });
+
+        document.getElementById("benchmarkSelect").addEventListener("change", () => {
+            filterAndRender(currentDays);
         });
 
         init();
