@@ -6,23 +6,13 @@ namespace StockPriceSheetPrintService.Service
 	public class StockpriceWorker(
 		ILogger<StockpriceWorker> logger,
 		ISaxoTokenService saxoTokenService,
-		IPortfolioJobRunner jobRunner) : BackgroundService, ISchedulerStatus
+		IPortfolioJobRunner jobRunner,
+		SchedulerStatusStore statusStore) : BackgroundService
 	{
 		private readonly ILogger<StockpriceWorker> _logger = logger;
 		private readonly ISaxoTokenService _saxoTokenService = saxoTokenService;
 		private readonly IPortfolioJobRunner _jobRunner = jobRunner;
-
-		private DateTimeOffset? _nextRunAt;
-		private DateTimeOffset? _nextTokenRefreshAt;
-		private DateTimeOffset? _lastRunAt;
-		private bool? _lastRunSucceeded;
-
-		// ISchedulerStatus
-		public DateTimeOffset? NextRunAt => _nextRunAt;
-		public DateTimeOffset? NextTokenRefreshAt => _nextTokenRefreshAt;
-		public DateTimeOffset? LastRunAt => _lastRunAt;
-		public bool? LastRunSucceeded => _lastRunSucceeded;
-
+		private readonly SchedulerStatusStore _statusStore = statusStore;
 
 		protected override async Task ExecuteAsync(CancellationToken ct)
 		{
@@ -40,9 +30,13 @@ namespace StockPriceSheetPrintService.Service
 				{
 					var nextRunUtc = GetNextRunTime(3, 30);
 					while (nextRunUtc.DayOfWeek == DayOfWeek.Sunday || nextRunUtc.DayOfWeek == DayOfWeek.Monday)
+					{
 						nextRunUtc = nextRunUtc.AddDays(1);
+					}
 
-					_nextRunAt = nextRunUtc;
+					_statusStore.SetNextRunAt(nextRunUtc);
+					_logger.LogInformation("[SCHEDULER] Next run scheduled for: {nextRun:dd/MM/yyyy HH:mm} UTC (in {hours:F1} hours)",
+						nextRunUtc, (nextRunUtc - DateTimeOffset.UtcNow).TotalHours);
 
 					while (DateTimeOffset.UtcNow < nextRunUtc && !ct.IsCancellationRequested)
 					{
@@ -50,9 +44,9 @@ namespace StockPriceSheetPrintService.Service
 						var refreshDelay = TimeSpan.FromMinutes(45);
 						if (refreshDelay > timeUntilJob) break;
 
-						_nextTokenRefreshAt = DateTimeOffset.UtcNow.Add(refreshDelay);
+						_statusStore.SetNextTokenRefreshAt(DateTimeOffset.UtcNow.Add(refreshDelay));
 						await Task.Delay(refreshDelay, ct);
-						_nextTokenRefreshAt = null;
+						_statusStore.SetNextTokenRefreshAt(null);
 						await _saxoTokenService.GetAccessTokenAsync(ct);
 					}
 
@@ -63,13 +57,11 @@ namespace StockPriceSheetPrintService.Service
 					try
 					{
 						await _jobRunner.RunJobAsync(ct);
-						_lastRunAt = DateTimeOffset.UtcNow;
-						_lastRunSucceeded = true;
+						_statusStore.SetLastRun(DateTimeOffset.UtcNow, true);
 					}
-					catch
+					catch (Exception ex) when (ex is not OperationCanceledException)
 					{
-						_lastRunAt = DateTimeOffset.UtcNow;
-						_lastRunSucceeded = false;
+						_statusStore.SetLastRun(DateTimeOffset.UtcNow, false);
 						throw;
 					}
 				}

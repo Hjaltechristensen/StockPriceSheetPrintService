@@ -32,9 +32,9 @@ builder.Host.UseSerilog();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
-builder.Services.AddSingleton<StockpriceWorker>();
-builder.Services.AddHostedService(sp => sp.GetRequiredService<StockpriceWorker>());
-builder.Services.AddSingleton<ISchedulerStatus>(sp => sp.GetRequiredService<StockpriceWorker>());
+builder.Services.AddSingleton<SchedulerStatusStore>();
+builder.Services.AddSingleton<ISchedulerStatus>(sp => sp.GetRequiredService<SchedulerStatusStore>());
+builder.Services.AddHostedService<StockpriceWorker>();
 builder.Services.AddHostedService<DiscordBotListener>();
 builder.Services.AddScoped<IPortfolioCalculator, PortfolioCalculator>();
 builder.Services.AddScoped<IPortfolioJobRunner, PortfolioJobRunner>();

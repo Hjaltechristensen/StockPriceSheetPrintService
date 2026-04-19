@@ -1,4 +1,4 @@
-﻿namespace StockPriceSheetPrintService.Service.Ports.Inbound
+namespace StockPriceSheetPrintService.Service.Ports.Outbound
 {
 	public interface ISchedulerStatus
 	{
