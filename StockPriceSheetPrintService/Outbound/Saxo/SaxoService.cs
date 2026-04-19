@@ -46,9 +46,9 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 
 			if (!tokenResponse.IsSuccessStatusCode)
 			{
-				_logger.LogError("[SAXO-AUTH] Token request afvist. Status: {status}, Body: {body}",
+				_logger.LogError("[SAXO-AUTH] Token request rejected. Status: {status}, Body: {body}",
 					(int)tokenResponse.StatusCode, tokenData);
-				throw new HttpRequestException($"Saxo afviste token request. Status: {tokenResponse.StatusCode}");
+				throw new HttpRequestException($"Saxo rejected token request. Status: {tokenResponse.StatusCode}");
 			}
 
 			var jsonDoc = JsonDocument.Parse(tokenData);
@@ -69,13 +69,13 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 
 			if (!balanceResponse.IsSuccessStatusCode)
 			{
-				_logger.LogError("[SAXO-AUTH] Kunne ikke hente balance. Status: {status}, Body: {body}",
+				_logger.LogError("[SAXO-AUTH] Could not fetch balance. Status: {status}, Body: {body}",
 					(int)balanceResponse.StatusCode, balanceData);
-				throw new HttpRequestException("Kunne ikke hente balance fra Saxo.");
+				throw new HttpRequestException("Could not fetch balance from Saxo.");
 			}
 
 			return JsonSerializer.Deserialize<SaxoBalanceResponse>(balanceData, JsonOptions)
-			?? throw new InvalidOperationException("Tom balance response fra Saxo.");
+			?? throw new InvalidOperationException("Empty balance response from Saxo.");
 		}
 
 		public async Task<SaxoTransactionsResponse> GetSaxoTransactionsAsync(string accessToken, DateTime fromDate, DateTime toDate, CancellationToken ct)
@@ -94,13 +94,13 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 			var transactionsData = await transactionsResponse.Content.ReadAsStringAsync(ct);
 			if (!transactionsResponse.IsSuccessStatusCode)
 			{
-				_logger.LogError("[SAXO-AUTH] Kunne ikke hente transactions. Status: {status}, Body: {body}",
+				_logger.LogError("[SAXO-AUTH] Could not fetch transactions. Status: {status}, Body: {body}",
 					(int)transactionsResponse.StatusCode, transactionsData);
-				throw new HttpRequestException("Kunne ikke hente transactions fra Saxo.");
+				throw new HttpRequestException("Could not fetch transactions from Saxo.");
 			}
 		
 			return JsonSerializer.Deserialize<SaxoTransactionsResponse>(transactionsData, JsonOptions)
-			?? throw new InvalidOperationException("Tom transactions response fra Saxo.");
+			?? throw new InvalidOperationException("Empty transactions response from Saxo.");
 		}
 
 		private async Task<string?> GetClientKeyAsync(string accessToken, CancellationToken ct)
@@ -114,14 +114,14 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 			var json = await response.Content.ReadAsStringAsync(ct);
 			if (!response.IsSuccessStatusCode)
 			{
-				_logger.LogError("[SAXO-AUTH] Kunne ikke hente client key. Status: {status}, Body: {body}",
+				_logger.LogError("[SAXO-AUTH] Could not fetch client key. Status: {status}, Body: {body}",
 					(int)response.StatusCode, json);
-				throw new HttpRequestException("Kunne ikke hente client key fra Saxo.");
+				throw new HttpRequestException("Could not fetch client key from Saxo.");
 			}
 
 			using var doc = JsonDocument.Parse(json);
 			_clientKey = doc.RootElement.GetProperty("ClientKey").GetString()
-				?? throw new InvalidOperationException("ClientKey mangler i Saxo /clients/me response.");
+				?? throw new InvalidOperationException("ClientKey missing in Saxo /clients/me response.");
 			return _clientKey;
 		}
 	}

@@ -28,10 +28,8 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 				? $"\n```{logEvent.Exception.Message}```"
 				: string.Empty;
 
-			var payload = new
+			var embedList = new List<object>
 			{
-				embeds = new[]
-				{
 				new
 				{
 					title = level,
@@ -39,8 +37,20 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 					color = logEvent.Level == LogEventLevel.Warning ? 16776960 : 15158332,
 					timestamp = logEvent.Timestamp.UtcDateTime
 				}
-			}
 			};
+
+			if (message.Contains("Overriding address(es)") && message.Contains("Binding to endpoints defined via IConfiguration and/or UseKestrel() instead"))
+			{
+				embedList.Insert(0,new
+				{
+					title = "✅ Startup",
+					description = "Startup completed...",
+					color = 3066993,
+					timestamp = logEvent.Timestamp.UtcDateTime
+				});
+			}
+
+			var payload = new { embeds = embedList.ToArray() };
 
 			Task.Run(async () =>
 			{

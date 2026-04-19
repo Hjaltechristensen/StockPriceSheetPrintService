@@ -64,7 +64,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				totalPrice += priceInDkk * multiplier;
 			}
 
-			_logger.LogInformation("[JOB] Total aktieværdi: {totalPrice:F2} DKK", totalPrice);
+			_logger.LogInformation("[JOB] Total stock value: {totalPrice:F2} DKK", totalPrice);
 			return totalPrice;
 		}
 
@@ -89,14 +89,14 @@ namespace StockPriceSheetPrintService.Service.Application
 			{
 				if (ExchangeCurrencyFallback.TryGetValue(exchange, out var fallback))
 				{
-					_logger.LogWarning("[VALUTA] {exchange} har null currency – bruger fallback: {currency}", exchange, fallback);
+					_logger.LogWarning("[CURRENCY] {exchange} has null currency – using fallback: {currency}", exchange, fallback);
 					currency = fallback;
 				}
 			}
 
 			if (string.IsNullOrEmpty(currency))
 			{
-				_logger.LogWarning("[VALUTA] Kunne ikke bestemme valuta – bruger kurs 1:1");
+				_logger.LogWarning("[CURRENCY] Could not determine currency – using rate 1:1");
 				return price;
 			}
 
@@ -109,7 +109,7 @@ namespace StockPriceSheetPrintService.Service.Application
 			if (rates.TryGetValue(currency, out var rate))
 				return price * rate;
 
-			_logger.LogWarning("[VALUTA] Ukendt valuta: {currency} – bruger kurs 1:1", currency);
+			_logger.LogWarning("[CURRENCY] Unknown currency: {currency} – using rate 1:1", currency);
 			return price;
 		}
 
@@ -139,7 +139,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				}
 			}
 
-			_logger.LogInformation("[VALUTA] Kurser inkl. Nordnet margin – USD: {usd:F4} DKK, EUR: {eur:F4} DKK",
+			_logger.LogInformation("[CURRENCY] Exchange rates including Nordnet margin – USD: {usd:F4} DKK, EUR: {eur:F4} DKK",
 				_exchangeRateCache.GetValueOrDefault("USD"),
 				_exchangeRateCache.GetValueOrDefault("EUR"));
 

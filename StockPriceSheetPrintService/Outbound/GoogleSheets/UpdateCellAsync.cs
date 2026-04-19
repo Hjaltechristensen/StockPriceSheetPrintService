@@ -87,7 +87,7 @@ namespace StockPriceSheetPrintService.Outbound.GoogleSheets
 				dayBeforeValue = decimal.Parse(cleanValue, NumberStyles.Any, CultureInfo.InvariantCulture);
 			}
 			int nextRow = existingValues.Count + 1;
-			_logger.LogInformation("[SHEETS] Skriver til række {row}", nextRow);
+			_logger.LogInformation("[SHEETS] Writing to row {row}", nextRow);
 
 			var updateRange = $"'{sheetName}'!{DateColumn}{nextRow}:{ValueColumn}{nextRow}";
 			var valueRange = new ValueRange
@@ -105,7 +105,7 @@ namespace StockPriceSheetPrintService.Outbound.GoogleSheets
 			updateRequest.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.USERENTERED;
 			await updateRequest.ExecuteAsync(ct);
 
-			_logger.LogInformation("[SHEETS] ✓ Værdi {value} skrevet til {range}", totalValue, updateRange);
+			_logger.LogInformation("[SHEETS] ✓ Value {value} written to {range}", totalValue, updateRange);
 			return dayBeforeValue;
 		}
 	}

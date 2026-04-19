@@ -18,12 +18,12 @@ namespace StockPriceSheetPrintService.Service.Application
 		public async Task RunJobAsync(CancellationToken ct, bool sendDiscordImmediately = false)
 		{
 			_logger.LogInformation("╔═══════════════════════════════════════════╗");
-			_logger.LogInformation("║  JOB KØRSEL STARTER - {time:HH:mm:ss} UTC        ║", DateTime.UtcNow);
+			_logger.LogInformation("║  JOB RUNNING START - {time:HH:mm:ss} UTC        ║", DateTime.UtcNow);
 			_logger.LogInformation("╚═══════════════════════════════════════════╝");
 
 			if (!_executionGuard.IsExecutionSafe())
 			{
-				_logger.LogWarning("[JOB] ✗ KØRSEL BLOKERET: Sikkerhedsmekanisme aktiveret (for mange kørsler)");
+				_logger.LogWarning("[JOB] ✗ EXECUTION BLOCKED: Safety mechanism activated (too many runs)");
 				return;
 			}
 
@@ -64,7 +64,7 @@ namespace StockPriceSheetPrintService.Service.Application
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "[JOB] ✗ UVENTET FEJL under job kørsel!");
+				_logger.LogError(ex, "[JOB] ✗ UNEXPECTED ERROR during job execution!");
 				_logger.LogError("[JOB] Exception Type: {type}", ex.GetType().Name);
 				_logger.LogError("[JOB] Stack Trace: {stackTrace}", ex.StackTrace);
 				throw;
@@ -77,7 +77,7 @@ namespace StockPriceSheetPrintService.Service.Application
 			totalLine = totalLine.PadRight(44) + "║";
 
 			_logger.LogInformation("╔═══════════════════════════════════════════╗");
-			_logger.LogInformation("║  JOB AFSLUTTET - SUCCESFULDT              ║");
+			_logger.LogInformation("║  JOB COMPLETED - SUCCESSFULLY             ║");
 			_logger.LogInformation(totalLine);
 			_logger.LogInformation("╚═══════════════════════════════════════════╝");
 		}

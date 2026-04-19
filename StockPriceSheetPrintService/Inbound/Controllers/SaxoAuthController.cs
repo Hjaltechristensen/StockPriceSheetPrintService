@@ -41,7 +41,7 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 			_logger.LogInformation("[SAXO-CALLBACK] OAuth callback starter");
 
 			if (string.IsNullOrEmpty(code))
-				return BadRequest("Ingen kode modtaget fra Saxo.");
+				return BadRequest("No code received from Saxo.");
 
 			try
 			{
@@ -51,16 +51,16 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 
 				return Ok(new
 				{
-					Message = "Alt er sat op! Din worker vil nu køre automatisk.",
+					Message = "Everything is set up! Your worker will now run automatically.",
 					Værdi = balance?.TotalValue,
 					Valuta = balance?.Currency,
-					NextRunTime = "Check logs for næste planlagte kørsel"
+					NextRunTime = "Check logs for next scheduled run"
 				});
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "[SAXO-CALLBACK] Fejl i callback");
-				return StatusCode(500, $"Intern serverfejl: {ex.Message}");
+				_logger.LogError(ex, "[SAXO-CALLBACK] Error in callback");
+				return StatusCode(500, $"Internal server error: {ex.Message}");
 			}
 		}
 
@@ -68,15 +68,15 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 		public async Task<IActionResult> TriggerJob(CancellationToken ct)
 		{
 			await _jobRunner.RunJobAsync(ct, true);
-			return Ok(new { Message = "Kørsel gennemført." });
+			return Ok(new { Message = "Job completed." });
 		}
 
 		[HttpPost("refreshToken")]
 		public async Task<IActionResult> RefreshSaxoAccessTokenAsync(CancellationToken ct)
 		{
 			var accessToken = await _saxoTokenService.GetAccessTokenAsync(ct);
-			if (accessToken == null) return NotFound(new { Message = "Ingen gyldig access token fundet. Log ind via /saxo/login" });
-			return Ok(new { Message = "Token refresh gennemført." });
+			if (accessToken == null) return NotFound(new { Message = "No valid access token found. Log in via /saxo/login" });
+			return Ok(new { Message = "Token refresh completed." });
 		}
 
 		[HttpPost("getAccessToken")]
@@ -84,7 +84,7 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 		{
 			var accessToken = await _saxoTokenService.GetAccessTokenAsync(ct);
 			if (accessToken == null)
-				return NotFound(new { Message = "Ingen gyldig access token fundet. Log ind via /saxo/login" });
+				return NotFound(new { Message = "No valid access token found. Log in via /saxo/login" });
 			return Ok(new { AccessToken = accessToken });
 		}
 	}

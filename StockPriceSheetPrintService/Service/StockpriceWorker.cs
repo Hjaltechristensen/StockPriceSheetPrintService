@@ -18,9 +18,9 @@ namespace StockPriceSheetPrintService.Service
 			_logger.LogInformation("║  STOCKPRIZE WORKER STARTET                ║");
 			_logger.LogInformation("╚═══════════════════════════════════════════╝");
 
-			_logger.LogInformation("[STARTUP] Udfører initial token refresh...");
+			_logger.LogInformation("[STARTUP] Performing initial token refresh...");
 			await _saxoTokenService.GetAccessTokenAsync(ct);
-			_logger.LogInformation("[STARTUP] ✓ Initial token refresh gennemført");
+			_logger.LogInformation("[STARTUP] ✓ Initial token refresh completed");
 
 			while (!ct.IsCancellationRequested)
 			{
@@ -37,7 +37,7 @@ namespace StockPriceSheetPrintService.Service
 					var delay = nextRunUtc - utcNow;
 					if (delay < TimeSpan.Zero) delay = TimeSpan.Zero;
 
-					_logger.LogInformation("[SCHEDULER] Næste kørsel planlagt til: {nextRun:dd/MM/yyyy HH:mm} UTC (om {hours:F1} timer)",
+					_logger.LogInformation("[SCHEDULER] Next run scheduled for: {nextRun:dd/MM/yyyy HH:mm} UTC (in {hours:F1} hours)",
 						nextRunUtc, delay.TotalHours);
 
 					while (DateTimeOffset.UtcNow < nextRunUtc && !ct.IsCancellationRequested)
@@ -47,9 +47,9 @@ namespace StockPriceSheetPrintService.Service
 
 						if (refreshDelay > timeUntilJob) break;
 
-						_logger.LogInformation("[SCHEDULER] Session refresh om 45 min for at holde token i live...");
+						_logger.LogInformation("[SCHEDULER] Session refresh in 45 min to keep token alive...");
 						await Task.Delay(refreshDelay, ct);
-						_logger.LogInformation("[SCHEDULER] Udfører token refresh...");
+						_logger.LogInformation("[SCHEDULER] Performing token refresh...");
 						await _saxoTokenService.GetAccessTokenAsync(ct);
 					}
 
@@ -61,11 +61,11 @@ namespace StockPriceSheetPrintService.Service
 				}
 				catch (OperationCanceledException)
 				{
-					_logger.LogInformation("[SCHEDULER] ✓ Worker stopper normalt...");
+					_logger.LogInformation("[SCHEDULER] ✓ Worker stopped normally...");
 				}
 				catch (Exception ex)
 				{
-					_logger.LogError(ex, "[SCHEDULER] ✗ UVENTET FEJL i scheduleren!");
+					_logger.LogError(ex, "[SCHEDULER] ✗ Unexpected error in scheduler!");
 				}
 			}
 		}

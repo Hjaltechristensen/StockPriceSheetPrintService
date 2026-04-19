@@ -19,7 +19,7 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 			var refreshToken = await _tokenStore.ReadRefreshTokenAsync(ct);
 			if (refreshToken == null)
 			{
-				_logger.LogWarning("[SAXO-TOKEN] Ingen refresh token fundet – log ind via /saxo/login");
+				_logger.LogWarning("[SAXO-TOKEN] No refresh token found – log in via /saxo/login");
 				await _saxoAuthService.BuildLoginUrl();
 				return null;
 			}
@@ -39,7 +39,7 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 
 					if (!response.IsSuccessStatusCode)
 					{
-						_logger.LogError("[SAXO-TOKEN] Saxo afviste refresh token. Status: {status}",
+						_logger.LogError("[SAXO-TOKEN] Saxo rejected refresh token. Status: {status}",
 							(int)response.StatusCode);
 						await _saxoAuthService.BuildLoginUrl();
 						return null;
@@ -53,7 +53,7 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 						if (!doc.RootElement.TryGetProperty("access_token", out var accessTokenElement) ||
 							!doc.RootElement.TryGetProperty("refresh_token", out var refreshTokenElement))
 						{
-							_logger.LogError("[SAXO-TOKEN] Token response mangler forventede properties");
+							_logger.LogError("[SAXO-TOKEN] Token response missing expected properties");
 							await _saxoAuthService.BuildLoginUrl();
 							return null;
 						}
@@ -63,26 +63,26 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 
 						if (string.IsNullOrEmpty(newAccessToken) || string.IsNullOrEmpty(newRefreshToken))
 						{
-							_logger.LogError("[SAXO-TOKEN] Token response indeholder tomme værdier");
+							_logger.LogError("[SAXO-TOKEN] Token response contains empty values");
 							await _saxoAuthService.BuildLoginUrl();
 							return null;
 						}
 
 						await _tokenStore.SaveRefreshTokenAsync(newRefreshToken, ct);
-						_logger.LogInformation("[SAXO-TOKEN] Token refresh fuldført");
+						_logger.LogInformation("[SAXO-TOKEN] Token refresh completed");
 
 						return newAccessToken;
 					}
 					catch (JsonException ex)
 					{
-						_logger.LogError(ex, "[SAXO-TOKEN] Fejl ved parsing af token response");
+						_logger.LogError(ex, "[SAXO-TOKEN] Error parsing token response");
 						await _saxoAuthService.BuildLoginUrl();
 						return null;
 					}
 				}
 				catch (Exception ex)
 				{
-					_logger.LogError(ex, "[SAXO-TOKEN] Uventet fejl under token refresh");
+					_logger.LogError(ex, "[SAXO-TOKEN] Unexpected error during token refresh");
 					await _saxoAuthService.BuildLoginUrl();
 					return null;
 				}

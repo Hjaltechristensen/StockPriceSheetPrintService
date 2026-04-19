@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace StockPriceSheetPrintService.Outbound.Filesystem.Helper
+namespace StockPriceSheetPrintService.Outbound.Filesystem.Helpers
 {
 	internal static class JsonFileHelper
 	{

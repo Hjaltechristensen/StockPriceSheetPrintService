@@ -11,7 +11,7 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
         public async Task<IActionResult> GetData(CancellationToken ct)
         {
             var spreadsheetId = configuration["SheetsApi:SheetsKey"]
-                ?? throw new InvalidOperationException("SheetsApi:SheetsKey er ikke konfigureret");
+                ?? throw new InvalidOperationException("SheetsApi:SheetsKey is not configured");
 
             var entries = await googleSheetsClient.GetHistoricalDataAsync(spreadsheetId, "Daily", ct);
 

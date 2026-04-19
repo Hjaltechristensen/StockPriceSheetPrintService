@@ -35,14 +35,14 @@ namespace StockPriceSheetPrintService.Outbound.Persistence
 
 					if (executionsLastHour >= MaxExecutionsPerHour)
 					{
-						_logger.LogWarning("Sikkerhedsadvarsel: {count} kørsler på 1 time. Grænse: {limit}",
+						_logger.LogWarning("Safety warning: {count} executions in 1 hour. Limit: {limit}",
 							executionsLastHour, MaxExecutionsPerHour);
 						return false;
 					}
 
 					if (executionsThisMonth >= MaxExecutionsPerMonth)
 					{
-						_logger.LogWarning("Sikkerhedsadvarsel: {count} kørsler denne måned. Grænse: {limit}",
+						_logger.LogWarning("Safety warning: {count} executions this month. Limit: {limit}",
 							executionsThisMonth, MaxExecutionsPerMonth);
 						return false;
 					}
@@ -52,7 +52,7 @@ namespace StockPriceSheetPrintService.Outbound.Persistence
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Fejl ved sikkerhedstjek");
+				_logger.LogError(ex, "Error during safety check");
 				return true;
 			}
 		}
@@ -76,7 +76,7 @@ namespace StockPriceSheetPrintService.Outbound.Persistence
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Fejl ved logning af kørsel");
+				_logger.LogError(ex, "Error during execution logging");
 			}
 		}
 
@@ -103,7 +103,7 @@ namespace StockPriceSheetPrintService.Outbound.Persistence
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Fejl ved indlæsning af kørselshistorik");
+				_logger.LogError(ex, "Error loading execution history");
 			}
 		}
 
@@ -128,7 +128,7 @@ namespace StockPriceSheetPrintService.Outbound.Persistence
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Fejl ved synkronisering af kørselslog");
+				_logger.LogError(ex, "Error syncing execution log");
 			}
 		}
 	}
