@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.WebSocket;
+using Microsoft.VisualBasic;
 using StockPriceSheetPrintService.Service.Exceptions;
 using StockPriceSheetPrintService.Service.Ports.Inbound;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
@@ -56,9 +57,115 @@ namespace StockPriceSheetPrintService.Service.Application
 				case "!getJuneAmount":
 					return await HandleGetJuneSharesAmount();
 
-				case "!button":
-					return await SendButton(message);
+				case "!update":
+					return await UpdateValues(message);
 
+				default:
+					return string.Empty;
+			}
+		}
+
+		public Task<Modal?> DispatchMessageComponentAsync(SocketMessageComponent component, CancellationToken ct)
+		{
+			switch (component.Data.CustomId)
+			{
+				case "btn_june":
+					return Task.FromResult<Modal?>(new ModalBuilder()
+						.WithTitle("Choose number")
+						.WithCustomId("june_modal")
+						.AddTextInput("New June share amount", customId: "input_share_count", placeholder: "June share amount...")
+						.Build());
+
+				case "btn_nordnet_cash":
+					return Task.FromResult<Modal?>(new ModalBuilder()
+						.WithTitle("Update Nordnet cash")
+						.WithCustomId("nordnet_cash_modal")
+						.AddTextInput("New Nordnet cash amount", customId: "input_cash_amount", placeholder: "Nordnet cash amount...")
+						.Build());
+
+				case "btn_nordnet_add":
+					return Task.FromResult<Modal?>(new ModalBuilder()
+						.WithTitle("Add Nordnet ticker")
+						.WithCustomId("nordnet_add_modal")
+						.AddTextInput("Ticker", customId: "input_ticker", placeholder: "Ticker symbol, e.g. 2B76.DE")
+						.AddTextInput("Amount", customId: "input_amount", placeholder: "Amount of shares, e.g. 218")
+						.Build());
+
+				case "btn_nordnet_remove":
+					return Task.FromResult<Modal?>(new ModalBuilder()
+						.WithTitle("Remove Nordnet ticker")
+						.WithCustomId("nordnet_remove_modal")
+						.AddTextInput("Ticker", customId: "input_ticker", placeholder: "Ticker symbol, e.g. 2B76.DE")
+						.Build());
+				default:
+					return Task.FromResult<Modal?>(null);
+			}
+		}
+
+		public async Task<string> DispatchModalAsync(SocketModal modal, CancellationToken ct)
+		{
+			switch (modal.Data.CustomId)
+			{
+				case "june_modal":
+					var shareCount = modal.Data.Components.FirstOrDefault(c => c.CustomId == "input_share_count")?.Value;
+					if (!int.TryParse(shareCount, NumberStyles.Any, CultureInfo.InvariantCulture, out int shareCountInt))
+						return "❌ Invalid format. Use only numbers e.g. 710";
+					
+					try
+					{
+						await _juneStore.SetJuneSharesAmountAsync(shareCountInt);
+						return $"✅ June shares updated: {shareCountInt:N2} stk.";
+					}
+					catch (JuneStoreException ex)
+					{
+						return $"❌ Error updating June shares: {ex.Message}";
+					}
+
+				case "nordnet_cash_modal":
+					var cashAmount = modal.Data.Components.FirstOrDefault(c => c.CustomId == "input_cash_amount")?.Value;
+					if (!int.TryParse(cashAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out int cashAmountInt))
+						return "❌ Invalid format. Use only numbers e.g. 1000.50";
+					
+					try
+					{
+						await _nordnetStore.SetNordnetCashAmountAsync(cashAmountInt);
+						return $"✅ Cash amount updated: {cashAmountInt:N2} DKK";
+					}
+					catch (NordnetStoreException ex)
+					{
+						return $"❌ Error updating cash: {ex.Message}";
+					}
+
+				case "nordnet_add_modal":
+					var ticker = modal.Data.Components.FirstOrDefault(c => c.CustomId == "input_ticker")?.Value.ToUpperInvariant();
+					var amount = modal.Data.Components.FirstOrDefault(c => c.CustomId == "input_amount")?.Value;
+					if (!int.TryParse(amount, NumberStyles.Any, CultureInfo.InvariantCulture, out int shares) || string.IsNullOrEmpty(ticker))
+						return "❌ Invalid format for amount or ticker. Use only numbers e.g. 218 and valid ticker symbol.";
+
+					try
+					{
+						await _nordnetSymbolStore.AddOrUpdateSymbolAsync(ticker, shares);
+						return $"✅ Symbol updated: {ticker} = {shares:N0} stk.";
+					}
+					catch (NordnetSymbolStoreException ex)
+					{
+						return $"❌ Error updating symbol: {ex.Message}";
+					}
+
+				case "nordnet_remove_modal":
+					var tickerToRemove = modal.Data.Components.FirstOrDefault(c => c.CustomId == "input_ticker")?.Value.ToUpperInvariant();
+					if (string.IsNullOrEmpty(tickerToRemove))
+						return "❌ Invalid format for ticker. Use valid ticker symbol.";
+
+					try
+					{
+						await _nordnetSymbolStore.RemoveSymbolAsync(tickerToRemove);
+						return $"✅ Symbol removed: {tickerToRemove}";
+					}
+					catch (NordnetSymbolStoreException ex)
+					{
+						return $"❌ Error removing symbol: {ex.Message}";
+					}
 				default:
 					return string.Empty;
 			}
@@ -88,14 +195,15 @@ namespace StockPriceSheetPrintService.Service.Application
         """;
 		}
 
-		private async Task<string> SendButton(SocketMessage message)
+		private async Task<string> UpdateValues(SocketMessage message)
 		{
 			var component = new ComponentBuilder()
-		.WithButton("Klik mig!", customId: "btn_klik", ButtonStyle.Primary, row: 0)
-		.WithButton("Farlig!", customId: "btn_farlig", ButtonStyle.Danger, row: 0)
-		.WithButton("Åbn modal", customId: "btn_open_june_modal", ButtonStyle.Secondary, row: 1) // ← tilføj denne
+		.WithButton("June share count", customId: "btn_june", ButtonStyle.Primary, row: 0)
+		.WithButton("Nordnet cash", customId: "btn_nordnet_cash", ButtonStyle.Primary, row: 1)
+		.WithButton("Add Nordnet ticker", customId: "btn_nordnet_add", ButtonStyle.Primary, row: 2)
+		.WithButton("Remove Nordnet ticker", customId: "btn_nordnet_remove", ButtonStyle.Primary, row: 3)
 		.Build();
-			await message.Channel.SendMessageAsync("Vælg en knap:", components: component);
+			await message.Channel.SendMessageAsync("Update values:", components: component);
 			return string.Empty;
 		}
 
@@ -261,6 +369,5 @@ namespace StockPriceSheetPrintService.Service.Application
 			📋 **Sidste run status:** {lastRunStatus}
 			""";
 		}
-
 	}
 }

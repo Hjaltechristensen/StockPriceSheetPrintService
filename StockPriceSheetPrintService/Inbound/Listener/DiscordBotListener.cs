@@ -32,34 +32,24 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 
 		private async Task OnModalSubmitted(SocketModal modalInteraction)
 		{
-			if (modalInteraction.Data.CustomId != "june_modal") return;
-			var input_navn = modalInteraction.Data.Components.FirstOrDefault(c => c.CustomId == "input_navn")?.Value;
-			var input_besked = modalInteraction.Data.Components.FirstOrDefault(c => c.CustomId == "input_besked")?.Value;
-			await modalInteraction.RespondAsync($"Du indtastede: {input_navn} og beskeden: {input_besked}", ephemeral: true);
+			if (modalInteraction == null) return;
+			if (modalInteraction.Channel.Id != 1495010067538247880) return;
+
+			var reply = await _botMessageReciver.DispatchModalAsync(modalInteraction, _stoppingToken);
+
+			if (!string.IsNullOrEmpty(reply))
+				await modalInteraction.RespondAsync(reply, ephemeral: true);
 		}
 
 		private async Task OnBtnExecuted(SocketMessageComponent interaction)
 		{
-			switch (interaction.Data.CustomId)
+			if (interaction == null) return;
+			if (interaction.Channel.Id != 1495010067538247880) return;
+
+			var reply = await _botMessageReciver.DispatchMessageComponentAsync(interaction, _stoppingToken);
+			if (reply != null)
 			{
-				case "btn_klik":
-					await interaction.RespondAsync("Du klikkede den blå!", ephemeral: true);
-					break;
-				case "btn_farlig":
-					await interaction.RespondAsync("Du klikkede den røde!", ephemeral: true);
-					break;
-				case "btn_open_june_modal":
-					var modal = new ModalBuilder()
-						.WithTitle("Choose number")
-						.WithCustomId("june_modal")
-						.AddTextInput("Det nye tal", customId: "input_navn", placeholder: "1234,00")
-						.AddTextInput("Besked", customId: "input_besked",
-						style: TextInputStyle.Paragraph,
-						placeholder: "Skriv din besked...",
-						required: false)
-						.Build();
-					await interaction.RespondWithModalAsync(modal);
-					break;
+				await interaction.RespondWithModalAsync(reply);
 			}
 		}
 
