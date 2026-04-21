@@ -108,13 +108,14 @@ namespace StockPriceSheetPrintService.Service.Application
 			{
 				case "june_modal":
 					var shareCount = modal.Data.Components.FirstOrDefault(c => c.CustomId == "input_share_count")?.Value;
-					if (!int.TryParse(shareCount, NumberStyles.Any, CultureInfo.InvariantCulture, out int shareCountInt))
+					var normalizedShareCount = shareCount?.Replace(',', '.');
+					if (!decimal.TryParse(normalizedShareCount, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal shareCountDecimal))
 						return "❌ Invalid format. Use only numbers e.g. 710";
 					
 					try
 					{
-						await _juneStore.SetJuneSharesAmountAsync(shareCountInt);
-						return $"✅ June shares updated: {shareCountInt:N2} stk.";
+						await _juneStore.SetJuneSharesAmountAsync(shareCountDecimal);
+						return $"✅ June shares updated: {shareCountDecimal:N2} stk.";
 					}
 					catch (JuneStoreException ex)
 					{
@@ -123,13 +124,14 @@ namespace StockPriceSheetPrintService.Service.Application
 
 				case "nordnet_cash_modal":
 					var cashAmount = modal.Data.Components.FirstOrDefault(c => c.CustomId == "input_cash_amount")?.Value;
-					if (!int.TryParse(cashAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out int cashAmountInt))
+					var normalizedCashAmount = cashAmount?.Replace(',', '.');
+					if (!decimal.TryParse(normalizedCashAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal cashAmountDecimal))
 						return "❌ Invalid format. Use only numbers e.g. 1000.50";
 					
 					try
 					{
-						await _nordnetStore.SetNordnetCashAmountAsync(cashAmountInt);
-						return $"✅ Cash amount updated: {cashAmountInt:N2} DKK";
+						await _nordnetStore.SetNordnetCashAmountAsync(cashAmountDecimal);
+						return $"✅ Cash amount updated: {cashAmountDecimal:N2} DKK";
 					}
 					catch (NordnetStoreException ex)
 					{
@@ -139,13 +141,14 @@ namespace StockPriceSheetPrintService.Service.Application
 				case "nordnet_add_modal":
 					var ticker = modal.Data.Components.FirstOrDefault(c => c.CustomId == "input_ticker")?.Value.ToUpperInvariant();
 					var amount = modal.Data.Components.FirstOrDefault(c => c.CustomId == "input_amount")?.Value;
-					if (!int.TryParse(amount, NumberStyles.Any, CultureInfo.InvariantCulture, out int shares) || string.IsNullOrEmpty(ticker))
+					var normalizedAmount = amount?.Replace(',', '.');
+					if (!decimal.TryParse(normalizedAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal sharesDecimal) || string.IsNullOrEmpty(ticker))
 						return "❌ Invalid format for amount or ticker. Use only numbers e.g. 218 and valid ticker symbol.";
 
 					try
 					{
-						await _nordnetSymbolStore.AddOrUpdateSymbolAsync(ticker, shares);
-						return $"✅ Symbol updated: {ticker} = {shares:N0} stk.";
+						await _nordnetSymbolStore.AddOrUpdateSymbolAsync(ticker, sharesDecimal);
+						return $"✅ Symbol updated: {ticker} = {sharesDecimal:N0} stk.";
 					}
 					catch (NordnetSymbolStoreException ex)
 					{
