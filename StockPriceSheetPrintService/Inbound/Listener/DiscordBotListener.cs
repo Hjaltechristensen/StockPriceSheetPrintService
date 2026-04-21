@@ -48,18 +48,19 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 				case "btn_farlig":
 					await interaction.RespondAsync("Du klikkede den røde!", ephemeral: true);
 					break;
+				case "btn_open_june_modal":
+					var modal = new ModalBuilder()
+						.WithTitle("Choose number")
+						.WithCustomId("june_modal")
+						.AddTextInput("Det nye tal", customId: "input_navn", placeholder: "1234,00")
+						.AddTextInput("Besked", customId: "input_besked",
+						style: TextInputStyle.Paragraph,
+						placeholder: "Skriv din besked...",
+						required: false)
+						.Build();
+					await interaction.RespondWithModalAsync(modal);
+					break;
 			}
-			var modal = new ModalBuilder()
-				.WithTitle("Choose number")
-				.WithCustomId("june_modal")
-				.AddTextInput("Det nye tal", customId: "input_navn", placeholder: "1234,00")
-				.AddTextInput("Besked", customId: "input_besked",
-				style: TextInputStyle.Paragraph,
-				placeholder: "Skriv din besked...",
-				required: false)
-				.Build();
-
-			await interaction.RespondWithModalAsync(modal);
 		}
 
 		private async Task OnMessageReceived(SocketMessage msg)

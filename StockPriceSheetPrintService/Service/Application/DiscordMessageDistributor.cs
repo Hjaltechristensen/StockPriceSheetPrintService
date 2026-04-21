@@ -91,11 +91,12 @@ namespace StockPriceSheetPrintService.Service.Application
 		private async Task<string> SendButton(SocketMessage message)
 		{
 			var component = new ComponentBuilder()
-			.WithButton("Klik mig!", customId: "btn_klik", ButtonStyle.Primary, row: 0)
-			.WithButton("Farlig!", customId: "btn_farlig", ButtonStyle.Danger, row: 0)
-			.Build();
+		.WithButton("Klik mig!", customId: "btn_klik", ButtonStyle.Primary, row: 0)
+		.WithButton("Farlig!", customId: "btn_farlig", ButtonStyle.Danger, row: 0)
+		.WithButton("Åbn modal", customId: "btn_open_june_modal", ButtonStyle.Secondary, row: 1) // ← tilføj denne
+		.Build();
 			await message.Channel.SendMessageAsync("Vælg en knap:", components: component);
-			return "Besked modtaget her";
+			return string.Empty;
 		}
 
 		private async Task<string> HandleUpdateNordnetCash(SocketMessage message)
