@@ -198,10 +198,10 @@ namespace StockPriceSheetPrintService.Service.Application
 		private async Task<string> UpdateValues(SocketMessage message)
 		{
 			var component = new ComponentBuilder()
-		.WithButton("June share count", customId: "btn_june", ButtonStyle.Primary, row: 0)
-		.WithButton("Nordnet cash", customId: "btn_nordnet_cash", ButtonStyle.Primary, row: 1)
-		.WithButton("Add Nordnet ticker", customId: "btn_nordnet_add", ButtonStyle.Primary, row: 2)
-		.WithButton("Remove Nordnet ticker", customId: "btn_nordnet_remove", ButtonStyle.Primary, row: 3)
+		.WithButton("June share count", customId: "btn_june", ButtonStyle.Primary)
+		.WithButton("Nordnet cash", customId: "btn_nordnet_cash", ButtonStyle.Primary)
+		.WithButton("Add Nordnet ticker", customId: "btn_nordnet_add", ButtonStyle.Primary)
+		.WithButton("Remove Nordnet ticker", customId: "btn_nordnet_remove", ButtonStyle.Primary)
 		.Build();
 			await message.Channel.SendMessageAsync("Update values:", components: component);
 			return string.Empty;
