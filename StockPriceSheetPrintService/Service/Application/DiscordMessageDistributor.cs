@@ -1,4 +1,5 @@
-﻿using Discord.WebSocket;
+﻿using Discord;
+using Discord.WebSocket;
 using StockPriceSheetPrintService.Service.Exceptions;
 using StockPriceSheetPrintService.Service.Ports.Inbound;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
@@ -55,6 +56,9 @@ namespace StockPriceSheetPrintService.Service.Application
 				case "!getJuneAmount":
 					return await HandleGetJuneSharesAmount();
 
+				case "!button":
+					return await SendButton(message);
+
 				default:
 					return string.Empty;
 			}
@@ -82,6 +86,16 @@ namespace StockPriceSheetPrintService.Service.Application
         `!status` — Show last run time and portfolio value
         `!help` — Show this message
         """;
+		}
+
+		private async Task<string> SendButton(SocketMessage message)
+		{
+			var component = new ComponentBuilder()
+			.WithButton("Klik mig!", customId: "btn_klik", ButtonStyle.Primary, row: 0)
+			.WithButton("Farlig!", customId: "btn_farlig", ButtonStyle.Danger, row: 0)
+			.Build();
+			await message.Channel.SendMessageAsync("Vælg en knap:", components: component);
+			return "Besked modtaget her";
 		}
 
 		private async Task<string> HandleUpdateNordnetCash(SocketMessage message)
