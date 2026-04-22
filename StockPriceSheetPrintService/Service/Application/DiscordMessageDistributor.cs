@@ -68,34 +68,15 @@ namespace StockPriceSheetPrintService.Service.Application
 				new BotButton("Trigger portfolio run", "btn_trigger"),
 				new BotButton("Refresh Saxo token", "btn_refreshToken"),
 				new BotButton("Help", "btn_help")
-]);
-
-		private static BotResponse HandleGetButtons() =>
-			new GetBotResponse("Get values:", [
-				new BotButton("Nordnet cash",    "btn_get_cash"),
-				new BotButton("June shares",     "btn_get_june"),
-				new BotButton("Nordnet symbols", "btn_get_symbols"),
-				new BotButton("Status",          "btn_get_status")
 			]);
 
-		private static BotResponse HandleUpdateButtons() =>
-			new UpdateBotResponse("Update values:", [
-				new BotButton("June share count",      "btn_june"),
-				new BotButton("Nordnet cash",          "btn_nordnet_cash"),
-				new BotButton("Add Nordnet ticker",    "btn_nordnet_add"),
-				new BotButton("Remove Nordnet ticker", "btn_nordnet_remove")
-			]);
 
 		private static BotResponse HandleHelp() => new HelpBotResponse("""
-			📋 **Saxo**
 			`!refreshToken` — Manually refresh Saxo access token
 
-			ℹ️ **Andet**
 			`!trigger` — Manually trigger the full portfolio run
 
-			`!update` — Update values (cash, June shares, symbols, status)
-
-			`!get` — Show current values (cash, June shares, symbols)
+			`!start` — Show the start menu
 
 			`!help` — Show this message
 			""");
