@@ -19,8 +19,6 @@ namespace StockPriceSheetPrintService.Service.Application
 				"!refreshToken" => await HandleRefreshToken(ct),
 				"!trigger"      => await HandleTrigger(ct),
 				"!help"         => HandleHelp(),
-				"!update"       => HandleUpdateButtons(),
-				"!get"          => HandleGetButtons(),
 				"!start"		=> HandleStartMenu(),
 				_               => new EmptyBotResponse()
 			};
