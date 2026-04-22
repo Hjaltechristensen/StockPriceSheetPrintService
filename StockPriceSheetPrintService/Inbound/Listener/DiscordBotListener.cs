@@ -62,9 +62,11 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 					break;
 				case GetBotResponse get:
 					await interaction.RespondAsync(get.Text, components: BuildComponents(get.Buttons), ephemeral: false);
+					try { await interaction.Message.DeleteAsync(); } catch { /* already deleted */ }
 					break;
 				case UpdateBotResponse update:
 					await interaction.RespondAsync(update.Text, components: BuildComponents(update.Buttons), ephemeral: false);
+					try { await interaction.Message.DeleteAsync(); } catch { /* already deleted */ }
 					break;
 				case MenuBotResponse menu:
 					await interaction.UpdateAsync(props =>
