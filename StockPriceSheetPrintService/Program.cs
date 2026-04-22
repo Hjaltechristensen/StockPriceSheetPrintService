@@ -1,8 +1,8 @@
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Events;
 using StockPriceSheetPrintService.Inbound.Listener;
 using StockPriceSheetPrintService.Outbound.DiscordUpdates;
-using StockPriceSheetPrintService.Outbound.Filesystem;
 using StockPriceSheetPrintService.Outbound.GoogleSheets;
 using StockPriceSheetPrintService.Outbound.HtmlScraping;
 using StockPriceSheetPrintService.Outbound.MarketStack;
@@ -32,6 +32,10 @@ builder.Host.UseSerilog();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
+builder.Services.AddDbContextFactory<StockDbContext>(options =>
+	options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")
+		?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection missing")));
+
 builder.Services.AddSingleton<SchedulerStatusStore>();
 builder.Services.AddSingleton<ISchedulerStatus>(sp => sp.GetRequiredService<SchedulerStatusStore>());
 builder.Services.AddHostedService<StockpriceWorker>();
@@ -41,18 +45,18 @@ builder.Services.AddScoped<IPortfolioJobRunner, PortfolioJobRunner>();
 builder.Services.AddScoped<ISaxoLoginService, SaxoLoginServiceImpl>();
 builder.Services.AddScoped<IPortfolioDataFetcher, PortfolioDataFetcher>();
 builder.Services.AddScoped<IPortfolioReporter, PortfolioReporter>();
-builder.Services.AddScoped<ITokenStore, EncryptedFileTokenStore>();
-builder.Services.AddScoped<ISeenTransferStore, SeenTransferStore>();
+builder.Services.AddScoped<ITokenStore, DbTokenStore>();
+builder.Services.AddScoped<ISeenTransferStore, DbSeenTransferStore>();
 builder.Services.AddScoped<ISaxoAuthService, SaxoService>();
 builder.Services.AddScoped<ISaxoAccountService, SaxoService>();
 builder.Services.AddScoped<ISaxoTokenService, SaxoTokenService>();
 builder.Services.AddScoped<IMarketStackService, MarketStackService>();
 builder.Services.AddSingleton<IGoogleSheetsClient, GoogleSheetsClientImpl>();
-builder.Services.AddSingleton<IExecutionGuard, ExecutionGuardImpl>();
-builder.Services.AddSingleton<INordnetStore, JsonNordnetStore>();
-builder.Services.AddSingleton<IJuneStore, JsonJuneStore>();
+builder.Services.AddSingleton<IExecutionGuard, DbExecutionGuard>();
+builder.Services.AddSingleton<INordnetStore, DbNordnetStore>();
+builder.Services.AddSingleton<IJuneStore, DbJuneStore>();
 builder.Services.AddSingleton<IDiscordBotMessageReceiver, DiscordMessageDistributor>();
-builder.Services.AddSingleton<INordnetSymbolStore, JsonNordnetSymbolStore>();
+builder.Services.AddSingleton<INordnetSymbolStore, DbNordnetSymbolStore>();
 builder.Services.AddHttpClient<IDiscordNotifier, DiscordNotifier>();
 builder.Services.AddHttpClient<IHtmlScraper, NavProviderImpl>(client =>
 {
@@ -78,6 +82,14 @@ builder.WebHost.ConfigureKestrel(options =>
 });
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+	var db = await scope.ServiceProvider
+		.GetRequiredService<IDbContextFactory<StockDbContext>>()
+		.CreateDbContextAsync();
+	await db.Database.MigrateAsync();
+}
 
 if (app.Environment.IsDevelopment())
 {
