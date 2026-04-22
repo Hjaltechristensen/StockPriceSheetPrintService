@@ -1,66 +1,91 @@
-﻿using Discord;
+using Discord;
 using Discord.WebSocket;
+using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Ports.Inbound;
+using StockPriceSheetPrintService.Service.Ports.Outbound;
 
 namespace StockPriceSheetPrintService.Inbound.Listener
 {
-	public class DiscordBotListener(IDiscordBotMessageReceiver discordBotMessageReciver, IConfiguration configuration) : IHostedService
+	public class DiscordBotListener(
+		DiscordSocketClient client,
+		IDiscordBotMessageReceiver receiver,
+		IDiscordBotResponder responder,
+		IConfiguration configuration) : IHostedService
 	{
-
-		private readonly DiscordSocketClient _client = new DiscordSocketClient(new DiscordSocketConfig
-		{
-			GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.MessageContent
-		});
-		private readonly IDiscordBotMessageReceiver _botMessageReciver = discordBotMessageReciver;
+		private const ulong ChannelId = 1495010067538247880;
 		private readonly string _token = configuration["Discord:BotToken"] ?? throw new InvalidOperationException("Discord:BotToken is missing");
 		private CancellationToken _stoppingToken;
 
 		public async Task StartAsync(CancellationToken ct)
 		{
 			_stoppingToken = ct;
-			_client.MessageReceived += OnMessageReceived;
-			_client.ButtonExecuted += OnBtnExecuted;
-			_client.ModalSubmitted += OnModalSubmitted;
-			await _client.LoginAsync(TokenType.Bot, _token);
-			await _client.StartAsync();
+			client.MessageReceived += OnMessageReceived;
+			client.ButtonExecuted += OnButtonExecuted;
+			client.ModalSubmitted += OnModalSubmitted;
+			await client.LoginAsync(TokenType.Bot, _token);
+			await client.StartAsync();
 		}
+
 		public async Task StopAsync(CancellationToken ct)
 		{
-			await _client.StopAsync();
-			_client.Dispose();
-		}
-
-		private async Task OnModalSubmitted(SocketModal modalInteraction)
-		{
-			if (modalInteraction == null) return;
-			if (modalInteraction.Channel.Id != 1495010067538247880) return;
-
-			var reply = await _botMessageReciver.DispatchModalAsync(modalInteraction, _stoppingToken);
-
-			if (!string.IsNullOrEmpty(reply))
-				await modalInteraction.RespondAsync(reply, ephemeral: true);
-		}
-
-		private async Task OnBtnExecuted(SocketMessageComponent interaction)
-		{
-			if (interaction == null) return;
-			if (interaction.Channel.Id != 1495010067538247880) return;
-
-			var reply = await _botMessageReciver.DispatchMessageComponentAsync(interaction, _stoppingToken);
-			if (reply != null)
-			{
-				await interaction.RespondWithModalAsync(reply);
-			}
+			await client.StopAsync();
 		}
 
 		private async Task OnMessageReceived(SocketMessage msg)
 		{
 			if (msg.Author.IsBot) return;
-			if (msg.Channel.Id != 1495010067538247880) return;
-			
-			var reply = await _botMessageReciver.DispatchMessageAsync(msg, _stoppingToken);
-			if (!string.IsNullOrEmpty(reply))
-				await msg.Channel.SendMessageAsync(reply);
+			if (msg.Channel.Id != ChannelId) return;
+
+			var parts = msg.Content.Split(' ');
+			var command = new BotMessageCommand(parts[0], parts[1..], msg.Channel.Id);
+			var response = await receiver.HandleMessageAsync(command, _stoppingToken);
+			await SendResponse(msg.Channel.Id, response);
+		}
+
+		private async Task OnButtonExecuted(SocketMessageComponent interaction)
+		{
+			if (interaction.Channel.Id != ChannelId) return;
+
+			var command = new BotComponentCommand(interaction.Data.CustomId);
+			var response = await receiver.HandleComponentAsync(command, _stoppingToken);
+
+			if (response is ModalBotResponse modal)
+				await interaction.RespondWithModalAsync(BuildModal(modal));
+		}
+
+		private async Task OnModalSubmitted(SocketModal modalInteraction)
+		{
+			if (modalInteraction.Channel.Id != ChannelId) return;
+
+			var fields = modalInteraction.Data.Components.ToDictionary(c => c.CustomId, c => c.Value);
+			var command = new BotModalCommand(modalInteraction.Data.CustomId, fields);
+			var response = await receiver.HandleModalAsync(command, _stoppingToken);
+
+			if (response is TextBotResponse text)
+				await modalInteraction.RespondAsync(text.Text, ephemeral: text.Ephemeral);
+		}
+
+		private async Task SendResponse(ulong channelId, BotResponse response)
+		{
+			switch (response)
+			{
+				case TextBotResponse text:
+					await responder.SendTextAsync(channelId, text.Text, _stoppingToken);
+					break;
+				case ComponentsBotResponse components:
+					await responder.SendComponentsAsync(channelId, components, _stoppingToken);
+					break;
+			}
+		}
+
+		private static Modal BuildModal(ModalBotResponse modal)
+		{
+			var builder = new ModalBuilder()
+				.WithTitle(modal.Title)
+				.WithCustomId(modal.ModalId);
+			foreach (var field in modal.Fields)
+				builder.AddTextInput(field.Label, customId: field.CustomId, placeholder: field.Placeholder);
+			return builder.Build();
 		}
 	}
 }

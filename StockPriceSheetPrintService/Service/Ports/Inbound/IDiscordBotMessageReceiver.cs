@@ -1,12 +1,11 @@
-﻿using Discord;
-using Discord.WebSocket;
+using StockPriceSheetPrintService.Service.Models;
 
 namespace StockPriceSheetPrintService.Service.Ports.Inbound
 {
 	public interface IDiscordBotMessageReceiver
 	{
-		Task<string> DispatchMessageAsync(SocketMessage message, CancellationToken ct);
-		Task<Modal?> DispatchMessageComponentAsync(SocketMessageComponent component, CancellationToken ct);
-		Task<string> DispatchModalAsync(SocketModal modal, CancellationToken ct);
+		Task<BotResponse> HandleMessageAsync(BotMessageCommand command, CancellationToken ct);
+		Task<BotResponse> HandleComponentAsync(BotComponentCommand command, CancellationToken ct);
+		Task<BotResponse> HandleModalAsync(BotModalCommand command, CancellationToken ct);
 	}
 }

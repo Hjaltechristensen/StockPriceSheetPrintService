@@ -1,8 +1,8 @@
-﻿using Discord;
-using Discord.WebSocket;
 using StockPriceSheetPrintService.Service.Exceptions;
+using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Ports.Inbound;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
+using StockPriceSheetPrintService.Service.Ports.Persistence;
 using System.Globalization;
 
 namespace StockPriceSheetPrintService.Service.Application
@@ -14,363 +14,295 @@ namespace StockPriceSheetPrintService.Service.Application
 		INordnetSymbolStore nordnetSymbolStore,
 		ISchedulerStatus schedulerStatus) : IDiscordBotMessageReceiver
 	{
-		private readonly INordnetStore _nordnetStore = nordnetStore;
-		private readonly IJuneStore _juneStore = juneStore;
-		private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
-		private readonly INordnetSymbolStore _nordnetSymbolStore = nordnetSymbolStore;
-		private readonly ISchedulerStatus _schedulerStatus = schedulerStatus;
-		public async Task<string> DispatchMessageAsync(SocketMessage message, CancellationToken ct)
-		{
-			switch (message.Content.Split(' ')[0])
+		public async Task<BotResponse> HandleMessageAsync(BotMessageCommand command, CancellationToken ct) =>
+			command.Command switch
 			{
-				case "!refreshToken":
-					return await HandleRefreshToken(ct);
+				"!refreshToken" => await HandleRefreshToken(ct),
+				"!trigger"      => await HandleTrigger(ct),
+				"!updateCash"   => await HandleUpdateNordnetCash(command.Args),
+				"!addSymbol"    => await HandleAddNordnetSymbol(command.Args),
+				"!removeSymbol" => await HandleRemoveNordnetSymbol(command.Args),
+				"!getSymbols"   => await HandleGetNordnetSymbols(),
+				"!updateJune"   => await HandleUpdateJuneSharesAmount(command.Args),
+				"!help"         => HandleHelp(),
+				"!status"       => HandleStatus(),
+				"!getCash"      => await HandleGetNordnetCash(),
+				"!getJuneAmount"=> await HandleGetJuneSharesAmount(),
+				"!update"       => HandleUpdateButtons(),
+				_               => new EmptyBotResponse()
+			};
 
-				case "!trigger":
-					return await HandleTrigger(ct);
-
-				case "!updateCash":
-					return await HandleUpdateNordnetCash(message);
-
-				case "!addSymbol":
-					return await HandleAddNordnetSymbol(message);
-
-				case "!removeSymbol":
-					return await HandleRemoveNordnetSymbol(message);
-
-				case "!getSymbols":
-					return await HandleGetNordnetSymbols();
-
-				case "!updateJune":
-					return await HandleUpdateJuneSharesAmount(message);
-
-				case "!help":
-					return HandleHelp();
-
-				case "!status":
-					return HandleStatus();
-
-				case "!getCash":
-					return await HandleGetNordnetCash();
-
-				case "!getJuneAmount":
-					return await HandleGetJuneSharesAmount();
-
-				case "!update":
-					return await UpdateValues(message);
-
-				default:
-					return string.Empty;
-			}
+		public Task<BotResponse> HandleComponentAsync(BotComponentCommand command, CancellationToken ct)
+		{
+			BotResponse response = command.CustomId switch
+			{
+				"btn_june" => new ModalBotResponse("Choose number", "june_modal", [
+					new BotModalField("New June share amount", "input_share_count", "June share amount...")
+				]),
+				"btn_nordnet_cash" => new ModalBotResponse("Update Nordnet cash", "nordnet_cash_modal", [
+					new BotModalField("New Nordnet cash amount", "input_cash_amount", "Nordnet cash amount...")
+				]),
+				"btn_nordnet_add" => new ModalBotResponse("Add Nordnet ticker", "nordnet_add_modal", [
+					new BotModalField("Ticker", "input_ticker", "Ticker symbol, e.g. 2B76.DE"),
+					new BotModalField("Amount", "input_amount", "Amount of shares, e.g. 218")
+				]),
+				"btn_nordnet_remove" => new ModalBotResponse("Remove Nordnet ticker", "nordnet_remove_modal", [
+					new BotModalField("Ticker", "input_ticker", "Ticker symbol, e.g. 2B76.DE")
+				]),
+				_ => new EmptyBotResponse()
+			};
+			return Task.FromResult(response);
 		}
 
-		public Task<Modal?> DispatchMessageComponentAsync(SocketMessageComponent component, CancellationToken ct)
-		{
-			switch (component.Data.CustomId)
+		public async Task<BotResponse> HandleModalAsync(BotModalCommand command, CancellationToken ct) =>
+			command.ModalId switch
 			{
-				case "btn_june":
-					return Task.FromResult<Modal?>(new ModalBuilder()
-						.WithTitle("Choose number")
-						.WithCustomId("june_modal")
-						.AddTextInput("New June share amount", customId: "input_share_count", placeholder: "June share amount...")
-						.Build());
+				"june_modal"          => await HandleJuneModal(command.Fields),
+				"nordnet_cash_modal"  => await HandleNordnetCashModal(command.Fields),
+				"nordnet_add_modal"   => await HandleNordnetAddModal(command.Fields),
+				"nordnet_remove_modal"=> await HandleNordnetRemoveModal(command.Fields),
+				_                     => new EmptyBotResponse()
+			};
 
-				case "btn_nordnet_cash":
-					return Task.FromResult<Modal?>(new ModalBuilder()
-						.WithTitle("Update Nordnet cash")
-						.WithCustomId("nordnet_cash_modal")
-						.AddTextInput("New Nordnet cash amount", customId: "input_cash_amount", placeholder: "Nordnet cash amount...")
-						.Build());
+		private static BotResponse HandleUpdateButtons() =>
+			new ComponentsBotResponse("Update values:", [
+				new BotButton("June share count",      "btn_june"),
+				new BotButton("Nordnet cash",          "btn_nordnet_cash"),
+				new BotButton("Add Nordnet ticker",    "btn_nordnet_add"),
+				new BotButton("Remove Nordnet ticker", "btn_nordnet_remove")
+			]);
 
-				case "btn_nordnet_add":
-					return Task.FromResult<Modal?>(new ModalBuilder()
-						.WithTitle("Add Nordnet ticker")
-						.WithCustomId("nordnet_add_modal")
-						.AddTextInput("Ticker", customId: "input_ticker", placeholder: "Ticker symbol, e.g. 2B76.DE")
-						.AddTextInput("Amount", customId: "input_amount", placeholder: "Amount of shares, e.g. 218")
-						.Build());
+		private static BotResponse HandleHelp() => new TextBotResponse("""
+			📋 **Saxo**
+			`!refreshToken` — Manually refresh Saxo access token
 
-				case "btn_nordnet_remove":
-					return Task.FromResult<Modal?>(new ModalBuilder()
-						.WithTitle("Remove Nordnet ticker")
-						.WithCustomId("nordnet_remove_modal")
-						.AddTextInput("Ticker", customId: "input_ticker", placeholder: "Ticker symbol, e.g. 2B76.DE")
-						.Build());
-				default:
-					return Task.FromResult<Modal?>(null);
-			}
+			💰 **Nordnet**
+			`!getSymbols` — Show all active symbols
+			`!getCash` — Show current Nordnet cash balance
+			`!updateCash <balance>` — Update cash balance, e.g. `!updateCash 1000.50`
+			`!addSymbol <ticker> <amount>` — Add/update symbol, e.g. `!addSymbol 2B76.DE 218`
+			`!removeSymbol <ticker>` — Remove symbol, e.g. `!removeSymbol O`
+
+			📊 **June**
+			`!updateJune <amount>` — Update June share count, e.g. `!updateJune 710`
+			`!getJuneAmount` — Show current June share count
+
+			ℹ️ **Andet**
+			`!trigger` — Manually trigger the full portfolio run
+			`!status` — Show last run time and portfolio value
+			`!help` — Show this message
+			`!update` — Show update options
+			""");
+
+		private BotResponse HandleStatus()
+		{
+			string Fmt(DateTimeOffset? t) => t is { } v ? $"<t:{v.ToUnixTimeSeconds()}:R>" : "Ukendt";
+			string FmtAbsolute(DateTimeOffset? t) => t is { } v ? $"{v:dd/MM/yyyy HH:mm} UTC" : "Aldrig";
+			var lastRunStatus = schedulerStatus.LastRunSucceeded switch
+			{
+				true  => "✅ Success",
+				false => "❌ Fejl",
+				null  => "Ukendt"
+			};
+			return new TextBotResponse($"""
+				📊 **Service Status**
+				⏳ **Næste job run:** {Fmt(schedulerStatus.NextRunAt)} ({FmtAbsolute(schedulerStatus.NextRunAt)})
+				🔑 **Næste token refresh:** {(schedulerStatus.NextTokenRefreshAt is not null ? Fmt(schedulerStatus.NextTokenRefreshAt) : "Ingen planlagt")}
+				🕐 **Sidste run:** {FmtAbsolute(schedulerStatus.LastRunAt)}
+				📋 **Sidste run status:** {lastRunStatus}
+				""");
 		}
 
-		public async Task<string> DispatchModalAsync(SocketModal modal, CancellationToken ct)
+		private async Task<BotResponse> HandleRefreshToken(CancellationToken ct)
 		{
-			switch (modal.Data.CustomId)
-			{
-				case "june_modal":
-					var shareCount = modal.Data.Components.FirstOrDefault(c => c.CustomId == "input_share_count")?.Value;
-					var normalizedShareCount = shareCount?.Replace(',', '.');
-					if (!decimal.TryParse(normalizedShareCount, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal shareCountDecimal))
-						return "❌ Invalid format. Use only numbers e.g. 710";
-					
-					try
-					{
-						await _juneStore.SetJuneSharesAmountAsync(shareCountDecimal);
-						return $"✅ June shares updated: {shareCountDecimal:N2} stk.";
-					}
-					catch (JuneStoreException ex)
-					{
-						return $"❌ Error updating June shares: {ex.Message}";
-					}
-
-				case "nordnet_cash_modal":
-					var cashAmount = modal.Data.Components.FirstOrDefault(c => c.CustomId == "input_cash_amount")?.Value;
-					var normalizedCashAmount = cashAmount?.Replace(',', '.');
-					if (!decimal.TryParse(normalizedCashAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal cashAmountDecimal))
-						return "❌ Invalid format. Use only numbers e.g. 1000.50";
-					
-					try
-					{
-						await _nordnetStore.SetNordnetCashAmountAsync(cashAmountDecimal);
-						return $"✅ Cash amount updated: {cashAmountDecimal:N2} DKK";
-					}
-					catch (NordnetStoreException ex)
-					{
-						return $"❌ Error updating cash: {ex.Message}";
-					}
-
-				case "nordnet_add_modal":
-					var ticker = modal.Data.Components.FirstOrDefault(c => c.CustomId == "input_ticker")?.Value.ToUpperInvariant();
-					var amount = modal.Data.Components.FirstOrDefault(c => c.CustomId == "input_amount")?.Value;
-					var normalizedAmount = amount?.Replace(',', '.');
-					if (!decimal.TryParse(normalizedAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal sharesDecimal) || string.IsNullOrEmpty(ticker))
-						return "❌ Invalid format for amount or ticker. Use only numbers e.g. 218 and valid ticker symbol.";
-
-					try
-					{
-						await _nordnetSymbolStore.AddOrUpdateSymbolAsync(ticker, sharesDecimal);
-						return $"✅ Symbol updated: {ticker} = {sharesDecimal:N0} stk.";
-					}
-					catch (NordnetSymbolStoreException ex)
-					{
-						return $"❌ Error updating symbol: {ex.Message}";
-					}
-
-				case "nordnet_remove_modal":
-					var tickerToRemove = modal.Data.Components.FirstOrDefault(c => c.CustomId == "input_ticker")?.Value.ToUpperInvariant();
-					if (string.IsNullOrEmpty(tickerToRemove))
-						return "❌ Invalid format for ticker. Use valid ticker symbol.";
-
-					try
-					{
-						await _nordnetSymbolStore.RemoveSymbolAsync(tickerToRemove);
-						return $"✅ Symbol removed: {tickerToRemove}";
-					}
-					catch (NordnetSymbolStoreException ex)
-					{
-						return $"❌ Error removing symbol: {ex.Message}";
-					}
-				default:
-					return string.Empty;
-			}
-		}
-
-		private static string HandleHelp()
-		{
-			return """
-        📋 **Saxo**
-        `!refreshToken` — Manually refresh Saxo access token
-
-        💰 **Nordnet**
-        `!getSymbols` — Show all active symbols
-        `!getCash` — Show current Nordnet cash balance
-        `!updateCash <balance>` — Update cash balance, e.g. `!updateCash 1000.50`
-        `!addSymbol <ticker> <amount>` — Add/update symbol, e.g. `!addSymbol 2B76.DE 218`
-        `!removeSymbol <ticker>` — Remove symbol, e.g. `!removeSymbol O`
-
-        📊 **June**
-        `!updateJune <amount>` — Update June share count, e.g. `!updateJune 710`
-        `!getJuneAmount` — Show current June share count
-
-        ℹ️ **Andet**
-        `!trigger` — Manually trigger the full portfolio run
-        `!status` — Show last run time and portfolio value
-        `!help` — Show this message
-        `!update` — Show update options
-        """;
-		}
-
-		private async Task<string> UpdateValues(SocketMessage message)
-		{
-			var component = new ComponentBuilder()
-		.WithButton("June share count", customId: "btn_june", ButtonStyle.Primary)
-		.WithButton("Nordnet cash", customId: "btn_nordnet_cash", ButtonStyle.Primary)
-		.WithButton("Add Nordnet ticker", customId: "btn_nordnet_add", ButtonStyle.Primary)
-		.WithButton("Remove Nordnet ticker", customId: "btn_nordnet_remove", ButtonStyle.Primary)
-		.Build();
-			await message.Channel.SendMessageAsync("Update values:", components: component);
-			return string.Empty;
-		}
-
-		private async Task<string> HandleUpdateNordnetCash(SocketMessage message)
-		{
-			var parts = message.Content.Split(' ');
-			if (parts.Length != 2 || !decimal.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out var amount))
-				return "❌ Invalid format. Use: !updateCash 1000.50";
-
-			try
-			{
-				await _nordnetStore.SetNordnetCashAmountAsync(amount);
-				return $"✅ Cash amount updated: {amount:N2} DKK";
-			}
-			catch (NordnetStoreException ex)
-			{
-				return $"❌ Error updating cash: {ex.Message}";
-			}
-		}
-
-		private async Task<string> HandleUpdateJuneSharesAmount(SocketMessage message)
-		{
-			var parts = message.Content.Split(' ');
-			if (parts.Length != 2 || !decimal.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out var amount))
-				return "❌ Invalid format. Use: !updateJune 710";
-
-			try
-			{
-				await _juneStore.SetJuneSharesAmountAsync(amount);
-				return $"✅ June shares updated: {amount:N2} stk.";
-			}
-			catch (JuneStoreException ex)
-			{
-				return $"❌ Error updating June shares: {ex.Message}";
-			}
-		}
-
-		private async Task<string> HandleGetNordnetCash()
-		{
-			try
-			{
-				var result = await _nordnetStore.GetNordnetCashAmountAsync();
-				return $"💰 Cash: {result.CashAmount:N2} DKK (Last updated: {result.LastUpdated:dd/MM/yyyy HH:mm})";
-			}
-			catch (NordnetStoreException ex)
-			{
-				return $"❌ Error getting cash: {ex.Message}";
-			}
-		}
-
-		private async Task<string> HandleGetJuneSharesAmount()
-		{
-			try
-			{
-				var result = await _juneStore.GetJuneSharesAmountAsync();
-				return $"📊 June shares: {result.Amount:N4} stk. (Last updated: {result.LastUpdated:dd/MM/yyyy HH:mm})";
-			}
-			catch (JuneStoreException ex)
-			{
-				return $"❌ Error getting June shares: {ex.Message}";
-			}
-		}
-
-		private async Task<string> HandleRefreshToken(CancellationToken ct)
-		{
-			await using var scope = _scopeFactory.CreateAsyncScope();
+			await using var scope = scopeFactory.CreateAsyncScope();
 			var saxoTokenService = scope.ServiceProvider.GetRequiredService<ISaxoTokenService>();
 			var accessToken = await saxoTokenService.GetAccessTokenAsync(ct);
-			return accessToken != null
+			return new TextBotResponse(accessToken != null
 				? "✅ AccessToken successfully updated"
-				: "❌ Failed to update AccessToken";
+				: "❌ Failed to update AccessToken");
 		}
 
-		private async Task<string> HandleTrigger(CancellationToken ct)
+		private async Task<BotResponse> HandleTrigger(CancellationToken ct)
 		{
 			try
 			{
-				await using var scope = _scopeFactory.CreateAsyncScope();
+				await using var scope = scopeFactory.CreateAsyncScope();
 				var jobRunner = scope.ServiceProvider.GetRequiredService<IPortfolioJobRunner>();
 				await jobRunner.RunJobAsync(ct, true);
-				return "✅ Portfolio run triggered successfully";
+				return new TextBotResponse("✅ Portfolio run triggered successfully");
 			}
 			catch (Exception ex)
 			{
-				return $"❌ Error triggering job: {ex.Message}";
+				return new TextBotResponse($"❌ Error triggering job: {ex.Message}");
 			}
 		}
 
-		private async Task<string> HandleAddNordnetSymbol(SocketMessage message)
+		private async Task<BotResponse> HandleUpdateNordnetCash(string[] args)
 		{
-			var parts = message.Content.Split(' ');
-			if (parts.Length != 3 || !decimal.TryParse(parts[2], NumberStyles.Any, CultureInfo.InvariantCulture, out var shares))
-				return "❌ Invalid format. Use: !addSymbol 2B76.DE 218";
-
-			var ticker = parts[1].ToUpperInvariant();
+			if (args.Length != 1 || !decimal.TryParse(args[0], NumberStyles.Any, CultureInfo.InvariantCulture, out var amount))
+				return new TextBotResponse("❌ Invalid format. Use: !updateCash 1000.50");
 			try
 			{
-				await _nordnetSymbolStore.AddOrUpdateSymbolAsync(ticker, shares);
-				return $"✅ Symbol updated: {ticker} = {shares:N0} stk.";
+				await nordnetStore.SetNordnetCashAmountAsync(amount);
+				return new TextBotResponse($"✅ Cash amount updated: {amount:N2} DKK");
+			}
+			catch (NordnetStoreException ex)
+			{
+				return new TextBotResponse($"❌ Error updating cash: {ex.Message}");
+			}
+		}
+
+		private async Task<BotResponse> HandleUpdateJuneSharesAmount(string[] args)
+		{
+			if (args.Length != 1 || !decimal.TryParse(args[0], NumberStyles.Any, CultureInfo.InvariantCulture, out var amount))
+				return new TextBotResponse("❌ Invalid format. Use: !updateJune 710");
+			try
+			{
+				await juneStore.SetJuneSharesAmountAsync(amount);
+				return new TextBotResponse($"✅ June shares updated: {amount:N2} stk.");
+			}
+			catch (JuneStoreException ex)
+			{
+				return new TextBotResponse($"❌ Error updating June shares: {ex.Message}");
+			}
+		}
+
+		private async Task<BotResponse> HandleGetNordnetCash()
+		{
+			try
+			{
+				var result = await nordnetStore.GetNordnetCashAmountAsync();
+				return new TextBotResponse($"💰 Cash: {result.CashAmount:N2} DKK (Last updated: {result.LastUpdated:dd/MM/yyyy HH:mm})");
+			}
+			catch (NordnetStoreException ex)
+			{
+				return new TextBotResponse($"❌ Error getting cash: {ex.Message}");
+			}
+		}
+
+		private async Task<BotResponse> HandleGetJuneSharesAmount()
+		{
+			try
+			{
+				var result = await juneStore.GetJuneSharesAmountAsync();
+				return new TextBotResponse($"📊 June shares: {result.Amount:N4} stk. (Last updated: {result.LastUpdated:dd/MM/yyyy HH:mm})");
+			}
+			catch (JuneStoreException ex)
+			{
+				return new TextBotResponse($"❌ Error getting June shares: {ex.Message}");
+			}
+		}
+
+		private async Task<BotResponse> HandleAddNordnetSymbol(string[] args)
+		{
+			if (args.Length != 2 || !decimal.TryParse(args[1], NumberStyles.Any, CultureInfo.InvariantCulture, out var shares))
+				return new TextBotResponse("❌ Invalid format. Use: !addSymbol 2B76.DE 218");
+			var ticker = args[0].ToUpperInvariant();
+			try
+			{
+				await nordnetSymbolStore.AddOrUpdateSymbolAsync(ticker, shares);
+				return new TextBotResponse($"✅ Symbol updated: {ticker} = {shares:N0} stk.");
 			}
 			catch (NordnetSymbolStoreException ex)
 			{
-				return $"❌ Error updating symbol: {ex.Message}";
+				return new TextBotResponse($"❌ Error updating symbol: {ex.Message}");
 			}
 		}
 
-		private async Task<string> HandleRemoveNordnetSymbol(SocketMessage message)
+		private async Task<BotResponse> HandleRemoveNordnetSymbol(string[] args)
 		{
-			var parts = message.Content.Split(' ');
-			if (parts.Length != 2)
-				return "❌ Invalid format. Use: !removeSymbol 2B76.DE";
-
-			var ticker = parts[1].ToUpperInvariant();
+			if (args.Length != 1)
+				return new TextBotResponse("❌ Invalid format. Use: !removeSymbol 2B76.DE");
+			var ticker = args[0].ToUpperInvariant();
 			try
 			{
-				await _nordnetSymbolStore.RemoveSymbolAsync(ticker);
-				return $"✅ Symbol removed: {ticker}";
+				await nordnetSymbolStore.RemoveSymbolAsync(ticker);
+				return new TextBotResponse($"✅ Symbol removed: {ticker}");
 			}
 			catch (NordnetSymbolStoreException ex)
 			{
-				return $"❌ Error removing symbol: {ex.Message}";
+				return new TextBotResponse($"❌ Error removing symbol: {ex.Message}");
 			}
 		}
 
-		private async Task<string> HandleGetNordnetSymbols()
+		private async Task<BotResponse> HandleGetNordnetSymbols()
 		{
 			try
 			{
-				var symbols = await _nordnetSymbolStore.GetSymbolsAsync();
+				var symbols = await nordnetSymbolStore.GetSymbolsAsync();
 				var lines = symbols.Select(kvp => $"`{kvp.Key}` — {kvp.Value:N0} stk.");
-				return $"📈 **Nordnet symbols:**\n{string.Join('\n', lines)}";
+				return new TextBotResponse($"📈 **Nordnet symbols:**\n{string.Join('\n', lines)}");
 			}
 			catch (NordnetSymbolStoreException ex)
 			{
-				return $"❌ Error fetching symbols: {ex.Message}";
+				return new TextBotResponse($"❌ Error fetching symbols: {ex.Message}");
 			}
 		}
 
-		private string HandleStatus()
+		private async Task<BotResponse> HandleJuneModal(Dictionary<string, string> fields)
 		{
-			var s = _schedulerStatus;
-
-			string Fmt(DateTimeOffset? t) => t is { } v
-				? $"<t:{v.ToUnixTimeSeconds()}:R>"
-				: "Ukendt";
-
-			string FmtAbsolute(DateTimeOffset? t) => t is { } v
-				? $"{v:dd/MM/yyyy HH:mm} UTC"
-				: "Aldrig";
-
-			var lastRunStatus = s.LastRunSucceeded switch
+			var normalized = fields.GetValueOrDefault("input_share_count")?.Replace(',', '.');
+			if (!decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, out var amount))
+				return new TextBotResponse("❌ Invalid format. Use only numbers e.g. 710", Ephemeral: true);
+			try
 			{
-				true => "✅ Success",
-				false => "❌ Fejl",
-				null => "Ukendt"
-			};
+				await juneStore.SetJuneSharesAmountAsync(amount);
+				return new TextBotResponse($"✅ June shares updated: {amount:N2} stk.", Ephemeral: true);
+			}
+			catch (JuneStoreException ex)
+			{
+				return new TextBotResponse($"❌ Error updating June shares: {ex.Message}", Ephemeral: true);
+			}
+		}
 
-			return $"""
-			📊 **Service Status**
-			⏳ **Næste job run:** {Fmt(s.NextRunAt)} ({FmtAbsolute(s.NextRunAt)})
-			🔑 **Næste token refresh:** {(s.NextTokenRefreshAt is not null ? Fmt(s.NextTokenRefreshAt) : "Ingen planlagt")}
-			🕐 **Sidste run:** {FmtAbsolute(s.LastRunAt)}
-			📋 **Sidste run status:** {lastRunStatus}
-			""";
+		private async Task<BotResponse> HandleNordnetCashModal(Dictionary<string, string> fields)
+		{
+			var normalized = fields.GetValueOrDefault("input_cash_amount")?.Replace(',', '.');
+			if (!decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, out var amount))
+				return new TextBotResponse("❌ Invalid format. Use only numbers e.g. 1000.50", Ephemeral: true);
+			try
+			{
+				await nordnetStore.SetNordnetCashAmountAsync(amount);
+				return new TextBotResponse($"✅ Cash amount updated: {amount:N2} DKK", Ephemeral: true);
+			}
+			catch (NordnetStoreException ex)
+			{
+				return new TextBotResponse($"❌ Error updating cash: {ex.Message}", Ephemeral: true);
+			}
+		}
+
+		private async Task<BotResponse> HandleNordnetAddModal(Dictionary<string, string> fields)
+		{
+			var ticker = fields.GetValueOrDefault("input_ticker")?.ToUpperInvariant();
+			var normalized = fields.GetValueOrDefault("input_amount")?.Replace(',', '.');
+			if (!decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, out var shares) || string.IsNullOrEmpty(ticker))
+				return new TextBotResponse("❌ Invalid format for amount or ticker.", Ephemeral: true);
+			try
+			{
+				await nordnetSymbolStore.AddOrUpdateSymbolAsync(ticker, shares);
+				return new TextBotResponse($"✅ Symbol updated: {ticker} = {shares:N0} stk.", Ephemeral: true);
+			}
+			catch (NordnetSymbolStoreException ex)
+			{
+				return new TextBotResponse($"❌ Error updating symbol: {ex.Message}", Ephemeral: true);
+			}
+		}
+
+		private async Task<BotResponse> HandleNordnetRemoveModal(Dictionary<string, string> fields)
+		{
+			var ticker = fields.GetValueOrDefault("input_ticker")?.ToUpperInvariant();
+			if (string.IsNullOrEmpty(ticker))
+				return new TextBotResponse("❌ Invalid format for ticker.", Ephemeral: true);
+			try
+			{
+				await nordnetSymbolStore.RemoveSymbolAsync(ticker);
+				return new TextBotResponse($"✅ Symbol removed: {ticker}", Ephemeral: true);
+			}
+			catch (NordnetSymbolStoreException ex)
+			{
+				return new TextBotResponse($"❌ Error removing symbol: {ex.Message}", Ephemeral: true);
+			}
 		}
 	}
 }

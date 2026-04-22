@@ -1,3 +1,5 @@
+using Discord;
+using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Events;
@@ -35,6 +37,12 @@ builder.Services.AddOpenApi();
 builder.Services.AddDbContextFactory<StockDbContext>(options =>
 	options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")
 		?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection missing")));
+
+builder.Services.AddSingleton(new DiscordSocketClient(new DiscordSocketConfig
+{
+	GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.MessageContent
+}));
+builder.Services.AddSingleton<IDiscordBotResponder, DiscordBotResponder>();
 
 builder.Services.AddSingleton<SchedulerStatusStore>();
 builder.Services.AddSingleton<ISchedulerStatus>(sp => sp.GetRequiredService<SchedulerStatusStore>());
