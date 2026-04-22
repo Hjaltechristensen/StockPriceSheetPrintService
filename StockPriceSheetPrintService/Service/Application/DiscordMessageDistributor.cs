@@ -1,6 +1,5 @@
 ﻿using Discord;
 using Discord.WebSocket;
-using Microsoft.VisualBasic;
 using StockPriceSheetPrintService.Service.Exceptions;
 using StockPriceSheetPrintService.Service.Ports.Inbound;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
@@ -195,6 +194,7 @@ namespace StockPriceSheetPrintService.Service.Application
         `!trigger` — Manually trigger the full portfolio run
         `!status` — Show last run time and portfolio value
         `!help` — Show this message
+        `!update` — Show update options
         """;
 		}
 
