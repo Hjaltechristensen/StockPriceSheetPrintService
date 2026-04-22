@@ -7,6 +7,8 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 {
 	public class DiscordBotResponder(DiscordSocketClient client) : IDiscordBotResponder
 	{
+		private ulong? _lastHelpBotMessageId;
+
 		public async Task SendTextAsync(ulong channelId, string text, CancellationToken ct = default)
 		{
 			if (client.GetChannel(channelId) is not IMessageChannel channel) return;
@@ -22,6 +24,23 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 				components.WithButton(button.Label, customId: button.CustomId, ButtonStyle.Primary);
 
 			await channel.SendMessageAsync(response.Text, components: components.Build());
+		}
+
+		public async Task SendHelpAsync(ulong channelId, string text, ulong userMessageId, CancellationToken ct = default)
+		{
+			if (client.GetChannel(channelId) is not IMessageChannel channel) return;
+
+			if (_lastHelpBotMessageId.HasValue)
+			{
+				try { await channel.DeleteMessageAsync(_lastHelpBotMessageId.Value); }
+				catch { /* Already deleted or missing */ }
+			}
+
+			try { await channel.DeleteMessageAsync(userMessageId); }
+			catch { /* Already deleted */ }
+
+			var botMessage = await channel.SendMessageAsync(text);
+			_lastHelpBotMessageId = botMessage.Id;
 		}
 	}
 }

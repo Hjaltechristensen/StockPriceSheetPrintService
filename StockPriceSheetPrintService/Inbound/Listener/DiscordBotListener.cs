@@ -39,7 +39,7 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 			var parts = msg.Content.Split(' ');
 			var command = new BotMessageCommand(parts[0], parts[1..], msg.Channel.Id);
 			var response = await receiver.HandleMessageAsync(command, _stoppingToken);
-			await SendResponse(msg.Channel.Id, response);
+			await SendResponse(msg.Channel.Id, response, msg.Id);
 		}
 
 		private async Task OnButtonExecuted(SocketMessageComponent interaction)
@@ -65,7 +65,7 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 				await modalInteraction.RespondAsync(text.Text, ephemeral: text.Ephemeral);
 		}
 
-		private async Task SendResponse(ulong channelId, BotResponse response)
+		private async Task SendResponse(ulong channelId, BotResponse response, ulong sourceMessageId = 0)
 		{
 			switch (response)
 			{
@@ -74,6 +74,9 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 					break;
 				case ComponentsBotResponse components:
 					await responder.SendComponentsAsync(channelId, components, _stoppingToken);
+					break;
+				case HelpBotResponse help:
+					await responder.SendHelpAsync(channelId, help.Text, sourceMessageId, _stoppingToken);
 					break;
 			}
 		}

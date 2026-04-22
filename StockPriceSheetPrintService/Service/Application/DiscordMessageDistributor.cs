@@ -72,7 +72,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				new BotButton("Remove Nordnet ticker", "btn_nordnet_remove")
 			]);
 
-		private static BotResponse HandleHelp() => new TextBotResponse("""
+		private static BotResponse HandleHelp() => new HelpBotResponse("""
 			📋 **Saxo**
 			`!refreshToken` — Manually refresh Saxo access token
 
