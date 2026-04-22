@@ -29,12 +29,13 @@ namespace StockPriceSheetPrintService.Service.Application
 				"!getCash"      => await HandleGetNordnetCash(),
 				"!getJuneAmount"=> await HandleGetJuneSharesAmount(),
 				"!update"       => HandleUpdateButtons(),
+				"!get"          => HandleGetButtons(),
 				_               => new EmptyBotResponse()
 			};
 
-		public Task<BotResponse> HandleComponentAsync(BotComponentCommand command, CancellationToken ct)
+		public async Task<BotResponse> HandleComponentAsync(BotComponentCommand command, CancellationToken ct)
 		{
-			BotResponse response = command.CustomId switch
+			return command.CustomId switch
 			{
 				"btn_june" => new ModalBotResponse("Choose number", "june_modal", [
 					new BotModalField("New June share amount", "input_share_count", "June share amount...")
@@ -49,10 +50,16 @@ namespace StockPriceSheetPrintService.Service.Application
 				"btn_nordnet_remove" => new ModalBotResponse("Remove Nordnet ticker", "nordnet_remove_modal", [
 					new BotModalField("Ticker", "input_ticker", "Ticker symbol, e.g. 2B76.DE")
 				]),
+				"btn_get_cash"    => AsEphemeral(await HandleGetNordnetCash()),
+				"btn_get_june"    => AsEphemeral(await HandleGetJuneSharesAmount()),
+				"btn_get_symbols" => AsEphemeral(await HandleGetNordnetSymbols()),
+				"btn_get_status"  => AsEphemeral(HandleStatus()),
 				_ => new EmptyBotResponse()
 			};
-			return Task.FromResult(response);
 		}
+
+		private static BotResponse AsEphemeral(BotResponse response) =>
+			response is TextBotResponse t ? t with { Ephemeral = true } : response;
 
 		public async Task<BotResponse> HandleModalAsync(BotModalCommand command, CancellationToken ct) =>
 			command.ModalId switch
@@ -63,6 +70,14 @@ namespace StockPriceSheetPrintService.Service.Application
 				"nordnet_remove_modal"=> await HandleNordnetRemoveModal(command.Fields),
 				_                     => new EmptyBotResponse()
 			};
+
+		private static BotResponse HandleGetButtons() =>
+			new GetBotResponse("Get values:", [
+				new BotButton("Nordnet cash",    "btn_get_cash"),
+				new BotButton("June shares",     "btn_get_june"),
+				new BotButton("Nordnet symbols", "btn_get_symbols"),
+				new BotButton("Status",          "btn_get_status")
+			]);
 
 		private static BotResponse HandleUpdateButtons() =>
 			new UpdateBotResponse("Update values:", [
@@ -76,22 +91,16 @@ namespace StockPriceSheetPrintService.Service.Application
 			📋 **Saxo**
 			`!refreshToken` — Manually refresh Saxo access token
 
-			💰 **Nordnet**
-			`!getSymbols` — Show all active symbols
-			`!getCash` — Show current Nordnet cash balance
-			`!updateCash <balance>` — Update cash balance, e.g. `!updateCash 1000.50`
+			💰 **Nordnet / June**
+			`!get` — Show current values (cash, June shares, symbols)
+			`!update` — Update values (cash, June shares, symbols)
 			`!addSymbol <ticker> <amount>` — Add/update symbol, e.g. `!addSymbol 2B76.DE 218`
 			`!removeSymbol <ticker>` — Remove symbol, e.g. `!removeSymbol O`
-
-			📊 **June**
-			`!updateJune <amount>` — Update June share count, e.g. `!updateJune 710`
-			`!getJuneAmount` — Show current June share count
 
 			ℹ️ **Andet**
 			`!trigger` — Manually trigger the full portfolio run
 			`!status` — Show last run time and portfolio value
 			`!help` — Show this message
-			`!update` — Show update options
 			""");
 
 		private BotResponse HandleStatus()

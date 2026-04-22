@@ -9,6 +9,7 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 	{
 		private ulong? _lastHelpBotMessageId;
 		private ulong? _lastUpdateBotMessageId;
+		private ulong? _lastGetBotMessageId;
 
 		public async Task SendTextAsync(ulong channelId, string text, CancellationToken ct = default)
 		{
@@ -63,6 +64,27 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 
 			var botMessage = await channel.SendMessageAsync(response.Text, components: components.Build());
 			_lastUpdateBotMessageId = botMessage.Id;
+		}
+
+		public async Task SendGetAsync(ulong channelId, GetBotResponse response, ulong userMessageId, CancellationToken ct = default)
+		{
+			if (client.GetChannel(channelId) is not IMessageChannel channel) return;
+
+			if (_lastGetBotMessageId.HasValue)
+			{
+				try { await channel.DeleteMessageAsync(_lastGetBotMessageId.Value); }
+				catch { /* Already deleted or missing */ }
+			}
+
+			try { await channel.DeleteMessageAsync(userMessageId); }
+			catch { /* Already deleted */ }
+
+			var components = new ComponentBuilder();
+			foreach (var button in response.Buttons)
+				components.WithButton(button.Label, customId: button.CustomId, ButtonStyle.Secondary);
+
+			var botMessage = await channel.SendMessageAsync(response.Text, components: components.Build());
+			_lastGetBotMessageId = botMessage.Id;
 		}
 	}
 }

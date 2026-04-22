@@ -6,6 +6,7 @@ namespace StockPriceSheetPrintService.Service.Models
 	public record ComponentsBotResponse(string Text, List<BotButton> Buttons) : BotResponse;
 	public record HelpBotResponse(string Text) : BotResponse;
 	public record UpdateBotResponse(string Text, List<BotButton> Buttons) : BotResponse;
+	public record GetBotResponse(string Text, List<BotButton> Buttons) : BotResponse;
 	public record EmptyBotResponse : BotResponse;
 
 	public record BotModalField(string Label, string CustomId, string Placeholder);

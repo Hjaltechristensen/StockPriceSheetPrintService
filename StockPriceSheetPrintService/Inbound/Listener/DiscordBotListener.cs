@@ -49,8 +49,15 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 			var command = new BotComponentCommand(interaction.Data.CustomId);
 			var response = await receiver.HandleComponentAsync(command, _stoppingToken);
 
-			if (response is ModalBotResponse modal)
-				await interaction.RespondWithModalAsync(BuildModal(modal));
+			switch (response)
+			{
+				case ModalBotResponse modal:
+					await interaction.RespondWithModalAsync(BuildModal(modal));
+					break;
+				case TextBotResponse text:
+					await interaction.RespondAsync(text.Text, ephemeral: text.Ephemeral);
+					break;
+			}
 		}
 
 		private async Task OnModalSubmitted(SocketModal modalInteraction)
@@ -80,6 +87,9 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 					break;
 				case UpdateBotResponse update:
 					await responder.SendUpdateAsync(channelId, update, sourceMessageId, _stoppingToken);
+					break;
+				case GetBotResponse get:
+					await responder.SendGetAsync(channelId, get, sourceMessageId, _stoppingToken);
 					break;
 			}
 		}
