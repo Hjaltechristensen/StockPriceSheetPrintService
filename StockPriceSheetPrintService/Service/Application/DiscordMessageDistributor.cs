@@ -18,9 +18,9 @@ namespace StockPriceSheetPrintService.Service.Application
 			{
 				"!refreshToken" => await HandleRefreshToken(ct),
 				"!trigger"      => await HandleTrigger(ct),
-				"!help"         => HandleHelp(),
 				"!start"		=> HandleStartMenu(),
-				_               => new EmptyBotResponse()
+				"!help"			=> HandleHelp(),
+				_ => new EmptyBotResponse()
 			};
 
 		public async Task<BotResponse> HandleComponentAsync(BotComponentCommand command, CancellationToken ct)
