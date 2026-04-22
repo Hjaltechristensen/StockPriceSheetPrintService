@@ -7,5 +7,6 @@ namespace StockPriceSheetPrintService.Service.Ports.Outbound
 		Task SendTextAsync(ulong channelId, string text, CancellationToken ct = default);
 		Task SendComponentsAsync(ulong channelId, ComponentsBotResponse response, CancellationToken ct = default);
 		Task SendHelpAsync(ulong channelId, string text, ulong userMessageId, CancellationToken ct = default);
+		Task SendUpdateAsync(ulong channelId, UpdateBotResponse response, ulong userMessageId, CancellationToken ct = default);
 	}
 }

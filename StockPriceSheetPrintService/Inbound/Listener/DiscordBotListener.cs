@@ -78,6 +78,9 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 				case HelpBotResponse help:
 					await responder.SendHelpAsync(channelId, help.Text, sourceMessageId, _stoppingToken);
 					break;
+				case UpdateBotResponse update:
+					await responder.SendUpdateAsync(channelId, update, sourceMessageId, _stoppingToken);
+					break;
 			}
 		}
 

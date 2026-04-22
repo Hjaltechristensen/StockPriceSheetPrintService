@@ -65,7 +65,7 @@ namespace StockPriceSheetPrintService.Service.Application
 			};
 
 		private static BotResponse HandleUpdateButtons() =>
-			new ComponentsBotResponse("Update values:", [
+			new UpdateBotResponse("Update values:", [
 				new BotButton("June share count",      "btn_june"),
 				new BotButton("Nordnet cash",          "btn_nordnet_cash"),
 				new BotButton("Add Nordnet ticker",    "btn_nordnet_add"),
