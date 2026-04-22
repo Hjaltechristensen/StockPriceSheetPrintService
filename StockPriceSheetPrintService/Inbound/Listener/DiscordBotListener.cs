@@ -61,10 +61,10 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 					await interaction.RespondAsync(help.Text, ephemeral: true);
 					break;
 				case GetBotResponse get:
-					await interaction.RespondAsync(get.Text, components: BuildComponents(get.Buttons), ephemeral: true);
+					await interaction.RespondAsync(get.Text, components: BuildComponents(get.Buttons), ephemeral: false);
 					break;
 				case UpdateBotResponse update:
-					await interaction.RespondAsync(update.Text, components: BuildComponents(update.Buttons), ephemeral: true);
+					await interaction.RespondAsync(update.Text, components: BuildComponents(update.Buttons), ephemeral: false);
 					break;
 				case MenuBotResponse menu:
 					await interaction.UpdateAsync(props =>
