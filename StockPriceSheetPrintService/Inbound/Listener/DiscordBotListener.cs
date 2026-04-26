@@ -57,6 +57,24 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 				case TextBotResponse text:
 					await interaction.RespondAsync(text.Text, ephemeral: text.Ephemeral);
 					break;
+				case HelpBotResponse help:
+					await interaction.RespondAsync(help.Text, ephemeral: true);
+					break;
+				case GetBotResponse get:
+					await interaction.RespondAsync(get.Text, components: BuildComponents(get.Buttons), ephemeral: false);
+					try { await interaction.Message.DeleteAsync(); } catch { /* already deleted */ }
+					break;
+				case UpdateBotResponse update:
+					await interaction.RespondAsync(update.Text, components: BuildComponents(update.Buttons), ephemeral: false);
+					try { await interaction.Message.DeleteAsync(); } catch { /* already deleted */ }
+					break;
+				case MenuBotResponse menu:
+					await interaction.UpdateAsync(props =>
+					{
+						props.Content = menu.Text;
+						props.Components = BuildComponents(menu.Buttons);
+					});
+					break;
 			}
 		}
 
@@ -79,8 +97,8 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 				case TextBotResponse text:
 					await responder.SendTextAsync(channelId, text.Text, _stoppingToken);
 					break;
-				case ComponentsBotResponse components:
-					await responder.SendComponentsAsync(channelId, components, _stoppingToken);
+				case MenuBotResponse menu:
+					await responder.SendMenuAsync(channelId, menu, sourceMessageId, _stoppingToken);
 					break;
 				case HelpBotResponse help:
 					await responder.SendHelpAsync(channelId, help.Text, sourceMessageId, _stoppingToken);
@@ -103,5 +121,20 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 				builder.AddTextInput(field.Label, customId: field.CustomId, placeholder: field.Placeholder);
 			return builder.Build();
 		}
+
+		private static MessageComponent BuildComponents(List<BotButton> buttons)
+		{
+			var builder = new ComponentBuilder();
+			foreach (var button in buttons)
+				builder.WithButton(button.Label, customId: button.CustomId, MapStyle(button.Style));
+			return builder.Build();
+		}
+
+		private static ButtonStyle MapStyle(BotButtonStyle style) => style switch
+		{
+			BotButtonStyle.Secondary => ButtonStyle.Secondary,
+			BotButtonStyle.Action    => ButtonStyle.Success,
+			_                        => ButtonStyle.Primary
+		};
 	}
 }

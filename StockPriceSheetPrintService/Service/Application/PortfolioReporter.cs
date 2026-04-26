@@ -1,4 +1,4 @@
-using StockPriceSheetPrintService.Service.Models;
+using StockPriceSheetPrintService.Service.Models.Saxo.Transactions;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Globalization;
 
@@ -18,7 +18,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		private const string TimeZoneId = "Central European Standard Time";
 		private const int ReportHourLocal = 7; // 07:00 lokal tid (DST håndteres automatisk af TimeZoneInfo)
 
-		public async Task ReportMorningAsync(decimal saxoBalance, decimal nordnetValue, decimal juneValue, decimal total, decimal previousDayValue, List<SaxoTransaction> newTransfers, bool sendDiscordImmediately, CancellationToken ct)
+		public async Task ReportMorningAsync(decimal saxoBalance, decimal nordnetValue, decimal juneValue, decimal total, decimal previousDayValue, List<SaxoTransaction> newTransfers, bool sendDiscordImmediately, string? claudeInsights, CancellationToken ct)
 		{
 			try
 			{
@@ -27,7 +27,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				if (sendDiscordImmediately)
 				{
 					_logger.LogInformation("[REPORTER] Manual trigger - sending Discord notification now");
-					await _discordNotifier.SendMorningReportAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, transferAmount, ct);
+					await _discordNotifier.SendMorningReportAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, transferAmount, claudeInsights, ct);
 					_logger.LogInformation("[REPORTER] Morning report sent at {time} UTC", DateTime.UtcNow);
 					return;
 				}
@@ -45,7 +45,7 @@ namespace StockPriceSheetPrintService.Service.Application
 
 				// Beregn forsinkelse fra server tid til target tid
 				var delayUntilReport = todayTargetLocal - nowLocal;
-				_logger.LogInformation("[REPORTER] Next report scheduled at {localTime} (in {hours}h {minutes}m)", 
+				_logger.LogInformation("[REPORTER] Next report scheduled at {localTime} (in {hours}h {minutes}m)",
 					todayTargetLocal, (int)delayUntilReport.TotalHours, delayUntilReport.Minutes);
 
 				_ = Task.Run(async () =>
@@ -53,7 +53,7 @@ namespace StockPriceSheetPrintService.Service.Application
 					await Task.Delay(delayUntilReport, CancellationToken.None);
 					try
 					{
-						await _discordNotifier.SendMorningReportAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, transferAmount, CancellationToken.None);
+						await _discordNotifier.SendMorningReportAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, transferAmount, claudeInsights, CancellationToken.None);
 						_logger.LogInformation("[REPORTER] Morning report sent at {time} UTC", DateTime.UtcNow);
 					}
 					catch (Exception ex)

@@ -8,12 +8,16 @@ namespace StockPriceSheetPrintService.Service.Application
 		ILogger<PortfolioJobRunner> logger,
 		IExecutionGuard executionGuard,
 		IPortfolioDataFetcher dataFetcher,
-		IPortfolioReporter reporter) : IPortfolioJobRunner
+		IPortfolioReporter reporter,
+		IClaudeReportInsights claudeInsights,
+		INordnetSymbolStore nordnetSymbolStore) : IPortfolioJobRunner
 	{
 		private readonly ILogger<PortfolioJobRunner> _logger = logger;
 		private readonly IExecutionGuard _executionGuard = executionGuard;
 		private readonly IPortfolioDataFetcher _dataFetcher = dataFetcher;
 		private readonly IPortfolioReporter _reporter = reporter;
+		private readonly IClaudeReportInsights _claudeInsights = claudeInsights;
+		private readonly INordnetSymbolStore _nordnetSymbolStore = nordnetSymbolStore;
 
 		public async Task RunJobAsync(CancellationToken ct, bool sendDiscordImmediately = false)
 		{
@@ -30,35 +34,43 @@ namespace StockPriceSheetPrintService.Service.Application
 			try
 			{
 				// Fetch all data in parallel
-				_logger.LogInformation("[JOB] [1/3] Fetching portfolio data...");
+				_logger.LogInformation("[JOB] [1/4] Fetching portfolio data...");
 				var saxoBalanceTask = _dataFetcher.GetSaxoBalanceAsync(ct);
 				var nordnetValueTask = _dataFetcher.GetNordnetValueAsync(ct);
 				var juneValueTask = _dataFetcher.GetJuneValueAsync(ct);
 				var transfersTask = _dataFetcher.GetNewTransfersAsync(ct);
 				var previousDayValueTask = _dataFetcher.GetPreviousDayValueAsync(ct);
+				var netPositionsTask = _dataFetcher.GetNetPositionsAsync(ct);
 
-				await Task.WhenAll(saxoBalanceTask, nordnetValueTask, juneValueTask, transfersTask, previousDayValueTask);
+				await Task.WhenAll(saxoBalanceTask, nordnetValueTask, juneValueTask, transfersTask, previousDayValueTask, netPositionsTask);
 
 				var saxoBalance = saxoBalanceTask.Result;
 				var nordnetValue = nordnetValueTask.Result;
 				var juneValue = juneValueTask.Result;
 				var newTransfers = transfersTask.Result;
 				var previousDayValue = previousDayValueTask.Result;
+				var saxoPositions = netPositionsTask.Result;
 
 				var total = saxoBalance + nordnetValue + juneValue;
 
 				_logger.LogInformation("[JOB] ✓ Portfolio values fetched");
-				_logger.LogInformation("[JOB]   Saxo: {saxo:F2} | Nordnet: {nordnet:F2} | June: {june:F2} | Total: {total:F2}", 
+				_logger.LogInformation("[JOB]   Saxo: {saxo:F2} | Nordnet: {nordnet:F2} | June: {june:F2} | Total: {total:F2}",
 					saxoBalance, nordnetValue, juneValue, total);
 
 				// Update Google Sheets
-				_logger.LogInformation("[JOB] [2/3] Updating Google Sheets...");
+				_logger.LogInformation("[JOB] [2/4] Updating Google Sheets...");
 				await _reporter.UpdateGoogleSheetsAsync(total, ct);
 				_executionGuard.LogExecution();
 
+				// Get morning report insights from Claude
+				_logger.LogInformation("[JOB] [3/4] Getting morning report insights from Claude...");
+				var nordnetSymbols = await _nordnetSymbolStore.GetSymbolsAsync();
+				var nordnetTickers = nordnetSymbols.Keys.ToList();
+				var insights = await _claudeInsights.GetInsightsAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, newTransfers, nordnetTickers, saxoPositions, ct);
+
 				// Report results
-				_logger.LogInformation("[JOB] [3/3] Reporting results...");
-				await _reporter.ReportMorningAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, newTransfers, sendDiscordImmediately, ct);
+				_logger.LogInformation("[JOB] [4/4] Reporting results...");
+				await _reporter.ReportMorningAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, newTransfers, sendDiscordImmediately, insights, ct);
 
 				LogJobCompleted(total);
 			}

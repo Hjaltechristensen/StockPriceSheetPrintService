@@ -1,4 +1,5 @@
-using StockPriceSheetPrintService.Service.Models;
+using StockPriceSheetPrintService.Service.Models.Saxo.InstrumentDetails;
+using StockPriceSheetPrintService.Service.Models.Saxo.Transactions;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using StockPriceSheetPrintService.Service.Ports.Persistence;
 
@@ -137,6 +138,28 @@ namespace StockPriceSheetPrintService.Service.Application
 			catch (Exception ex)
 			{
 				_logger.LogError(ex, "[FETCHER] Unexpected error fetching transfers");
+				return [];
+			}
+		}
+
+		public async Task<List<SaxoInstrument>> GetNetPositionsAsync(CancellationToken ct)
+		{
+			try
+			{
+				var saxoToken = await _saxoTokenService.GetAccessTokenAsync(ct);
+				if (saxoToken == null)
+				{
+					_logger.LogWarning("[FETCHER] Saxo token not available for net positions fetch");
+					return [];
+				}
+
+				var positions = await _saxoAccountService.GetNetPositionsAsync(saxoToken, ct);
+				_logger.LogInformation("[FETCHER] Fetched {count} Saxo net positions", positions.Count);
+				return positions;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[FETCHER] Unexpected error fetching Saxo net positions");
 				return [];
 			}
 		}
