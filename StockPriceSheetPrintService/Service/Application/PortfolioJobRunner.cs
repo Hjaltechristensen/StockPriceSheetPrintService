@@ -1,4 +1,4 @@
-﻿using StockPriceSheetPrintService.Service.Ports.Inbound;
+using StockPriceSheetPrintService.Service.Ports.Inbound;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using StockPriceSheetPrintService.Service.Ports.Persistence;
 
@@ -10,7 +10,8 @@ namespace StockPriceSheetPrintService.Service.Application
 		IPortfolioDataFetcher dataFetcher,
 		IPortfolioReporter reporter,
 		IClaudeReportInsights claudeInsights,
-		INordnetSymbolStore nordnetSymbolStore) : IPortfolioJobRunner
+		INordnetSymbolStore nordnetSymbolStore,
+		IClaudeToggle claudeToggle) : IPortfolioJobRunner
 	{
 		private readonly ILogger<PortfolioJobRunner> _logger = logger;
 		private readonly IExecutionGuard _executionGuard = executionGuard;
@@ -18,7 +19,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		private readonly IPortfolioReporter _reporter = reporter;
 		private readonly IClaudeReportInsights _claudeInsights = claudeInsights;
 		private readonly INordnetSymbolStore _nordnetSymbolStore = nordnetSymbolStore;
-		public bool UseClaude { get; set; } = true;
+		private readonly IClaudeToggle _claudeToggle = claudeToggle;
 
 		public async Task RunJobAsync(CancellationToken ct, bool sendDiscordImmediately = false)
 		{
@@ -64,17 +65,17 @@ namespace StockPriceSheetPrintService.Service.Application
 				_executionGuard.LogExecution();
 
 				// Get morning report insights from Claude
+				var nordnetSymbols = await _nordnetSymbolStore.GetSymbolsAsync();
+				var nordnetTickers = nordnetSymbols.Keys.ToList();
 				string? insights = null;
-				if (UseClaude)
+				if (_claudeToggle.IsEnabled)
 				{
 					_logger.LogInformation("[JOB] [3/4] Getting morning report insights from Claude...");
-					var nordnetSymbols = await _nordnetSymbolStore.GetSymbolsAsync();
-					var nordnetTickers = nordnetSymbols.Keys.ToList();
 					insights = await _claudeInsights.GetInsightsAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, newTransfers, nordnetTickers, saxoPositions, ct);
 				}
 				else
 				{
-					_logger.LogInformation("[JOB] Claude insights disabled, skipping.");
+					_logger.LogInformation("[JOB] [3/4] Claude insights skipped (slået fra).");
 				}
 
 				// Report results

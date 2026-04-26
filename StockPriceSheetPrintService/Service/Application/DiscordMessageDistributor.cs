@@ -11,7 +11,8 @@ namespace StockPriceSheetPrintService.Service.Application
 		IJuneStore juneStore,
 		IServiceScopeFactory scopeFactory,
 		INordnetSymbolStore nordnetSymbolStore,
-		ISchedulerStatus schedulerStatus) : IDiscordBotMessageReceiver
+		ISchedulerStatus schedulerStatus,
+		IClaudeToggle claudeToggle) : IDiscordBotMessageReceiver
 	{
 		public async Task<BotResponse> HandleMessageAsync(BotMessageCommand command, CancellationToken ct) =>
 			command.Command switch
@@ -27,12 +28,14 @@ namespace StockPriceSheetPrintService.Service.Application
 		{
 			return command.CustomId switch
 			{
-				"btn_back"         => HandleStartMenu(),
-				"btn_get"          => HandleGetButtons(),
-				"btn_update"       => HandleUpdateButtons(),
-				"btn_trigger"      => AsEphemeral(await HandleTrigger(ct)),
-				"btn_refreshToken" => AsEphemeral(await HandleRefreshToken(ct)),
-				"btn_help"         => HandleHelp(),
+				"btn_back"           => HandleStartMenu(),
+				"btn_get"            => HandleGetButtons(),
+				"btn_update"         => HandleUpdateButtons(),
+				"btn_actions"        => HandleActionsButtons(),
+				"btn_trigger"        => AsEphemeral(await HandleTrigger(ct)),
+				"btn_refreshToken"   => AsEphemeral(await HandleRefreshToken(ct)),
+				"btn_help"           => HandleHelp(),
+				"btn_toggle_claude"  => HandleToggleClaude(),
 				"btn_june" => new ModalBotResponse("Choose number", "june_modal", [
 					new BotModalField("New June share amount", "input_share_count", "June share amount...")
 				]),
@@ -69,12 +72,29 @@ namespace StockPriceSheetPrintService.Service.Application
 
 		private static MenuBotResponse HandleStartMenu() =>
 			new("📋 **Portfolio menu:**", [
-				new BotButton("📊 Get values",        "btn_get",          BotButtonStyle.Primary),
-				new BotButton("✏️ Update values",      "btn_update",       BotButtonStyle.Primary),
-				new BotButton("⚡ Trigger portfolio", "btn_trigger",      BotButtonStyle.Action),
-				new BotButton("🔑 Refresh token",     "btn_refreshToken", BotButtonStyle.Action),
-				new BotButton("❓ Help",              "btn_help",         BotButtonStyle.Secondary)
+				new BotButton("📊 Get values",   "btn_get",     BotButtonStyle.Primary),
+				new BotButton("✏️ Update values", "btn_update",  BotButtonStyle.Primary),
+				new BotButton("⚙️ Actions",       "btn_actions", BotButtonStyle.Secondary)
 			]);
+
+		private MenuBotResponse HandleActionsButtons() =>
+			new("⚙️ **Actions:**", [
+				new BotButton("⚡ Trigger portfolio",                   "btn_trigger",       BotButtonStyle.Action),
+				new BotButton("🔑 Refresh token",                       "btn_refreshToken",  BotButtonStyle.Action),
+				new BotButton("❓ Help",                                 "btn_help",          BotButtonStyle.Secondary),
+				new BotButton(claudeToggle.IsEnabled ? "🤖 Claude: TIL" : "🤖 Claude: FRA",
+				              "btn_toggle_claude",
+				              claudeToggle.IsEnabled ? BotButtonStyle.Action : BotButtonStyle.Secondary),
+				new BotButton("⬅️ Back",                                "btn_back",          BotButtonStyle.Secondary)
+			]);
+
+		private BotResponse HandleToggleClaude()
+		{
+			claudeToggle.Toggle();
+			return new TextBotResponse(
+				claudeToggle.IsEnabled ? "🤖 Claude insights: **slået TIL**" : "🤖 Claude insights: **slået FRA**",
+				Ephemeral: true);
+		}
 
 		private static GetBotResponse HandleGetButtons() =>
 			new("Get values:", [
@@ -118,6 +138,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				🔑 **Næste token refresh:** {(schedulerStatus.NextTokenRefreshAt is not null ? Fmt(schedulerStatus.NextTokenRefreshAt) : "Ingen planlagt")}
 				🕐 **Sidste run:** {FmtAbsolute(schedulerStatus.LastRunAt)}
 				📋 **Sidste run status:** {lastRunStatus}
+				🤖 **Claude insights:** {(claudeToggle.IsEnabled ? "TIL" : "FRA")}
 				""");
 		}
 
