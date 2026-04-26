@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using StockPriceSheetPrintService.Outbound.Persistence.Entities;
+using StockPriceSheetPrintService.Service.Models.Saxo.InstrumentDetails;
+using System.Text.Json;
 
 namespace StockPriceSheetPrintService.Outbound.Persistence
 {
@@ -11,11 +13,19 @@ namespace StockPriceSheetPrintService.Outbound.Persistence
 		public DbSet<JuneSharesEntity> JuneShares { get; set; }
 		public DbSet<NordnetSymbolEntity> NordnetSymbols { get; set; }
 		public DbSet<ExecutionLogEntity> ExecutionLogs { get; set; }
+		public DbSet<SaxoPositionsEntity> SaxoPositions { get; set; }
 
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
 			modelBuilder.Entity<SeenTransferEntity>().HasKey(e => e.BookingId);
 			modelBuilder.Entity<NordnetSymbolEntity>().HasKey(e => e.Ticker);
+			modelBuilder.Entity<SaxoPositionsEntity>().HasKey(e => e.Uic);
+			modelBuilder.Entity<SaxoPositionsEntity>()
+				.Property(e => e.Exchange)
+				.HasColumnType("jsonb")
+				.HasConversion(
+					v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+					v => JsonSerializer.Deserialize<ExchangeDto>(v, (JsonSerializerOptions?)null) ?? new ExchangeDto());
 		}
 	}
 }
