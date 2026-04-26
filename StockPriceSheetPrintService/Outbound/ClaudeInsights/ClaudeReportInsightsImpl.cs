@@ -1,4 +1,5 @@
 using Anthropic;
+using Anthropic.Exceptions;
 using Anthropic.Models.Messages;
 using StockPriceSheetPrintService.Service.Models.Saxo.InstrumentDetails;
 using StockPriceSheetPrintService.Service.Models.Saxo.Transactions;
@@ -8,8 +9,8 @@ namespace StockPriceSheetPrintService.Outbound.ClaudeInsights
 {
 	public class ClaudeReportInsightsImpl(IConfiguration configuration, ILogger<ClaudeReportInsightsImpl> logger) : IClaudeReportInsights
 	{
-		private const string Model = "claude-haiku-4-5-20251001";
-		private const int MaxTokens = 1024;
+		private const string _model = "claude-haiku-4-5-20251001";
+		private const int MaxTokens = 512;
 
 		private readonly AnthropicClient _client = new()
 		{
@@ -66,19 +67,16 @@ namespace StockPriceSheetPrintService.Outbound.ClaudeInsights
 			var parameters = new MessageCreateParams
 			{
 				MaxTokens = MaxTokens,
-				System =
-				[
+				System = new List<TextBlockParam>
+				{
 					new() { Text = SystemPrompt, CacheControl = new CacheControlEphemeral() }
-				],
-				Tools =
-				[
-					new() { Type = "web_search_20250305", Name = "web_search" }
-				],
+				},
+				Tools = [new ToolUnion(new WebSearchTool20250305())],
 				Messages =
 				[
 					new() { Role = Role.User, Content = userPrompt }
 				],
-				Model = Model,
+				Model = _model,
 			};
 
 			try
@@ -95,6 +93,16 @@ namespace StockPriceSheetPrintService.Outbound.ClaudeInsights
 					.Where(t => !string.IsNullOrWhiteSpace(t));
 
 				return string.Join(" ", textParts).Trim() is { Length: > 0 } result ? result : null;
+			}
+			catch (AnthropicUnauthorizedException ex)
+			{
+				logger.LogError(ex, "[CLAUDE] Unauthorized - check API key");
+				return null;
+			}
+			catch (AnthropicRateLimitException ex)
+			{
+				logger.LogError(ex, "[CLAUDE] Rate limited");
+				return null;
 			}
 			catch (Exception ex)
 			{
