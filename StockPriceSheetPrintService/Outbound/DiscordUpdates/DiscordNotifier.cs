@@ -29,9 +29,9 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 				_logger.LogWarning("[DISCORD] Discord:WebhookLogin configuration missing");
 		}
 
-		public async Task SendMorningReportAsync(decimal saxoBalance, decimal stockValue, decimal juneValue, decimal total, decimal dayBeforeValue, decimal? lastTransferAmount, CancellationToken stoppingToken)
+		public async Task SendMorningReportAsync(decimal saxoBalance, decimal stockValue, decimal juneValue, decimal total, decimal dayBeforeValue, decimal? lastTransferAmount, string? claudeInsights, CancellationToken stoppingToken)
 		{
-			var payload = BuildPayload(saxoBalance, stockValue, juneValue, total, dayBeforeValue, lastTransferAmount);
+			var payload = BuildPayload(saxoBalance, stockValue, juneValue, total, dayBeforeValue, lastTransferAmount, claudeInsights);
 			await PublishDiscordMessage(_webhookUrl, payload, stoppingToken);
 		}
 
@@ -90,7 +90,7 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 			return value.ToString("N2", CultureInfo.GetCultureInfo("da-DK"));
 		}
 
-		private object BuildPayload(decimal saxoBalance, decimal stockValue, decimal juneValue, decimal total, decimal dayBeforeValue, decimal? lastTransferAmount)
+		private object BuildPayload(decimal saxoBalance, decimal stockValue, decimal juneValue, decimal total, decimal dayBeforeValue, decimal? lastTransferAmount, string? claudeInsights)
 		{
 			var change = total - dayBeforeValue;
 			var changePct = Math.Round((change / dayBeforeValue) * 100, 2);
@@ -105,6 +105,16 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 
 			var distributionValue = "```" + $"Saxo    {Math.Round((saxoBalance / total) * 100, 1),6}%\nNordnet {Math.Round((stockValue / total) * 100, 1),6}%\nJune    {Math.Round((juneValue / total) * 100, 1),6}%" + "```";
 
+			var mainFields = new List<object>
+			{
+				new { name = "🏛️ Portfolio", value = $"||{portfolioValue}||", inline = false },
+				new { name = "💰 Total Value", value = $"||**{Dkk(total)} DKK**||", inline = false },
+				new { name = changeSinceYesterdayString, value = changeValue, inline = false }
+			};
+
+			if (!string.IsNullOrWhiteSpace(claudeInsights))
+				mainFields.Add(new { name = "🤖 AI Insights", value = claudeInsights, inline = false });
+
 			return new
 			{
 				embeds = new object[]
@@ -114,12 +124,7 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 						title = "🌅 Morning Market Report",
 						description = "For " + DateTime.UtcNow.AddDays(-1).ToString("dddd dd MMMM yyyy"),
 						color = embedColor,
-						fields = new[]
-						{
-							new { name = "🏛️ Portfolio", value = $"||{portfolioValue}||", inline = false },
-							new { name = "💰 Total Value", value = $"||**{Dkk(total)} DKK**||", inline = false },
-							new { name = changeSinceYesterdayString, value = changeValue, inline = false }
-						},
+						fields = mainFields,
 						timestamp = DateTime.UtcNow.ToString("o")
 					},
 					new

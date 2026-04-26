@@ -1,15 +1,10 @@
-﻿using Google.Apis.Sheets.v4.Data;
-using Microsoft.EntityFrameworkCore;
-using StockPriceSheetPrintService.Outbound.Persistence;
-using StockPriceSheetPrintService.Outbound.Persistence.Entities;
-using StockPriceSheetPrintService.Service.Models.Saxo;
+﻿using StockPriceSheetPrintService.Service.Models.Saxo;
 using StockPriceSheetPrintService.Service.Models.Saxo.InstrumentDetails;
 using StockPriceSheetPrintService.Service.Models.Saxo.Positions;
 using StockPriceSheetPrintService.Service.Models.Saxo.Transactions;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Net.Http.Headers;
 using System.Text.Json;
-using static Google.Apis.Requests.BatchRequest;
 
 namespace StockPriceSheetPrintService.Outbound.Saxo
 {
@@ -112,7 +107,7 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 			?? throw new InvalidOperationException("Empty transactions response from Saxo.");
 		}
 
-		public async Task<List<SaxoInstrument>> GetNetPositions(string accessToken, CancellationToken ct)
+		public async Task<List<SaxoInstrument>> GetNetPositionsAsync(string accessToken, CancellationToken ct)
 		{
 			var client = _httpClientFactory.CreateClient();
 			client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
@@ -146,22 +141,11 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 									  .SequenceEqual(dbUics.OrderBy(x => x));
 
 				if (isEqual)
-				{
-					return savedPositions.Select(p => new SaxoInstrument
-					{
-						AssetType = p.AssetType,
-						Description = p.Description,
-						Symbol = p.Symbol,
-						CurrencyCode = p.CurrencyCode,
-						Exchange = p.Exchange
-					}).ToList();
-				}
+					return savedPositions;
 
 				_logger.LogInformation(
 					"Net positions have changed, fetching instrument details from API. API UICs: {apiUics}",
 					string.Join(", ", apiUics));
-
-				await _saxoNetPositionStore.RemoveAllPositionsAsync();
 
 				var tasks = apiPositions
 					.Select(p => GetInstrumentDetails(client, p.Uic, p.AssetType, ct));
@@ -169,13 +153,14 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 				var instruments = (await Task.WhenAll(tasks)).ToList();
 
 				await _saxoNetPositionStore.UpsertPositionsAsync(instruments);
+				await _saxoNetPositionStore.RemoveStalePositionsAsync(instruments.Select(i => i.Uic).ToList());
 
 				return instruments;
 			}
 			catch (Exception e)
 			{
 				_logger.LogError(e, "Error while fetching net positions or instrument details. Returning empty list.");
-				return new List<SaxoInstrument>();
+				return [];
 			}
 		}
 

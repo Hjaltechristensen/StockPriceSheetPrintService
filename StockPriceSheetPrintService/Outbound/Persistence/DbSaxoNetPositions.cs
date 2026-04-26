@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using StockPriceSheetPrintService.Outbound.Persistence.Entities;
 using StockPriceSheetPrintService.Service.Exceptions;
 using StockPriceSheetPrintService.Service.Models.Saxo.InstrumentDetails;
@@ -56,7 +56,7 @@ namespace StockPriceSheetPrintService.Outbound.Persistence
 			}
 		}
 
-		public async Task<List<SaxoPositionsEntity>> GetNetPositionsAsync()
+		public async Task<List<SaxoInstrument>> GetNetPositionsAsync()
 		{
 			try
 			{
@@ -64,7 +64,15 @@ namespace StockPriceSheetPrintService.Outbound.Persistence
 
 				var positions = await db.SaxoPositions.ToListAsync();
 
-				return positions.Count > 0 ? positions : [];
+				return positions.Select(p => new SaxoInstrument
+				{
+					Uic = p.Uic,
+					AssetType = p.AssetType,
+					Description = p.Description,
+					Symbol = p.Symbol,
+					CurrencyCode = p.CurrencyCode,
+					Exchange = p.Exchange
+				}).ToList();
 			}
 			catch (Exception ex)
 			{
@@ -72,17 +80,19 @@ namespace StockPriceSheetPrintService.Outbound.Persistence
 			}
 		}
 
-		public async Task RemoveAllPositionsAsync()
+		public async Task RemoveStalePositionsAsync(List<int> validUics)
 		{
 			try
 			{
 				await using var db = await dbFactory.CreateDbContextAsync();
 
-				await db.SaxoPositions.ExecuteDeleteAsync();
+				await db.SaxoPositions
+					.Where(x => !validUics.Contains(x.Uic))
+					.ExecuteDeleteAsync();
 			}
 			catch (Exception ex)
 			{
-				throw new SaxoPositionStoreException("Failed to remove all positions.", ex);
+				throw new SaxoPositionStoreException("Failed to remove stale positions.", ex);
 			}
 		}
 	}
