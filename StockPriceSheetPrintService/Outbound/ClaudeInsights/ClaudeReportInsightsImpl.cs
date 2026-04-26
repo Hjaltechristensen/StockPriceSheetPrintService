@@ -9,7 +9,9 @@ namespace StockPriceSheetPrintService.Outbound.ClaudeInsights
 {
 	public class ClaudeReportInsightsImpl(IConfiguration configuration, ILogger<ClaudeReportInsightsImpl> logger) : IClaudeReportInsights
 	{
-		private readonly ILogger<ClaudeReportInsightsImpl> _logger = logger;
+		private const string _model = "claude-haiku-4-5-20251001";
+		private const int MaxTokens = 512;
+
 		private readonly AnthropicClient _client = new()
 		{
 			ApiKey = configuration["Claude:ApiKey"] ?? throw new InvalidOperationException("Claude:ApiKey missing")
@@ -17,8 +19,9 @@ namespace StockPriceSheetPrintService.Outbound.ClaudeInsights
 
 		private const string SystemPrompt =
 			"Du er en kortfattet porteføljeassistent. Du modtager dagens porteføljedata inkl. aktuelle beholdninger fra Saxo Bank og Nordnet. " +
-			"Analyser tallene og giv en skarp kommentar (max 3-4 sætninger) om dagens udvikling — hvad kan forklare op- eller nedturen? " +
-			"Nævn konkrete instrumenter fra beholdningen hvis relevant. Svar på dansk. Undgå generiske fraser som 'markederne bevægede sig'.";
+			"Brug web search til at finde dagens kursbevægelser og nyheder for de specifikke instrumenter i beholdningen. " +
+			"Giv derefter en skarp kommentar (max 3-4 sætninger) der konkret forklarer hvad der drev op- eller nedturen. " +
+			"Nævn specifikke instrumenter og årsager. Svar på dansk. Undgå generiske fraser.";
 
 		public async Task<string?> GetInsightsAsync(
 			decimal saxoBalance,
@@ -56,27 +59,24 @@ namespace StockPriceSheetPrintService.Outbound.ClaudeInsights
 				$"  June (Danske Invest): {juneValue:N2} DKK\n" +
 				$"  Total: {total:N2} DKK\n" +
 				$"  Ændring siden i går: {sign}{change:N2} DKK ({sign}{changePct}%)\n\n" +
-				$"Saxo-beholdning (aktuelle positioner):\n{saxoPositionsText}\n\n" +
+				$"Saxo-beholdning:\n{saxoPositionsText}\n\n" +
 				$"Nordnet-tickers: {nordnetTickersText}\n\n" +
 				$"{transfersText}\n\n" +
-				$"Giv en kort analyse af hvad der kan forklare dagens kurs-udvikling baseret på disse instrumenter.";
+				$"Søg efter dagens kursbevægelser for disse instrumenter og forklar kort hvad der drev porteføljeudviklingen.";
 
 			var parameters = new MessageCreateParams
 			{
-				MaxTokens = 512,
+				MaxTokens = MaxTokens,
 				System = new List<TextBlockParam>
 				{
 					new() { Text = SystemPrompt, CacheControl = new CacheControlEphemeral() }
 				},
+				Tools = [new ToolUnion(new WebSearchTool20250305())],
 				Messages =
 				[
-					new()
-					{
-						Role = Role.User,
-						Content = userPrompt,
-					},
+					new() { Role = Role.User, Content = userPrompt }
 				],
-				Model = "claude-haiku-4-5",
+				Model = _model,
 			};
 
 			try
@@ -84,33 +84,29 @@ namespace StockPriceSheetPrintService.Outbound.ClaudeInsights
 				var response = await _client.Messages.Create(parameters, ct);
 				response.Validate();
 
-				_logger.LogInformation(
+				logger.LogInformation(
 					"[CLAUDE] Insights received. Tokens: input={InputTokens}, output={OutputTokens}, cacheRead={CacheRead}",
 					response.Usage.InputTokens, response.Usage.OutputTokens, response.Usage.CacheReadInputTokens);
 
-				if (response.Content.Count > 0 && response.Content[0].TryPickText(out var textBlock))
-					return textBlock.Text;
+				var textParts = response.Content
+					.Select(block => block.TryPickText(out var t) ? t?.Text : null)
+					.Where(t => !string.IsNullOrWhiteSpace(t));
 
-				return null;
+				return string.Join(" ", textParts).Trim() is { Length: > 0 } result ? result : null;
 			}
 			catch (AnthropicUnauthorizedException ex)
 			{
-				_logger.LogError(ex, "[CLAUDE] Unauthorized error calling Anthropic API");
-				return null;
-			}
-			catch (AnthropicUnprocessableEntityException ex)
-			{
-				_logger.LogError(ex, "[CLAUDE] Unprocessable entity error calling Anthropic API");
+				logger.LogError(ex, "[CLAUDE] Unauthorized - check API key");
 				return null;
 			}
 			catch (AnthropicRateLimitException ex)
 			{
-				_logger.LogError(ex, "[CLAUDE] Rate limit error calling Anthropic API");
+				logger.LogError(ex, "[CLAUDE] Rate limited");
 				return null;
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "[CLAUDE] Unexpected error calling Anthropic API");
+				logger.LogError(ex, "[CLAUDE] Unexpected error calling Anthropic API");
 				return null;
 			}
 		}

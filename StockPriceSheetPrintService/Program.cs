@@ -47,6 +47,7 @@ builder.Services.AddSingleton<IDiscordBotResponder, DiscordBotResponder>();
 
 builder.Services.AddSingleton<SchedulerStatusStore>();
 builder.Services.AddSingleton<ISchedulerStatus>(sp => sp.GetRequiredService<SchedulerStatusStore>());
+builder.Services.AddSingleton<IClaudeToggle, ClaudeToggleStore>();
 builder.Services.AddHostedService<StockpriceWorker>();
 builder.Services.AddHostedService<DiscordBotListener>();
 builder.Services.AddScoped<IPortfolioCalculator, PortfolioCalculator>();
