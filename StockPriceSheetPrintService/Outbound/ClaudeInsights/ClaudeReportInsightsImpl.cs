@@ -83,10 +83,18 @@ namespace StockPriceSheetPrintService.Outbound.ClaudeInsights
 			{
 				var response = await _client.Messages.Create(parameters, ct);
 				response.Validate();
+				
+				const decimal inputPricePerMillion = 1.00m;
+				const decimal outputPricePerMillion = 5.00m;
+
+				var inputCostUsd = (response.Usage.InputTokens / 1_000_000m) * inputPricePerMillion;
+				var outputCostUsd = (response.Usage.OutputTokens / 1_000_000m) * outputPricePerMillion;
+				var totalCostUsd = inputCostUsd + outputCostUsd;
 
 				logger.LogInformation(
-					"[CLAUDE] Insights received. Tokens: input={InputTokens}, output={OutputTokens}, cacheRead={CacheRead}",
-					response.Usage.InputTokens, response.Usage.OutputTokens, response.Usage.CacheReadInputTokens);
+					"[CLAUDE] Insights received. Tokens: input={InputTokens}, output={OutputTokens}, cacheRead={CacheRead} | Est. cost: ${Cost:F5} USD",
+					response.Usage.InputTokens, response.Usage.OutputTokens, response.Usage.CacheReadInputTokens, totalCostUsd);
+
 
 				var textParts = response.Content
 					.Select(block => block.TryPickText(out var t) ? t?.Text : null)

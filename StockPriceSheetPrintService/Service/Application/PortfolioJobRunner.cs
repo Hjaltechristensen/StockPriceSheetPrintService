@@ -65,12 +65,12 @@ namespace StockPriceSheetPrintService.Service.Application
 				_executionGuard.LogExecution();
 
 				// Get morning report insights from Claude
-				var nordnetSymbols = await _nordnetSymbolStore.GetSymbolsAsync();
-				var nordnetTickers = nordnetSymbols.Keys.ToList();
 				string? insights = null;
 				if (_claudeToggle.IsEnabled)
 				{
 					_logger.LogInformation("[JOB] [3/4] Getting morning report insights from Claude...");
+					var nordnetSymbols = await _nordnetSymbolStore.GetSymbolsAsync();
+					var nordnetTickers = nordnetSymbols.Keys.ToList();
 					insights = await _claudeInsights.GetInsightsAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, newTransfers, nordnetTickers, saxoPositions, ct);
 				}
 				else
