@@ -74,17 +74,17 @@ namespace StockPriceSheetPrintService.Service.Application
 			new("📋 **Portfolio menu:**", [
 				new BotButton("📊 Get values",   "btn_get",     BotButtonStyle.Primary),
 				new BotButton("✏️ Update values", "btn_update",  BotButtonStyle.Primary),
-				new BotButton("⚙️ Actions",       "btn_actions", BotButtonStyle.Secondary)
+				new BotButton("⚙️ Actions",       "btn_actions", BotButtonStyle.Primary)
 			]);
 
 		private MenuBotResponse HandleActionsButtons() =>
 			new("⚙️ **Actions:**", [
 				new BotButton("⚡ Trigger portfolio",                   "btn_trigger",       BotButtonStyle.Action),
 				new BotButton("🔑 Refresh token",                       "btn_refreshToken",  BotButtonStyle.Action),
-				new BotButton("❓ Help",                                 "btn_help",          BotButtonStyle.Secondary),
 				new BotButton(claudeToggle.IsEnabled ? "🤖 Claude: TIL" : "🤖 Claude: FRA",
-				              "btn_toggle_claude",
-				              claudeToggle.IsEnabled ? BotButtonStyle.Action : BotButtonStyle.Secondary),
+							  "btn_toggle_claude",
+							  claudeToggle.IsEnabled ? BotButtonStyle.Action : BotButtonStyle.Action),
+				new BotButton("❓ Help",                                 "btn_help",          BotButtonStyle.Secondary),
 				new BotButton("⬅️ Back",                                "btn_back",          BotButtonStyle.Secondary)
 			]);
 
@@ -98,19 +98,19 @@ namespace StockPriceSheetPrintService.Service.Application
 
 		private static GetBotResponse HandleGetButtons() =>
 			new("Get values:", [
-				new BotButton("Nordnet cash",    "btn_get_cash",    BotButtonStyle.Secondary),
-				new BotButton("June shares",     "btn_get_june",    BotButtonStyle.Secondary),
-				new BotButton("Nordnet symbols", "btn_get_symbols", BotButtonStyle.Secondary),
-				new BotButton("Status",          "btn_get_status",  BotButtonStyle.Secondary),
+				new BotButton("Nordnet cash",    "btn_get_cash",    BotButtonStyle.Action),
+				new BotButton("June shares",     "btn_get_june",    BotButtonStyle.Action),
+				new BotButton("Nordnet symbols", "btn_get_symbols", BotButtonStyle.Action),
+				new BotButton("Status",          "btn_get_status",  BotButtonStyle.Action),
 				new BotButton("⬅️ Back",         "btn_back",        BotButtonStyle.Secondary)
 			]);
 
 		private static UpdateBotResponse HandleUpdateButtons() =>
 			new("Update values:", [
-				new BotButton("June share count",      "btn_june",           BotButtonStyle.Primary),
-				new BotButton("Nordnet cash",          "btn_nordnet_cash",   BotButtonStyle.Primary),
-				new BotButton("Add Nordnet ticker",    "btn_nordnet_add",    BotButtonStyle.Primary),
-				new BotButton("Remove Nordnet ticker", "btn_nordnet_remove", BotButtonStyle.Primary),
+				new BotButton("June share count",      "btn_june",           BotButtonStyle.Action),
+				new BotButton("Nordnet cash",          "btn_nordnet_cash",   BotButtonStyle.Action),
+				new BotButton("Add Nordnet ticker",    "btn_nordnet_add",    BotButtonStyle.Action),
+				new BotButton("Remove Nordnet ticker", "btn_nordnet_remove", BotButtonStyle.Action),
 				new BotButton("⬅️ Back",               "btn_back",           BotButtonStyle.Secondary)
 			]);
 
