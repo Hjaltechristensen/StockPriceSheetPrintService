@@ -1,4 +1,5 @@
-using StockPriceSheetPrintService.Service.Models;
+using StockPriceSheetPrintService.Service.Models.Saxo;
+using StockPriceSheetPrintService.Service.Models.Saxo.Transactions;
 
 namespace StockPriceSheetPrintService.Service.Ports.Outbound
 {

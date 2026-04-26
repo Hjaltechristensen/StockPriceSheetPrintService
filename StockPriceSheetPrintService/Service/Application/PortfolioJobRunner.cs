@@ -30,7 +30,7 @@ namespace StockPriceSheetPrintService.Service.Application
 			try
 			{
 				// Fetch all data in parallel
-				_logger.LogInformation("[JOB] [1/3] Fetching portfolio data...");
+				_logger.LogInformation("[JOB] [1/4] Fetching portfolio data...");
 				var saxoBalanceTask = _dataFetcher.GetSaxoBalanceAsync(ct);
 				var nordnetValueTask = _dataFetcher.GetNordnetValueAsync(ct);
 				var juneValueTask = _dataFetcher.GetJuneValueAsync(ct);
@@ -52,12 +52,16 @@ namespace StockPriceSheetPrintService.Service.Application
 					saxoBalance, nordnetValue, juneValue, total);
 
 				// Update Google Sheets
-				_logger.LogInformation("[JOB] [2/3] Updating Google Sheets...");
+				_logger.LogInformation("[JOB] [2/4] Updating Google Sheets...");
 				await _reporter.UpdateGoogleSheetsAsync(total, ct);
 				_executionGuard.LogExecution();
 
+				// Claude Code - Get morning report insights
+				_logger.LogInformation("[JOB] [3/4] Getting morning report insights from Claude...");
+
+
 				// Report results
-				_logger.LogInformation("[JOB] [3/3] Reporting results...");
+				_logger.LogInformation("[JOB] [4/4] Reporting results...");
 				await _reporter.ReportMorningAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, newTransfers, sendDiscordImmediately, ct);
 
 				LogJobCompleted(total);

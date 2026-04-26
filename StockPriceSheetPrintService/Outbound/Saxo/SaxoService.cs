@@ -1,11 +1,19 @@
-﻿using StockPriceSheetPrintService.Service.Models;
+﻿using Google.Apis.Sheets.v4.Data;
+using Microsoft.EntityFrameworkCore;
+using StockPriceSheetPrintService.Outbound.Persistence;
+using StockPriceSheetPrintService.Outbound.Persistence.Entities;
+using StockPriceSheetPrintService.Service.Models.Saxo;
+using StockPriceSheetPrintService.Service.Models.Saxo.InstrumentDetails;
+using StockPriceSheetPrintService.Service.Models.Saxo.Positions;
+using StockPriceSheetPrintService.Service.Models.Saxo.Transactions;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using static Google.Apis.Requests.BatchRequest;
 
 namespace StockPriceSheetPrintService.Outbound.Saxo
 {
-	public class SaxoService(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<SaxoService> logger) : ISaxoAuthService, ISaxoAccountService
+	public class SaxoService(IHttpClientFactory httpClientFactory, IConfiguration configuration, ISaxoNetPositionStore saxoNetPositionStore, ILogger<SaxoService> logger) : ISaxoAuthService, ISaxoAccountService
 	{
 		private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 		private readonly ILogger<SaxoService> _logger = logger;
@@ -15,6 +23,7 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 		private readonly string _appSecret = configuration["Saxo:AppSecret"] ?? throw new InvalidOperationException("Saxo:AppSecret missing");
 		private readonly string _apiBaseUrl = configuration["Saxo:ApiBaseUrl"] ?? throw new InvalidOperationException("ApiBaseUrl missing");
 		private readonly string _authEndpoint = configuration["Saxo:AuthEndpoint"] ?? throw new InvalidOperationException("AuthEndpoint missing");
+		private readonly ISaxoNetPositionStore _saxoNetPositionStore = saxoNetPositionStore;
 		private string? _clientKey;
 
 		private static readonly JsonSerializerOptions JsonOptions = new()
@@ -98,9 +107,93 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 					(int)transactionsResponse.StatusCode, transactionsData);
 				throw new HttpRequestException("Could not fetch transactions from Saxo.");
 			}
-		
+
 			return JsonSerializer.Deserialize<SaxoTransactionsResponse>(transactionsData, JsonOptions)
 			?? throw new InvalidOperationException("Empty transactions response from Saxo.");
+		}
+
+		public async Task<List<SaxoInstrument>> GetNetPositions(string accessToken, CancellationToken ct)
+		{
+			var client = _httpClientFactory.CreateClient();
+			client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+			var clientKey = await GetClientKeyAsync(accessToken, ct);
+
+			var response = await client.GetAsync(
+				$"{_apiBaseUrl}/port/v1/netpositions?ClientKey={clientKey}", ct);
+
+			response.EnsureSuccessStatusCode();
+
+			var json = await response.Content.ReadAsStringAsync(ct);
+
+			var netPositions = JsonSerializer.Deserialize<SaxoNetPositionsResponse>(json, JsonOptions)
+				?? throw new InvalidOperationException("Empty net positions response");
+
+			var apiPositions = netPositions.Data
+				.Where(p => p?.NetPositionBase != null)
+				.Select(p => p.NetPositionBase)
+				.ToList();
+
+			var apiUics = apiPositions.Select(p => p.Uic);
+
+			try
+			{
+				var savedPositions = await _saxoNetPositionStore.GetNetPositionsAsync();
+
+				var dbUics = savedPositions.Select(p => p.Uic);
+
+				bool isEqual = apiUics.OrderBy(x => x)
+									  .SequenceEqual(dbUics.OrderBy(x => x));
+
+				if (isEqual)
+				{
+					return savedPositions.Select(p => new SaxoInstrument
+					{
+						AssetType = p.AssetType,
+						Description = p.Description,
+						Symbol = p.Symbol,
+						CurrencyCode = p.CurrencyCode,
+						Exchange = p.Exchange
+					}).ToList();
+				}
+
+				_logger.LogInformation(
+					"Net positions have changed, fetching instrument details from API. API UICs: {apiUics}",
+					string.Join(", ", apiUics));
+
+				await _saxoNetPositionStore.RemoveAllPositionsAsync();
+
+				var tasks = apiPositions
+					.Select(p => GetInstrumentDetails(client, p.Uic, p.AssetType, ct));
+
+				var instruments = (await Task.WhenAll(tasks)).ToList();
+
+				await _saxoNetPositionStore.UpsertPositionsAsync(instruments);
+
+				return instruments;
+			}
+			catch (Exception e)
+			{
+				_logger.LogError(e, "Error while fetching net positions or instrument details. Returning empty list.");
+				return new List<SaxoInstrument>();
+			}
+		}
+
+		private async Task<SaxoInstrument> GetInstrumentDetails(HttpClient client, int uic, string assetType, CancellationToken ct)
+		{
+			var response = await client.GetAsync(
+				$"{_apiBaseUrl}/ref/v1/instruments/details/{uic}/{assetType}", ct);
+
+			response.EnsureSuccessStatusCode();
+
+			var json = await response.Content.ReadAsStringAsync(ct);
+
+			var instrument = JsonSerializer.Deserialize<SaxoInstrument>(json, JsonOptions)
+				?? throw new InvalidOperationException("Empty instrument response");
+
+			instrument.Uic = uic;
+
+			return instrument;
 		}
 
 		private async Task<string?> GetClientKeyAsync(string accessToken, CancellationToken ct)

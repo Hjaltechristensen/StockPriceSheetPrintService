@@ -1,4 +1,4 @@
-using StockPriceSheetPrintService.Service.Models;
+using StockPriceSheetPrintService.Service.Models.Saxo.Transactions;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using StockPriceSheetPrintService.Service.Ports.Persistence;
 
