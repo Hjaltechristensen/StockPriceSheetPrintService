@@ -1,28 +1,26 @@
 using Anthropic;
-using Anthropic.Exceptions;
 using Anthropic.Models.Messages;
 using StockPriceSheetPrintService.Service.Models.Saxo.InstrumentDetails;
 using StockPriceSheetPrintService.Service.Models.Saxo.Transactions;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace StockPriceSheetPrintService.Outbound.ClaudeInsights
 {
-	public class ClaudeReportInsightsImpl(IConfiguration configuration, IHttpClientFactory httpClientFactory, ILogger<ClaudeReportInsightsImpl> logger) : IClaudeReportInsights
+	public class ClaudeReportInsightsImpl(IConfiguration configuration, ILogger<ClaudeReportInsightsImpl> logger) : IClaudeReportInsights
 	{
-		private readonly ILogger<ClaudeReportInsightsImpl> _logger = logger;
 		private const string Model = "claude-haiku-4-5-20251001";
-		private const int _maxTokens = 1024;
+		private const int MaxTokens = 1024;
 
-		private readonly string _apiKey = configuration["Claude:ApiKey"] ?? throw new InvalidOperationException("Claude:ApiKey missing");
+		private readonly AnthropicClient _client = new()
+		{
+			ApiKey = configuration["Claude:ApiKey"] ?? throw new InvalidOperationException("Claude:ApiKey missing")
+		};
 
 		private const string SystemPrompt =
-		"Du er en kortfattet porteføljeassistent. Du modtager dagens porteføljedata inkl. aktuelle beholdninger fra Saxo Bank og Nordnet. " +
-		"Brug web search til at finde dagens kursbevægelser og nyheder for de specifikke instrumenter i beholdningen. " +
-		"Giv derefter en skarp kommentar (max 3-4 sætninger) der konkret forklarer hvad der drev op- eller nedturen. " +
-		"Nævn specifikke instrumenter og årsager. Svar på dansk. Undgå generiske fraser.";
+			"Du er en kortfattet porteføljeassistent. Du modtager dagens porteføljedata inkl. aktuelle beholdninger fra Saxo Bank og Nordnet. " +
+			"Brug web search til at finde dagens kursbevægelser og nyheder for de specifikke instrumenter i beholdningen. " +
+			"Giv derefter en skarp kommentar (max 3-4 sætninger) der konkret forklarer hvad der drev op- eller nedturen. " +
+			"Nævn specifikke instrumenter og årsager. Svar på dansk. Undgå generiske fraser.";
 
 		public async Task<string?> GetInsightsAsync(
 			decimal saxoBalance,
@@ -65,53 +63,35 @@ namespace StockPriceSheetPrintService.Outbound.ClaudeInsights
 				$"{transfersText}\n\n" +
 				$"Søg efter dagens kursbevægelser for disse instrumenter og forklar kort hvad der drev porteføljeudviklingen.";
 
-			var requestBody = new
+			var parameters = new MessageCreateParams
 			{
-				model = Model,
-				max_tokens = _maxTokens,
-				system = SystemPrompt,
-				tools = new[]
-				{
-					new { type = "web_search_20250305", name = "web_search" }
-				},
-				messages = new[]
-				{
-					new { role = "user", content = userPrompt }
-				}
+				MaxTokens = MaxTokens,
+				System =
+				[
+					new() { Text = SystemPrompt, CacheControl = new CacheControlEphemeral() }
+				],
+				Tools =
+				[
+					new() { Type = "web_search_20250305", Name = "web_search" }
+				],
+				Messages =
+				[
+					new() { Role = Role.User, Content = userPrompt }
+				],
+				Model = Model,
 			};
-
-			var json = JsonSerializer.Serialize(requestBody);
 
 			try
 			{
-				var client = httpClientFactory.CreateClient("Claude");
-				using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.anthropic.com/v1/messages");
-				request.Headers.Add("x-api-key", _apiKey);
-				request.Headers.Add("anthropic-version", "2023-06-01");
-				request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+				var response = await _client.Messages.Create(parameters, ct);
+				response.Validate();
 
-				using var response = await client.SendAsync(request, ct);
-				var responseBody = await response.Content.ReadAsStringAsync(ct);
-
-				if (!response.IsSuccessStatusCode)
-				{
-					logger.LogError("[CLAUDE] API error {StatusCode}: {Body}", response.StatusCode, responseBody);
-					return null;
-				}
-
-				var doc = JsonNode.Parse(responseBody);
-				var usage = doc?["usage"];
 				logger.LogInformation(
-					"[CLAUDE] Insights received. Tokens: input={InputTokens}, output={OutputTokens}",
-					usage?["input_tokens"], usage?["output_tokens"]);
+					"[CLAUDE] Insights received. Tokens: input={InputTokens}, output={OutputTokens}, cacheRead={CacheRead}",
+					response.Usage.InputTokens, response.Usage.OutputTokens, response.Usage.CacheReadInputTokens);
 
-				// Saml alle text-blokke fra content-arrayet (ignorer tool_use og web_search_tool_result)
-				var contentArray = doc?["content"]?.AsArray();
-				if (contentArray is null) return null;
-
-				var textParts = contentArray
-					.Where(block => block?["type"]?.GetValue<string>() == "text")
-					.Select(block => block?["text"]?.GetValue<string>())
+				var textParts = response.Content
+					.Select(block => block.TryPickText(out var t) ? t?.Text : null)
 					.Where(t => !string.IsNullOrWhiteSpace(t));
 
 				return string.Join(" ", textParts).Trim() is { Length: > 0 } result ? result : null;
@@ -121,7 +101,6 @@ namespace StockPriceSheetPrintService.Outbound.ClaudeInsights
 				logger.LogError(ex, "[CLAUDE] Unexpected error calling Anthropic API");
 				return null;
 			}
-
 		}
 	}
 }

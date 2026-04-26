@@ -1,21 +1,21 @@
-using StockPriceSheetPrintService.Service.Ports.Persistence;
+using Discord;
+using Discord.WebSocket;
+using Microsoft.EntityFrameworkCore;
+using Serilog;
+using Serilog.Events;
+using StockPriceSheetPrintService.Inbound.Listener;
 using StockPriceSheetPrintService.Outbound.ClaudeInsights;
 using StockPriceSheetPrintService.Outbound.DiscordUpdates;
-using StockPriceSheetPrintService.Service.Ports.Outbound;
 using StockPriceSheetPrintService.Outbound.GoogleSheets;
 using StockPriceSheetPrintService.Outbound.HtmlScraping;
-using StockPriceSheetPrintService.Service.Ports.Inbound;
 using StockPriceSheetPrintService.Outbound.MarketStack;
 using StockPriceSheetPrintService.Outbound.Persistence;
-using StockPriceSheetPrintService.Service.Application;
-using StockPriceSheetPrintService.Inbound.Listener;
 using StockPriceSheetPrintService.Outbound.Saxo;
 using StockPriceSheetPrintService.Service;
-using Microsoft.EntityFrameworkCore;
-using Discord.WebSocket;
-using Serilog.Events;
-using Discord;
-using Serilog;
+using StockPriceSheetPrintService.Service.Application;
+using StockPriceSheetPrintService.Service.Ports.Inbound;
+using StockPriceSheetPrintService.Service.Ports.Outbound;
+using StockPriceSheetPrintService.Service.Ports.Persistence;
 
 var errorWebhook = Environment.GetEnvironmentVariable("Discord__WebhookError")
 	?? throw new InvalidOperationException("Discord:WebhookError missing");
@@ -74,11 +74,6 @@ builder.Services.AddHttpClient<IHtmlScraper, NavProviderImpl>(client =>
 	client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
 	client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
 	client.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.9");
-});
-
-builder.Services.AddHttpClient("Claude", client =>
-{
-	client.Timeout = TimeSpan.FromSeconds(60);
 });
 
 builder.Services.AddHttpClient("StockApi", client =>
