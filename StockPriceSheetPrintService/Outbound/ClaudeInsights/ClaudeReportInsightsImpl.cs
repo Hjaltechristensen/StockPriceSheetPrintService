@@ -71,14 +71,7 @@ namespace StockPriceSheetPrintService.Outbound.ClaudeInsights
 				{
 					new() { Text = SystemPrompt, CacheControl = new CacheControlEphemeral() }
 				},
-				Tools =
-[
-    new ToolUnion(new WebSearchTool20250305
-    {
-        MaxUses = 5,
-        AllowedCallers = ["direct"]
-    })
-],
+				Tools = [new ToolUnion(new WebSearchTool20250305())],
 				Messages =
 				[
 					new() { Role = Role.User, Content = userPrompt }
@@ -89,8 +82,7 @@ namespace StockPriceSheetPrintService.Outbound.ClaudeInsights
 			try
 			{
 				var response = await _client.Messages.Create(parameters, ct);
-				response.Validate();
-				
+
 				const decimal inputPricePerMillion = 1.00m;
 				const decimal outputPricePerMillion = 5.00m;
 
