@@ -71,7 +71,14 @@ namespace StockPriceSheetPrintService.Outbound.ClaudeInsights
 				{
 					new() { Text = SystemPrompt, CacheControl = new CacheControlEphemeral() }
 				},
-				Tools = [new ToolUnion(new WebSearchTool20260209())],
+				Tools =
+[
+    new ToolUnion(new WebSearchTool20250305
+    {
+        MaxUses = 5,
+        AllowedCallers = ["direct"]
+    })
+],
 				Messages =
 				[
 					new() { Role = Role.User, Content = userPrompt }
