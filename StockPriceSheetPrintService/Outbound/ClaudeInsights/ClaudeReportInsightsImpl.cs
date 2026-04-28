@@ -14,7 +14,12 @@ namespace StockPriceSheetPrintService.Outbound.ClaudeInsights
 
 		private readonly AnthropicClient _client = new()
 		{
-			ApiKey = configuration["Claude:ApiKey"] ?? throw new InvalidOperationException("Claude:ApiKey missing")
+			ApiKey = configuration["Claude:ApiKey"] ?? throw new InvalidOperationException("Claude:ApiKey missing"),
+			Timeout = TimeSpan.FromSeconds(180),
+			HttpClient = new HttpClient
+			{
+				Timeout = System.Threading.Timeout.InfiniteTimeSpan
+			}
 		};
 
 		private const string SystemPrompt =
@@ -71,7 +76,7 @@ namespace StockPriceSheetPrintService.Outbound.ClaudeInsights
 				{
 					new() { Text = SystemPrompt, CacheControl = new CacheControlEphemeral() }
 				},
-				Tools = [new ToolUnion(new WebSearchTool20250305())],
+				Tools = [new ToolUnion(new WebSearchTool20260209())],
 				Messages =
 				[
 					new() { Role = Role.User, Content = userPrompt }
@@ -82,7 +87,7 @@ namespace StockPriceSheetPrintService.Outbound.ClaudeInsights
 			try
 			{
 				var response = await _client.Messages.Create(parameters, ct);
-
+				
 				const decimal inputPricePerMillion = 1.00m;
 				const decimal outputPricePerMillion = 5.00m;
 
