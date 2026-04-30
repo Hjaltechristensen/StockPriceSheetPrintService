@@ -12,7 +12,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		IServiceScopeFactory scopeFactory,
 		INordnetSymbolStore nordnetSymbolStore,
 		ISchedulerStatus schedulerStatus,
-		IClaudeToggle claudeToggle) : IDiscordBotMessageReceiver
+		IGeminiToggle geminiToggle) : IDiscordBotMessageReceiver
 	{
 		public async Task<BotResponse> HandleMessageAsync(BotMessageCommand command, CancellationToken ct) =>
 			command.Command switch
@@ -35,7 +35,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				"btn_trigger"        => AsEphemeral(await HandleTrigger(ct)),
 				"btn_refreshToken"   => AsEphemeral(await HandleRefreshToken(ct)),
 				"btn_help"           => HandleHelp(),
-				"btn_toggle_claude"  => HandleToggleClaude(),
+				"btn_toggle_gemini"  => HandleToggleGemini(),
 				"btn_june" => new ModalBotResponse("Choose number", "june_modal", [
 					new BotModalField("New June share amount", "input_share_count", "June share amount...")
 				]),
@@ -81,18 +81,18 @@ namespace StockPriceSheetPrintService.Service.Application
 			new("⚙️ **Actions:**", [
 				new BotButton("⚡ Trigger portfolio",                   "btn_trigger",       BotButtonStyle.Action),
 				new BotButton("🔑 Refresh token",                       "btn_refreshToken",  BotButtonStyle.Action),
-				new BotButton(claudeToggle.IsEnabled ? "🤖 Claude: TIL" : "🤖 Claude: FRA",
-							  "btn_toggle_claude",
-							  claudeToggle.IsEnabled ? BotButtonStyle.Action : BotButtonStyle.Action),
+				new BotButton(geminiToggle.IsEnabled ? "🤖 Gemini: TIL" : "🤖 Gemini: FRA",
+							  "btn_toggle_gemini",
+							  geminiToggle.IsEnabled ? BotButtonStyle.Action : BotButtonStyle.Action),
 				new BotButton("❓ Help",                                 "btn_help",          BotButtonStyle.Secondary),
 				new BotButton("⬅️ Back",                                "btn_back",          BotButtonStyle.Secondary)
 			]);
 
-		private BotResponse HandleToggleClaude()
+		private BotResponse HandleToggleGemini()
 		{
-			claudeToggle.Toggle();
+			geminiToggle.Toggle();
 			return new TextBotResponse(
-				claudeToggle.IsEnabled ? "🤖 Claude insights: **slået TIL**" : "🤖 Claude insights: **slået FRA**",
+				geminiToggle.IsEnabled ? "🤖 Gemini insights: **slået TIL**" : "🤖 Gemini insights: **slået FRA**",
 				Ephemeral: true);
 		}
 
@@ -138,7 +138,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				🔑 **Næste token refresh:** {(schedulerStatus.NextTokenRefreshAt is not null ? Fmt(schedulerStatus.NextTokenRefreshAt) : "Ingen planlagt")}
 				🕐 **Sidste run:** {FmtAbsolute(schedulerStatus.LastRunAt)}
 				📋 **Sidste run status:** {lastRunStatus}
-				🤖 **Claude insights:** {(claudeToggle.IsEnabled ? "TIL" : "FRA")}
+				🤖 **Gemini insights:** {(geminiToggle.IsEnabled ? "TIL" : "FRA")}
 				""");
 		}
 

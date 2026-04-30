@@ -29,9 +29,9 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 				_logger.LogWarning("[DISCORD] Discord:WebhookLogin configuration missing");
 		}
 
-		public async Task SendMorningReportAsync(decimal saxoBalance, decimal stockValue, decimal juneValue, decimal total, decimal dayBeforeValue, decimal? lastTransferAmount, string? claudeInsights, CancellationToken stoppingToken)
+		public async Task SendMorningReportAsync(decimal saxoBalance, decimal stockValue, decimal juneValue, decimal total, decimal dayBeforeValue, decimal? lastTransferAmount, string? geminiInsights, CancellationToken stoppingToken)
 		{
-			var payload = BuildPayload(saxoBalance, stockValue, juneValue, total, dayBeforeValue, lastTransferAmount, claudeInsights);
+			var payload = BuildPayload(saxoBalance, stockValue, juneValue, total, dayBeforeValue, lastTransferAmount, geminiInsights);
 			await PublishDiscordMessage(_webhookUrl, payload, stoppingToken);
 		}
 
@@ -90,7 +90,7 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 			return value.ToString("N2", CultureInfo.GetCultureInfo("da-DK"));
 		}
 
-		private object BuildPayload(decimal saxoBalance, decimal stockValue, decimal juneValue, decimal total, decimal dayBeforeValue, decimal? lastTransferAmount, string? claudeInsights)
+		private object BuildPayload(decimal saxoBalance, decimal stockValue, decimal juneValue, decimal total, decimal dayBeforeValue, decimal? lastTransferAmount, string? geminiInsights)
 		{
 			var change = total - dayBeforeValue;
 			var changePct = Math.Round((change / dayBeforeValue) * 100, 2);
@@ -112,8 +112,8 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 				new { name = changeSinceYesterdayString, value = changeValue, inline = false }
 			};
 
-			if (!string.IsNullOrWhiteSpace(claudeInsights))
-				mainFields.Add(new { name = "🤖 AI Insights", value = claudeInsights, inline = false });
+			if (!string.IsNullOrWhiteSpace(geminiInsights))
+				mainFields.Add(new { name = "🤖 AI Insights", value = geminiInsights, inline = false });
 
 			return new
 			{

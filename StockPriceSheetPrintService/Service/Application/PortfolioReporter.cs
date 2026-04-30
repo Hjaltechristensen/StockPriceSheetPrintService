@@ -18,7 +18,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		private const string TimeZoneId = "Central European Standard Time";
 		private const int ReportHourLocal = 7; // 07:00 lokal tid (DST håndteres automatisk af TimeZoneInfo)
 
-		public async Task ReportMorningAsync(decimal saxoBalance, decimal nordnetValue, decimal juneValue, decimal total, decimal previousDayValue, List<SaxoTransaction> newTransfers, bool sendDiscordImmediately, string? claudeInsights, CancellationToken ct)
+		public async Task ReportMorningAsync(decimal saxoBalance, decimal nordnetValue, decimal juneValue, decimal total, decimal previousDayValue, List<SaxoTransaction> newTransfers, bool sendDiscordImmediately, string? geminiInsights, CancellationToken ct)
 		{
 			try
 			{
@@ -27,7 +27,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				if (sendDiscordImmediately)
 				{
 					_logger.LogInformation("[REPORTER] Manual trigger - sending Discord notification now");
-					await _discordNotifier.SendMorningReportAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, transferAmount, claudeInsights, ct);
+					await _discordNotifier.SendMorningReportAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, transferAmount, geminiInsights, ct);
 					_logger.LogInformation("[REPORTER] Morning report sent at {time} UTC", DateTime.UtcNow);
 					return;
 				}
@@ -53,7 +53,7 @@ namespace StockPriceSheetPrintService.Service.Application
 					await Task.Delay(delayUntilReport, CancellationToken.None);
 					try
 					{
-						await _discordNotifier.SendMorningReportAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, transferAmount, claudeInsights, CancellationToken.None);
+						await _discordNotifier.SendMorningReportAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, transferAmount, geminiInsights, CancellationToken.None);
 						_logger.LogInformation("[REPORTER] Morning report sent at {time} UTC", DateTime.UtcNow);
 					}
 					catch (Exception ex)

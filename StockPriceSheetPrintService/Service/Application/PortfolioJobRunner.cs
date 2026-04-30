@@ -9,17 +9,17 @@ namespace StockPriceSheetPrintService.Service.Application
 		IExecutionGuard executionGuard,
 		IPortfolioDataFetcher dataFetcher,
 		IPortfolioReporter reporter,
-		IClaudeReportInsights claudeInsights,
+		IGeminiReportInsights geminiInsights,
 		INordnetSymbolStore nordnetSymbolStore,
-		IClaudeToggle claudeToggle) : IPortfolioJobRunner
+		IGeminiToggle geminiToggle) : IPortfolioJobRunner
 	{
 		private readonly ILogger<PortfolioJobRunner> _logger = logger;
 		private readonly IExecutionGuard _executionGuard = executionGuard;
 		private readonly IPortfolioDataFetcher _dataFetcher = dataFetcher;
 		private readonly IPortfolioReporter _reporter = reporter;
-		private readonly IClaudeReportInsights _claudeInsights = claudeInsights;
+		private readonly IGeminiReportInsights _geminiInsights = geminiInsights;
 		private readonly INordnetSymbolStore _nordnetSymbolStore = nordnetSymbolStore;
-		private readonly IClaudeToggle _claudeToggle = claudeToggle;
+		private readonly IGeminiToggle _geminiToggle = geminiToggle;
 
 		public async Task RunJobAsync(CancellationToken ct, bool sendDiscordImmediately = false)
 		{
@@ -64,18 +64,18 @@ namespace StockPriceSheetPrintService.Service.Application
 				await _reporter.UpdateGoogleSheetsAsync(total, ct);
 				_executionGuard.LogExecution();
 
-				// Get morning report insights from Claude
+				// Get morning report insights from Gemini
 				string? insights = null;
-				if (_claudeToggle.IsEnabled)
+				if (_geminiToggle.IsEnabled)
 				{
-					_logger.LogInformation("[JOB] [3/4] Getting morning report insights from Claude...");
+					_logger.LogInformation("[JOB] [3/4] Getting morning report insights from Gemini...");
 					var nordnetSymbols = await _nordnetSymbolStore.GetSymbolsAsync();
 					var nordnetTickers = nordnetSymbols.Keys.ToList();
-					insights = await _claudeInsights.GetInsightsAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, newTransfers, nordnetTickers, saxoPositions, ct);
+					insights = await _geminiInsights.GetInsightsAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, newTransfers, nordnetTickers, saxoPositions, ct);
 				}
 				else
 				{
-					_logger.LogInformation("[JOB] [3/4] Claude insights skipped (slået fra).");
+					_logger.LogInformation("[JOB] [3/4] Gemini insights skipped (slået fra).");
 				}
 
 				// Report results

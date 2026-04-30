@@ -1,6 +1,6 @@
 namespace StockPriceSheetPrintService.Service.Ports.Outbound
 {
-	public interface IClaudeToggle
+	public interface IGeminiToggle
 	{
 		bool IsEnabled { get; }
 		void Toggle();
