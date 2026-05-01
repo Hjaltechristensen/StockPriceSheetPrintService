@@ -35,7 +35,7 @@ namespace StockPriceSheetPrintService.Outbound.GeminiInsights
 			var sign = change >= 0 ? "+" : "";
 
 			var transfersText = newTransfers.Count > 0
-				? $"Nye overførsler: {string.Join(", ", newTransfers.Select(t => $"{t.BookedAmount:N2} DKK"))}"
+				? $"Nye overførsler: {string.Join(", ", newTransfers.Select(t => $"{t.Amount:N2} DKK"))}"
 				: "Ingen nye overførsler";
 
 			var saxoPositionsText = saxoPositions.Count > 0

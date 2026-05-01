@@ -125,6 +125,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				var seenIds = await _seenTransferStore.LoadAsync(ct);
 				var newTransfers = response.Data
 					.Where(t => !seenIds.Contains(t.BookingId))
+					.Where(t => t.Amount > 0)
 					.ToList();
 
 				if (newTransfers.Count > 0)

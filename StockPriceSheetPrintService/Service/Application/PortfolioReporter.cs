@@ -22,7 +22,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		{
 			try
 			{
-				var transferAmount = newTransfers.Count > 0 ? newTransfers.Sum(t => t.BookedAmount) : (decimal?)null;
+				var transferAmount = newTransfers.Count > 0 ? newTransfers.Sum(t => t.Amount) : (decimal?)null;
 
 				if (sendDiscordImmediately)
 				{
