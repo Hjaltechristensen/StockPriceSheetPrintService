@@ -93,17 +93,20 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 		private object BuildPayload(decimal saxoBalance, decimal stockValue, decimal juneValue, decimal total, decimal dayBeforeValue, decimal? lastTransferAmount, string? geminiInsights)
 		{
 			var change = total - dayBeforeValue;
-			var changePct = Math.Round((change / dayBeforeValue) * 100, 2);
+			var changePct = dayBeforeValue != 0 ? Math.Round((change / dayBeforeValue) * 100, 2) : (decimal?)null;
 			var sign = change >= 0 ? "+" : "";
 			var embedColor = change >= 0 ? EmbedColorPositive : EmbedColorNegative;
 			var changeSinceYesterdayString = change >= 0 ? "📈 Change Since Yesterday" : "📉 Change Since Yesterday";
 
 			var portfolioValue = "```" + $"Saxo    {Dkk(saxoBalance),12} DKK\nNordnet {Dkk(stockValue),12} DKK\nJune    {Dkk(juneValue),12} DKK\n" + "```";
-			var changeValue = "```diff\n" + $"{sign}{Dkk(change)} DKK ({sign}{changePct}%)" + "\n```";
+			var changePctStr = changePct.HasValue ? $" ({sign}{changePct}%)" : "";
+			var changeValue = "```diff\n" + $"{sign}{Dkk(change)} DKK{changePctStr}" + "\n```";
 			if (lastTransferAmount.HasValue && lastTransferAmount.Value > 0)
 				changeValue += $"\n*⚠️ Inkluderer seneste indskud på {Dkk(lastTransferAmount.Value)} DKK*";
 
-			var distributionValue = "```" + $"Saxo    {Math.Round((saxoBalance / total) * 100, 1),6}%\nNordnet {Math.Round((stockValue / total) * 100, 1),6}%\nJune    {Math.Round((juneValue / total) * 100, 1),6}%" + "```";
+			var distributionValue = total != 0
+				? "```" + $"Saxo    {Math.Round((saxoBalance / total) * 100, 1),6}%\nNordnet {Math.Round((stockValue / total) * 100, 1),6}%\nJune    {Math.Round((juneValue / total) * 100, 1),6}%" + "```"
+				: "```N/A```";
 
 			var mainFields = new List<object>
 			{
