@@ -152,19 +152,15 @@ namespace StockPriceSheetPrintService.Service.Application
 				: "❌ Failed to update AccessToken");
 		}
 
-		private async Task<BotResponse> HandleTrigger(CancellationToken ct)
+		private Task<BotResponse> HandleTrigger(CancellationToken ct)
 		{
-			try
+			_ = Task.Run(async () =>
 			{
 				await using var scope = scopeFactory.CreateAsyncScope();
 				var jobRunner = scope.ServiceProvider.GetRequiredService<IPortfolioJobRunner>();
-				await jobRunner.RunJobAsync(ct, true);
-				return new TextBotResponse("✅ Portfolio run triggered successfully");
-			}
-			catch (Exception ex)
-			{
-				return new TextBotResponse($"❌ Error triggering job: {ex.Message}");
-			}
+				await jobRunner.RunJobAsync(CancellationToken.None, true);
+			}, ct);
+			return Task.FromResult<BotResponse>(new TextBotResponse("⚡ Portfolio job started – rapport ankommer om lidt via Discord"));
 		}
 
 		private async Task<BotResponse> HandleGetNordnetCash()
