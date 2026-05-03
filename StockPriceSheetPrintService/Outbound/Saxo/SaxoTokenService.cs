@@ -4,15 +4,22 @@ using System.Text.Json;
 
 namespace StockPriceSheetPrintService.Outbound.Saxo
 {
-	public class SaxoTokenService(ILogger<SaxoTokenService> logger, IConfiguration configuration, IHttpClientFactory httpClientFactory, ITokenStore tokenStore, ISaxoAuthService saxoAuthService) : ISaxoTokenService
+	public class SaxoTokenService(ILogger<SaxoTokenService> logger, IConfiguration configuration, IHttpClientFactory httpClientFactory, ITokenStore tokenStore, ISaxoAuthService saxoAuthService, IDiscordNotifier discordNotifier) : ISaxoTokenService
 	{
 		private readonly ILogger<SaxoTokenService> _logger = logger;
 		private readonly ITokenStore _tokenStore = tokenStore;
 		private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 		private readonly ISaxoAuthService _saxoAuthService = saxoAuthService;
+		private readonly IDiscordNotifier _discordNotifier = discordNotifier;
 		private readonly string _appKey = configuration["Saxo:AppKey"] ?? throw new InvalidOperationException("Saxo:AppKey missing");
 		private readonly string _appSecret = configuration["Saxo:AppSecret"] ?? throw new InvalidOperationException("Saxo:AppSecret missing");
 		private readonly string _tokenEndpoint = configuration["Saxo:TokenEndpoint"] ?? throw new InvalidOperationException("Saxo:TokenEndpoint missing");
+
+		private async Task NotifyLoginRequired(CancellationToken ct)
+		{
+			var loginUrl = await _saxoAuthService.BuildLoginUrl();
+			await _discordNotifier.SendLoginUrlAsync(loginUrl, ct);
+		}
 
 		public async Task<string?> GetAccessTokenAsync(CancellationToken ct)
 		{
@@ -20,7 +27,7 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 			if (refreshToken == null)
 			{
 				_logger.LogWarning("[SAXO-TOKEN] No refresh token found – log in via /saxo/login");
-				await _saxoAuthService.BuildLoginUrl();
+				await NotifyLoginRequired(ct);
 				return null;
 			}
 
@@ -41,7 +48,7 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 					{
 						_logger.LogError("[SAXO-TOKEN] Saxo rejected refresh token. Status: {status}",
 							(int)response.StatusCode);
-						await _saxoAuthService.BuildLoginUrl();
+						await NotifyLoginRequired(ct);
 						return null;
 					}
 
@@ -54,7 +61,7 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 							!doc.RootElement.TryGetProperty("refresh_token", out var refreshTokenElement))
 						{
 							_logger.LogError("[SAXO-TOKEN] Token response missing expected properties");
-							await _saxoAuthService.BuildLoginUrl();
+							await NotifyLoginRequired(ct);
 							return null;
 						}
 
@@ -64,7 +71,7 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 						if (string.IsNullOrEmpty(newAccessToken) || string.IsNullOrEmpty(newRefreshToken))
 						{
 							_logger.LogError("[SAXO-TOKEN] Token response contains empty values");
-							await _saxoAuthService.BuildLoginUrl();
+							await NotifyLoginRequired(ct);
 							return null;
 						}
 
@@ -76,14 +83,14 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 					catch (JsonException ex)
 					{
 						_logger.LogError(ex, "[SAXO-TOKEN] Error parsing token response");
-						await _saxoAuthService.BuildLoginUrl();
+						await NotifyLoginRequired(ct);
 						return null;
 					}
 				}
 				catch (Exception ex)
 				{
 					_logger.LogError(ex, "[SAXO-TOKEN] Unexpected error during token refresh");
-					await _saxoAuthService.BuildLoginUrl();
+					await NotifyLoginRequired(ct);
 					return null;
 				}
 			}
