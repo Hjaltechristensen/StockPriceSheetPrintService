@@ -47,25 +47,32 @@ namespace StockPriceSheetPrintService.Outbound.GeminiInsights
 				? string.Join(", ", nordnetTickers)
 				: "ingen";
 
-			var userPrompt =
-				$"Porteføljedata for i dag:\n\n" +
-				$"Porteføljeværdier:\n" +
-				$"  Saxo: {saxoBalance:N2} DKK\n" +
-				$"  Nordnet: {nordnetValue:N2} DKK\n" +
-				$"  June (Danske Invest): {juneValue:N2} DKK\n" +
-				$"  Total: {total:N2} DKK\n" +
-				$"  Ændring siden i går: {sign}{change:N2} DKK ({sign}{changePct}%)\n\n" +
-				$"Saxo-beholdning:\n{saxoPositionsText}\n\n" +
-				$"Nordnet-tickers: {nordnetTickersText}\n\n" +
-				$"{transfersText}\n\n" +
-				$"Søg efter dagens kursbevægelser for disse instrumenter og forklar kort hvad der drev porteføljeudviklingen.";
+			var currentDate = DateTime.Now.ToString("dd-MM-yyyy");
 
-			string basePrompt =
-			"Du er en kortfattet porteføljeassistent. Du modtager dagens porteføljedata inkl. aktuelle beholdninger fra Saxo Bank og Nordnet. " +
-			"Brug web search til at finde dagens kursbevægelser og nyheder for de specifikke instrumenter i beholdningen. " +
-			"Giv derefter en skarp kommentar (max 3-4 sætninger) der konkret forklarer hvad der drev op- eller nedturen. " +
-			"Nævn specifikke instrumenter og årsager. Svar på dansk. Undgå generiske fraser." +
-			$"Her kommer dagens tal: {userPrompt}";
+var userPrompt =
+    $"Dagens dato: {currentDate}\n\n" + // Vigtigt anker!
+    $"Porteføljeværdier:\n" +
+    $"  Saxo: {saxoBalance:N2} DKK\n" +
+    $"  Nordnet: {nordnetValue:N2} DKK\n" +
+    $"  June (Danske Invest): {juneValue:N2} DKK\n" +
+    $"  Total: {total:N2} DKK\n" +
+    $"  Ændring siden i går: {sign}{change:N2} DKK ({sign}{changePct}%)\n\n" +
+    $"Saxo-beholdning:\n{saxoPositionsText}\n\n" +
+    $"Nordnet-tickers: {nordnetTickersText}\n\n" +
+    $"{transfersText}";
+
+			string basePrompt = 
+    "Du er en finansiel analytiker. Din opgave er at forklare dagens bevægelser i en portefølje.\n\n" +
+    "PROCES:\n" +
+    $"1. Søg efter de specifikke lukkekurser eller dagsafkast for hver ticker for datoen {currentDate}.\n" +
+    "2. Identificer de 3 største positive og negative bidragsydere.\n" +
+    "3. Dobbelttjek at din forklaring matcher de faktiske kursdata (hvis en aktie er faldet, må du IKKE skrive den trak op).\n\n" +
+    "REGLER:\n" +
+    "- Vær ekstremt præcis med retningen (op/ned).\n" +
+    "- Hvis du ikke kan finde data for i dag, så skriv 'Data ikke fundet for [ticker]'.\n" +
+    "- Max 3-4 skarpe sætninger.\n" +
+    "- Svar på dansk.\n\n" +
+    $"Her er porteføljedata: {userPrompt}";
 
 
 			try
