@@ -47,10 +47,10 @@ namespace StockPriceSheetPrintService.Outbound.GeminiInsights
 				? string.Join(", ", nordnetTickers)
 				: "ingen";
 
-			var currentDate = DateTime.Now.ToString("dd-MM-yyyy");
+			var yesterdaysDate = DateTime.Now.AddDays(-1).ToString("dd-MM-yyyy");
 
 var userPrompt =
-    $"Dagens dato: {currentDate}\n\n" + // Vigtigt anker!
+    $"Dagens dato: {yesterdaysDate}\n\n" +
     $"Porteføljeværdier:\n" +
     $"  Saxo: {saxoBalance:N2} DKK\n" +
     $"  Nordnet: {nordnetValue:N2} DKK\n" +
@@ -64,7 +64,7 @@ var userPrompt =
 			string basePrompt = 
     "Du er en finansiel analytiker. Din opgave er at forklare dagens bevægelser i en portefølje.\n\n" +
     "PROCES:\n" +
-    $"1. Søg efter de specifikke lukkekurser eller dagsafkast for hver ticker for datoen {currentDate}.\n" +
+    $"1. Søg efter de specifikke lukkekurser eller dagsafkast for hver ticker for datoen {yesterdaysDate}.\n" +
     "2. Identificer de 3 største positive og negative bidragsydere.\n" +
     "3. Dobbelttjek at din forklaring matcher de faktiske kursdata (hvis en aktie er faldet, må du IKKE skrive den trak op).\n\n" +
     "REGLER:\n" +
