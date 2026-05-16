@@ -187,15 +187,22 @@ namespace StockPriceSheetPrintService.Service.Application
 				}
 
 				var yesterday = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1));
-				var previousDayEntry = historicalData.FirstOrDefault(x => x.Date == yesterday);
+
+				// Use the latest entry strictly before yesterday — the current run will write
+				// yesterday's entry, so any existing entry for that date is from a same-day
+				// earlier run with identical market data, which would produce a false 0 difference.
+				var previousDayEntry = historicalData
+					.Where(x => x.Date < yesterday)
+					.OrderByDescending(x => x.Date)
+					.FirstOrDefault();
 
 				if (previousDayEntry == default)
 				{
-					_logger.LogWarning("[FETCHER] No entry found for {date}, using latest available", yesterday);
-					previousDayEntry = historicalData.OrderByDescending(x => x.Date).First();
+					_logger.LogWarning("[FETCHER] No entry found before {date}", yesterday);
+					return 0m;
 				}
 
-				_logger.LogInformation("[FETCHER] Previous day value ({date}): {value:F2} DKK", 
+				_logger.LogInformation("[FETCHER] Previous day value ({date}): {value:F2} DKK",
 					previousDayEntry.Date, previousDayEntry.Value);
 				return previousDayEntry.Value;
 			}
