@@ -50,17 +50,18 @@ namespace StockPriceSheetPrintService.Service.Application
 				var effectiveCurrency = !string.IsNullOrEmpty(d.PriceCurrency) ? d.PriceCurrency
 					: (ExchangeCurrencyFallback.TryGetValue(d.Exchange ?? "", out var fb) ? fb : "?");
 
-				if (d.Close == 0.0m)
+				if (d.Close is null or 0m)
 				{
-					_logger.LogWarning("Closing price was 0.0 for {Symbol} - Redirecting to YahooFinance", d.Symbol);
+					_logger.LogWarning("Closing price was null/0 for {Symbol} - Redirecting to YahooFinance", d.Symbol);
 					var yahooData = await _htmlScraper.GetFromYahooApiAsync(d.Symbol, ct);
 					d.Date = yahooData?.Date ?? d.Date;
-					d.Close = yahooData?.Nav ?? d.Close;
+					d.Close = yahooData?.Nav ?? d.Close ?? 0m;
 				}
 
-				var priceInDkk = ConvertCurrencyToDkk(d.Close, d.PriceCurrency, d.Exchange, rates);
+				var closePrice = d.Close ?? 0m;
+				var priceInDkk = ConvertCurrencyToDkk(closePrice, d.PriceCurrency, d.Exchange, rates);
 				_logger.LogInformation("[JOB] {Multiplier} x {Symbol} closed at: {Close} {Currency} = {Dkk:F4} DKK, total: {Total:F2} DKK",
-					multiplier, d.Symbol, d.Close, effectiveCurrency, priceInDkk, multiplier * priceInDkk);
+					multiplier, d.Symbol, closePrice, effectiveCurrency, priceInDkk, multiplier * priceInDkk);
 				totalPrice += priceInDkk * multiplier;
 			}
 
