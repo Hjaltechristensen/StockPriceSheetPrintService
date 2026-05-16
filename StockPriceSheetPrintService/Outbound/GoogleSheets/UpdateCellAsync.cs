@@ -33,34 +33,28 @@ namespace StockPriceSheetPrintService.Outbound.GoogleSheets
 		{
 			var service = await CreateServiceAsync(ct);
 
-			var getRequest = service.Spreadsheets.Values.Get(spreadsheetId, $"'{sheetName}'!{DateColumn}:{ValueColumn}");
-			getRequest.ValueRenderOption = SpreadsheetsResource.ValuesResource.GetRequest.ValueRenderOptionEnum.UNFORMATTEDVALUE;
-			var response = await getRequest.ExecuteAsync(ct);
-			var rows = response.Values ?? [];
+			var getRequest = service.Spreadsheets.Values.Get(
+				spreadsheetId, $"'{sheetName}'!{DateColumn}:{ValueColumn}");
 
-			// Google Sheets epoch: dage siden 30. december 1899
+			getRequest.ValueRenderOption =
+				SpreadsheetsResource.ValuesResource.GetRequest.ValueRenderOptionEnum.UNFORMATTEDVALUE;
+			getRequest.DateTimeRenderOption =
+				SpreadsheetsResource.ValuesResource.GetRequest.DateTimeRenderOptionEnum.SERIALNUMBER;
+
+			var response = await getRequest.ExecuteAsync(ct);
+
 			var sheetsEpoch = new DateOnly(1899, 12, 30);
 
-			var result = new List<(DateOnly, decimal)>();
-			foreach (var row in rows)
-			{
-				if (row.Count < 2) continue;
-				var dateStr = row[0]?.ToString();
-				var valueStr = row[1]?.ToString();
-				if (dateStr is null || valueStr is null) continue;
-
-				// Med UNFORMATTED_VALUE returneres datoer som serienumre (double)
-				if (!DateOnly.TryParseExact(dateStr, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out DateOnly date))
-				{
-					if (!double.TryParse(dateStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var serial))
-						continue;
-					date = sheetsEpoch.AddDays((int)serial);
-				}
-
-				if (!decimal.TryParse(valueStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var value)) continue;
-				result.Add((date, value));
-			}
-			return result;
+			return (response.Values ?? [])
+				.Skip(1) // spring header-række over
+				.Where(row => row.Count >= 2 && row[0] is IConvertible && row[1] is IConvertible)
+				.Select(row => (
+					Date: (DateOnly?)sheetsEpoch.AddDays((int)Convert.ToDouble(row[0], CultureInfo.InvariantCulture)),
+					Value: (decimal?)Convert.ToDecimal(row[1], CultureInfo.InvariantCulture)
+				))
+				.Where(x => x.Date.HasValue && x.Value.HasValue)
+				.Select(x => (x.Date!.Value, x.Value!.Value))
+				.ToList();
 		}
 
 		public async Task<decimal> UpdateGoogleSheetsCellAsync(string spreadsheetId, string sheetName, string totalValue, CancellationToken ct)
