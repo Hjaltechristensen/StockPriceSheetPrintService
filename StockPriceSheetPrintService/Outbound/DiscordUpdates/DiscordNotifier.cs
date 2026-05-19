@@ -45,7 +45,13 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 
 			try
 			{
-				await _httpClient.PostAsJsonAsync(webhook, payload, cancellationToken: stoppingToken);
+				var response = await _httpClient.PostAsJsonAsync(webhook, payload, cancellationToken: stoppingToken);
+				if (!response.IsSuccessStatusCode)
+				{
+					var body = await response.Content.ReadAsStringAsync(stoppingToken);
+					_logger.LogError("[DISCORD] Discord returned {StatusCode}: {Body}", (int)response.StatusCode, body);
+					return;
+				}
 				_logger.LogInformation("[DISCORD] Message sent successfully");
 			}
 			catch (HttpRequestException ex)
@@ -116,7 +122,10 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 			};
 
 			if (!string.IsNullOrWhiteSpace(geminiInsights))
-				mainFields.Add(new { name = "🤖 AI Insights", value = geminiInsights, inline = false });
+			{
+				var truncated = geminiInsights.Length > 1024 ? geminiInsights[..1021] + "…" : geminiInsights;
+				mainFields.Add(new { name = "🤖 AI Insights", value = truncated, inline = false });
+			}
 
 			return new
 			{
