@@ -1,3 +1,4 @@
+using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Models.Saxo.Transactions;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Globalization;
@@ -8,12 +9,14 @@ namespace StockPriceSheetPrintService.Service.Application
 		ILogger<PortfolioReporter> logger,
 		IDiscordNotifier discordNotifier,
 		IGoogleSheetsClient googleSheetsClient,
-		IConfiguration configuration) : IPortfolioReporter
+		IConfiguration configuration,
+		IPendingReportStore pendingReportStore) : IPortfolioReporter
 	{
 		private readonly ILogger<PortfolioReporter> _logger = logger;
 		private readonly IDiscordNotifier _discordNotifier = discordNotifier;
 		private readonly IGoogleSheetsClient _googleSheetsClient = googleSheetsClient;
 		private readonly IConfiguration _configuration = configuration;
+		private readonly IPendingReportStore _pendingReportStore = pendingReportStore;
 
 		private const string TimeZoneId = "Central European Standard Time";
 		private const int ReportHourLocal = 7; // 07:00 lokal tid (DST håndteres automatisk af TimeZoneInfo)
@@ -48,9 +51,14 @@ namespace StockPriceSheetPrintService.Service.Application
 				_logger.LogInformation("[REPORTER] Next report scheduled at {localTime} (in {hours}h {minutes}m)",
 					todayTargetLocal, (int)delayUntilReport.TotalHours, delayUntilReport.Minutes);
 
+				_pendingReportStore.Set(new PendingReport(saxoBalance, nordnetValue, juneValue, total, previousDayValue, transferAmount, geminiInsights, DateTime.UtcNow));
+
+
 				_ = Task.Run(async () =>
 				{
 					await Task.Delay(delayUntilReport, CancellationToken.None);
+					var report = _pendingReportStore.Get();
+					if (report is null) return;
 					try
 					{
 						await _discordNotifier.SendMorningReportAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, transferAmount, geminiInsights, CancellationToken.None);

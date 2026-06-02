@@ -5,6 +5,7 @@ using Serilog;
 using Serilog.Events;
 using StockPriceSheetPrintService.Inbound.Listener;
 using StockPriceSheetPrintService.Outbound.DiscordUpdates;
+using StockPriceSheetPrintService.Outbound.Filesystem;
 using StockPriceSheetPrintService.Outbound.GeminiInsights;
 using StockPriceSheetPrintService.Outbound.GoogleSheets;
 using StockPriceSheetPrintService.Outbound.HtmlScraping;
@@ -44,7 +45,7 @@ builder.Services.AddSingleton(new DiscordSocketClient(new DiscordSocketConfig
 	GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.MessageContent
 }));
 builder.Services.AddSingleton<IDiscordBotResponder, DiscordBotResponder>();
-
+builder.Services.AddSingleton<IPendingReportStore, InMemoryPendingReportStore>();
 builder.Services.AddSingleton<SchedulerStatusStore>();
 builder.Services.AddSingleton<ISchedulerStatus>(sp => sp.GetRequiredService<SchedulerStatusStore>());
 builder.Services.AddSingleton<IGeminiToggle, GeminiToggleStore>();

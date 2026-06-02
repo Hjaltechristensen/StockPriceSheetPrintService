@@ -12,8 +12,17 @@ namespace StockPriceSheetPrintService.Service.Application
 		IServiceScopeFactory scopeFactory,
 		INordnetSymbolStore nordnetSymbolStore,
 		ISchedulerStatus schedulerStatus,
-		IGeminiToggle geminiToggle) : IDiscordBotMessageReceiver
+		IGeminiToggle geminiToggle,
+		ITriggerReportService triggerReportService) : IDiscordBotMessageReceiver
 	{
+		private readonly INordnetStore _nordnetStore = nordnetStore;
+		private readonly IJuneStore _juneStore = juneStore;
+		private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
+		private readonly INordnetSymbolStore _nordnetSymbolStore = nordnetSymbolStore;
+		private readonly ISchedulerStatus _schedulerStatus = schedulerStatus;
+		private readonly IGeminiToggle _geminiToggle = geminiToggle;
+		private readonly ITriggerReportService _triggerReportService = triggerReportService;
+
 		public async Task<BotResponse> HandleMessageAsync(BotMessageCommand command, CancellationToken ct) =>
 			command.Command switch
 			{
@@ -34,7 +43,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				"btn_actions"        => HandleActionsButtons(),
 				"btn_trigger"        => AsEphemeral(await HandleTrigger(ct)),
 				"btn_refreshToken"   => AsEphemeral(await HandleRefreshToken(ct)),
-				"btn_help"           => HandleHelp(),
+				"btn_send_report"	 => AsEphemeral(await HandleSendReport(ct)),
 				"btn_toggle_gemini"  => HandleToggleGemini(),
 				"btn_june" => new ModalBotResponse("Choose number", "june_modal", [
 					new BotModalField("New June share amount", "input_share_count", "June share amount...")
@@ -81,18 +90,18 @@ namespace StockPriceSheetPrintService.Service.Application
 			new("⚙️ **Actions:**", [
 				new BotButton("⚡ Trigger portfolio",                   "btn_trigger",       BotButtonStyle.Action),
 				new BotButton("🔑 Refresh token",                       "btn_refreshToken",  BotButtonStyle.Action),
-				new BotButton(geminiToggle.IsEnabled ? "🤖 Gemini: TIL" : "🤖 Gemini: FRA",
+				new BotButton(_geminiToggle.IsEnabled ? "🤖 Gemini: TIL" : "🤖 Gemini: FRA",
 							  "btn_toggle_gemini",
-							  geminiToggle.IsEnabled ? BotButtonStyle.Action : BotButtonStyle.Action),
-				new BotButton("❓ Help",                                 "btn_help",          BotButtonStyle.Secondary),
+							  _geminiToggle.IsEnabled ? BotButtonStyle.Action : BotButtonStyle.Action),
+				new BotButton("📨 Send rapport nu",                     "btn_send_report",   BotButtonStyle.Action),
 				new BotButton("⬅️ Back",                                "btn_back",          BotButtonStyle.Secondary)
 			]);
 
 		private BotResponse HandleToggleGemini()
 		{
-			geminiToggle.Toggle();
+			_geminiToggle.Toggle();
 			return new TextBotResponse(
-				geminiToggle.IsEnabled ? "🤖 Gemini insights: **slået TIL**" : "🤖 Gemini insights: **slået FRA**",
+				_geminiToggle.IsEnabled ? "🤖 Gemini insights: **slået TIL**" : "🤖 Gemini insights: **slået FRA**",
 				Ephemeral: true);
 		}
 
@@ -126,7 +135,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		{
 			string Fmt(DateTimeOffset? t) => t is { } v ? $"<t:{v.ToUnixTimeSeconds()}:R>" : "Ukendt";
 			string FmtAbsolute(DateTimeOffset? t) => t is { } v ? $"{v:dd/MM/yyyy HH:mm} UTC" : "Aldrig";
-			var lastRunStatus = schedulerStatus.LastRunSucceeded switch
+			var lastRunStatus = _schedulerStatus.LastRunSucceeded switch
 			{
 				true  => "✅ Success",
 				false => "❌ Fejl",
@@ -134,17 +143,17 @@ namespace StockPriceSheetPrintService.Service.Application
 			};
 			return new TextBotResponse($"""
 				📊 **Service Status**
-				⏳ **Næste job run:** {Fmt(schedulerStatus.NextRunAt)} ({FmtAbsolute(schedulerStatus.NextRunAt)})
-				🔑 **Næste token refresh:** {(schedulerStatus.NextTokenRefreshAt is not null ? Fmt(schedulerStatus.NextTokenRefreshAt) : "Ingen planlagt")}
-				🕐 **Sidste run:** {FmtAbsolute(schedulerStatus.LastRunAt)}
+				⏳ **Næste job run:** {Fmt(_schedulerStatus.NextRunAt)} ({FmtAbsolute(_schedulerStatus.NextRunAt)})
+				🔑 **Næste token refresh:** {(_schedulerStatus.NextTokenRefreshAt is not null ? Fmt(_schedulerStatus.NextTokenRefreshAt) : "Ingen planlagt")}
+				🕐 **Sidste run:** {FmtAbsolute(_schedulerStatus.LastRunAt)}
 				📋 **Sidste run status:** {lastRunStatus}
-				🤖 **Gemini insights:** {(geminiToggle.IsEnabled ? "TIL" : "FRA")}
+				🤖 **Gemini insights:** {(_geminiToggle.IsEnabled ? "TIL" : "FRA")}
 				""");
 		}
 
 		private async Task<BotResponse> HandleRefreshToken(CancellationToken ct)
 		{
-			await using var scope = scopeFactory.CreateAsyncScope();
+			await using var scope = _scopeFactory.CreateAsyncScope();
 			var saxoTokenService = scope.ServiceProvider.GetRequiredService<ISaxoTokenService>();
 			var accessToken = await saxoTokenService.GetAccessTokenAsync(ct);
 			return new TextBotResponse(accessToken != null
@@ -156,7 +165,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		{
 			_ = Task.Run(async () =>
 			{
-				await using var scope = scopeFactory.CreateAsyncScope();
+				await using var scope = _scopeFactory.CreateAsyncScope();
 				var jobRunner = scope.ServiceProvider.GetRequiredService<IPortfolioJobRunner>();
 				await jobRunner.RunJobAsync(CancellationToken.None, true);
 			}, ct);
@@ -167,7 +176,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		{
 			try
 			{
-				var result = await nordnetStore.GetNordnetCashAmountAsync();
+				var result = await _nordnetStore.GetNordnetCashAmountAsync();
 				return new TextBotResponse($"💰 Cash: {result.CashAmount:N2} DKK (Last updated: {result.LastUpdated:dd/MM/yyyy HH:mm})");
 			}
 			catch (NordnetStoreException ex)
@@ -180,7 +189,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		{
 			try
 			{
-				var result = await juneStore.GetJuneSharesAmountAsync();
+				var result = await _juneStore.GetJuneSharesAmountAsync();
 				return new TextBotResponse($"📊 June shares: {result.Amount:N4} stk. (Last updated: {result.LastUpdated:dd/MM/yyyy HH:mm})");
 			}
 			catch (JuneStoreException ex)
@@ -193,7 +202,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		{
 			try
 			{
-				var symbols = await nordnetSymbolStore.GetSymbolsAsync();
+				var symbols = await _nordnetSymbolStore.GetSymbolsAsync();
 				var lines = symbols.Select(kvp => $"`{kvp.Key}` — {kvp.Value:N0} stk.");
 				return new TextBotResponse($"📈 **Nordnet symbols:**\n{string.Join('\n', lines)}");
 			}
@@ -210,7 +219,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				return new TextBotResponse("❌ Invalid format. Use only numbers e.g. 710", Ephemeral: true);
 			try
 			{
-				await juneStore.SetJuneSharesAmountAsync(amount);
+				await _juneStore.SetJuneSharesAmountAsync(amount);
 				return new TextBotResponse($"✅ June shares updated: {amount:N2} stk.", Ephemeral: true);
 			}
 			catch (JuneStoreException ex)
@@ -226,7 +235,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				return new TextBotResponse("❌ Invalid format. Use only numbers e.g. 1000.50", Ephemeral: true);
 			try
 			{
-				await nordnetStore.SetNordnetCashAmountAsync(amount);
+				await _nordnetStore.SetNordnetCashAmountAsync(amount);
 				return new TextBotResponse($"✅ Cash amount updated: {amount:N2} DKK", Ephemeral: true);
 			}
 			catch (NordnetStoreException ex)
@@ -243,7 +252,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				return new TextBotResponse("❌ Invalid format for amount or ticker.", Ephemeral: true);
 			try
 			{
-				await nordnetSymbolStore.AddOrUpdateSymbolAsync(ticker, shares);
+				await _nordnetSymbolStore.AddOrUpdateSymbolAsync(ticker, shares);
 				return new TextBotResponse($"✅ Symbol updated: {ticker} = {shares:N0} stk.", Ephemeral: true);
 			}
 			catch (NordnetSymbolStoreException ex)
@@ -259,7 +268,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				return new TextBotResponse("❌ Invalid format for ticker.", Ephemeral: true);
 			try
 			{
-				await nordnetSymbolStore.RemoveSymbolAsync(ticker);
+				await _nordnetSymbolStore.RemoveSymbolAsync(ticker);
 				return new TextBotResponse($"✅ Symbol removed: {ticker}", Ephemeral: true);
 			}
 			catch (NordnetSymbolStoreException ex)
@@ -267,5 +276,14 @@ namespace StockPriceSheetPrintService.Service.Application
 				return new TextBotResponse($"❌ Error removing symbol: {ex.Message}", Ephemeral: true);
 			}
 		}
+
+		private async Task<BotResponse> HandleSendReport(CancellationToken ct)
+		{
+			var sent = await _triggerReportService.TrySendPendingReportAsync(ct);
+			return new TextBotResponse(sent
+				? "📨 Morning report sendt!"
+				: "⚠️ Ingen rapport klar endnu – prøv igen efter kl. 07:00");
+		}
+
 	}
 }
