@@ -90,10 +90,10 @@ namespace StockPriceSheetPrintService.Service.Application
 			new("⚙️ **Actions:**", [
 				new BotButton("⚡ Trigger portfolio",                   "btn_trigger",       BotButtonStyle.Action),
 				new BotButton("🔑 Refresh token",                       "btn_refreshToken",  BotButtonStyle.Action),
+				new BotButton("📨 Send rapport nu",                     "btn_send_report",   BotButtonStyle.Action),
 				new BotButton(_geminiToggle.IsEnabled ? "🤖 Gemini: TIL" : "🤖 Gemini: FRA",
 							  "btn_toggle_gemini",
 							  _geminiToggle.IsEnabled ? BotButtonStyle.Action : BotButtonStyle.Action),
-				new BotButton("📨 Send rapport nu",                     "btn_send_report",   BotButtonStyle.Action),
 				new BotButton("⬅️ Back",                                "btn_back",          BotButtonStyle.Secondary)
 			]);
 
