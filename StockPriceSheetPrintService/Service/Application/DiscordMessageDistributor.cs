@@ -282,7 +282,7 @@ namespace StockPriceSheetPrintService.Service.Application
 			var sent = await _triggerReportService.TrySendPendingReportAsync(ct);
 			return new TextBotResponse(sent
 				? "📨 Morning report sendt!"
-				: "⚠️ Ingen rapport klar endnu – prøv igen efter kl. 07:00");
+				: "⚠️ No pending report found - try again after 07:00");
 		}
 
 	}
