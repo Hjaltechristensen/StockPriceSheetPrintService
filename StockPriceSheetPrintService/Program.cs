@@ -51,6 +51,7 @@ builder.Services.AddSingleton<ISchedulerStatus>(sp => sp.GetRequiredService<Sche
 builder.Services.AddSingleton<IGeminiToggle, GeminiToggleStore>();
 builder.Services.AddHostedService<StockpriceWorker>();
 builder.Services.AddHostedService<DiscordBotListener>();
+builder.Services.AddScoped<ITriggerReportService, TriggerReportServiceImpl>();
 builder.Services.AddScoped<IPortfolioCalculator, PortfolioCalculator>();
 builder.Services.AddScoped<IPortfolioJobRunner, PortfolioJobRunner>();
 builder.Services.AddScoped<ISaxoLoginService, SaxoLoginServiceImpl>();
