@@ -1,4 +1,4 @@
-using StockPriceSheetPrintService.Service.Models;
+using StockPriceSheetPrintService.OutboundDto;
 
 namespace StockPriceSheetPrintService.Service.Ports.Outbound
 {

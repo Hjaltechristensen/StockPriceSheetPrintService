@@ -1,7 +1,7 @@
 using Google.GenAI;
 using Google.GenAI.Types;
-using StockPriceSheetPrintService.Service.Models.Saxo.InstrumentDetails;
-using StockPriceSheetPrintService.Service.Models.Saxo.Transactions;
+using StockPriceSheetPrintService.OutboundDto.Saxo.InstrumentDetails;
+using StockPriceSheetPrintService.OutboundDto.Saxo.Transactions;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 
 namespace StockPriceSheetPrintService.Outbound.GeminiInsights

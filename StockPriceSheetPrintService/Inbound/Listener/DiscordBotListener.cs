@@ -1,8 +1,8 @@
 using Discord;
 using Discord.WebSocket;
-using StockPriceSheetPrintService.Service.Models;
+using StockPriceSheetPrintService.InboundDto;
+using StockPriceSheetPrintService.InboundMappers;
 using StockPriceSheetPrintService.Service.Ports.Inbound;
-using StockPriceSheetPrintService.Service.Ports.Outbound;
 
 namespace StockPriceSheetPrintService.Inbound.Listener
 {
@@ -36,8 +36,7 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 			if (msg.Author.IsBot) return;
 			if (msg.Channel.Id != ChannelId) return;
 
-			var parts = msg.Content.Split(' ');
-			var command = new BotMessageCommand(parts[0], parts[1..], msg.Channel.Id);
+			var command = DiscordToInboundMapper.FromMessage(msg.Content, msg.Channel.Id);
 			var response = await receiver.HandleMessageAsync(command, _stoppingToken);
 			await SendResponse(msg.Channel.Id, response, msg.Id);
 		}
@@ -46,7 +45,7 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 		{
 			if (interaction.Channel.Id != ChannelId) return;
 
-			var command = new BotComponentCommand(interaction.Data.CustomId);
+			var command = DiscordToInboundMapper.FromButton(interaction.Data.CustomId);
 			var response = await receiver.HandleComponentAsync(command, _stoppingToken);
 
 			switch (response)
@@ -82,8 +81,9 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 		{
 			if (modalInteraction.Channel.Id != ChannelId) return;
 
-			var fields = modalInteraction.Data.Components.ToDictionary(c => c.CustomId, c => c.Value);
-			var command = new BotModalCommand(modalInteraction.Data.CustomId, fields);
+			var command = DiscordToInboundMapper.FromModal(
+				modalInteraction.Data.CustomId,
+				modalInteraction.Data.Components.Select(c => (c.CustomId, c.Value)));
 			var response = await receiver.HandleModalAsync(command, _stoppingToken);
 
 			if (response is TextBotResponse text)

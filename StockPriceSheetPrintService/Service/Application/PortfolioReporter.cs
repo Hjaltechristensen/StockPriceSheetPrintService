@@ -1,5 +1,5 @@
-using StockPriceSheetPrintService.Service.Models;
-using StockPriceSheetPrintService.Service.Models.Saxo.Transactions;
+using StockPriceSheetPrintService.OutboundDto;
+using StockPriceSheetPrintService.OutboundDto.Saxo.Transactions;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Globalization;
 

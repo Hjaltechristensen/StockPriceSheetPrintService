@@ -1,4 +1,4 @@
-﻿using StockPriceSheetPrintService.Service.Models.Saxo.InstrumentDetails;
+﻿using StockPriceSheetPrintService.OutboundDto.Saxo.InstrumentDetails;
 
 namespace StockPriceSheetPrintService.Outbound.Persistence.Entities
 {

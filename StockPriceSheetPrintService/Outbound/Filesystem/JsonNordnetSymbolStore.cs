@@ -1,5 +1,5 @@
 ﻿using StockPriceSheetPrintService.Outbound.Filesystem.Helpers;
-using StockPriceSheetPrintService.Service.Exceptions;
+using StockPriceSheetPrintService.OutboundExceptions;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Text.Json;
 

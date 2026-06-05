@@ -1,5 +1,5 @@
-using StockPriceSheetPrintService.Service.Exceptions;
-using StockPriceSheetPrintService.Service.Models;
+using StockPriceSheetPrintService.OutboundExceptions;
+using StockPriceSheetPrintService.InboundDto;
 using StockPriceSheetPrintService.Service.Ports.Inbound;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Globalization;

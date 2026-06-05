@@ -1,5 +1,5 @@
 using HtmlAgilityPack;
-using StockPriceSheetPrintService.Service.Models;
+using StockPriceSheetPrintService.OutboundDto;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Globalization;
 using System.Text.Json;

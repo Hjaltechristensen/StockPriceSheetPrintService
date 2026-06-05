@@ -1,4 +1,4 @@
-using StockPriceSheetPrintService.Service.Ports.Persistence;
+using StockPriceSheetPrintService.Service.Ports.Outbound;
 
 namespace StockPriceSheetPrintService.Outbound.Persistence
 {

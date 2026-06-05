@@ -1,7 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using StockPriceSheetPrintService.Service.Ports.Inbound;
-using StockPriceSheetPrintService.Service.Ports.Outbound;
-using StockPriceSheetPrintService.Service.Ports.Persistence;
 
 namespace StockPriceSheetPrintService.Inbound.Controllers
 {
@@ -10,20 +8,14 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 	public class SaxoAuthController : ControllerBase
 	{
 		private readonly ISaxoLoginService _saxoLoginService;
-		private readonly ISaxoAuthService _saxoAuthService;
-		private readonly ISaxoAccountService _saxoAccountService;
-		private readonly ITokenStore _tokenStore;
-		private readonly ISaxoTokenService _saxoTokenService;
+		private readonly ISaxoManagementService _saxoManagementService;
 		private readonly IPortfolioJobRunner _jobRunner;
 		private readonly ILogger<SaxoAuthController> _logger;
 
-		public SaxoAuthController(ISaxoLoginService saxoLoginService, ISaxoAuthService saxoAuthService, ISaxoAccountService saxoAccountService, ITokenStore tokenStore, ISaxoTokenService saxoTokenService, IPortfolioJobRunner jobRunner, ILogger<SaxoAuthController> logger)
+		public SaxoAuthController(ISaxoLoginService saxoLoginService, ISaxoManagementService saxoManagementService, IPortfolioJobRunner jobRunner, ILogger<SaxoAuthController> logger)
 		{
 			_saxoLoginService = saxoLoginService;
-			_saxoAuthService = saxoAuthService;
-			_saxoAccountService = saxoAccountService;
-			_tokenStore = tokenStore;
-			_saxoTokenService = saxoTokenService;
+			_saxoManagementService = saxoManagementService;
 			_jobRunner = jobRunner;
 			_logger = logger;
 		}
@@ -45,15 +37,12 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 
 			try
 			{
-				var tokens = await _saxoAuthService.ExchangeCodeForTokensAsync(code, ct);
-				await _tokenStore.SaveRefreshTokenAsync(tokens.RefreshToken, ct);
-				var balance = await _saxoAccountService.GetBalanceAsync(tokens.AccessToken, ct);
-
+				var result = await _saxoManagementService.HandleCallbackAsync(code, ct);
 				return Ok(new
 				{
 					Message = "Everything is set up! Your worker will now run automatically.",
-					Værdi = balance?.TotalValue,
-					Valuta = balance?.Currency,
+					Værdi = result.TotalValue,
+					Valuta = result.Currency,
 					NextRunTime = "Check logs for next scheduled run"
 				});
 			}
@@ -74,7 +63,7 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 		[HttpPost("refreshToken")]
 		public async Task<IActionResult> RefreshSaxoAccessTokenAsync(CancellationToken ct)
 		{
-			var accessToken = await _saxoTokenService.GetAccessTokenAsync(ct);
+			var accessToken = await _saxoManagementService.GetOrRefreshAccessTokenAsync(ct);
 			if (accessToken == null) return NotFound(new { Message = "No valid access token found. Log in via /saxo/login" });
 			return Ok(new { Message = "Token refresh completed." });
 		}
@@ -82,7 +71,7 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 		[HttpPost("getAccessToken")]
 		public async Task<IActionResult> GetAccessTokenAsync(CancellationToken ct)
 		{
-			var accessToken = await _saxoTokenService.GetAccessTokenAsync(ct);
+			var accessToken = await _saxoManagementService.GetOrRefreshAccessTokenAsync(ct);
 			if (accessToken == null)
 				return NotFound(new { Message = "No valid access token found. Log in via /saxo/login" });
 			return Ok(new { AccessToken = accessToken });

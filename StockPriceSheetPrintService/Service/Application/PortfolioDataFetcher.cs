@@ -1,7 +1,6 @@
-using StockPriceSheetPrintService.Service.Models.Saxo.InstrumentDetails;
-using StockPriceSheetPrintService.Service.Models.Saxo.Transactions;
+using StockPriceSheetPrintService.OutboundDto.Saxo.InstrumentDetails;
+using StockPriceSheetPrintService.OutboundDto.Saxo.Transactions;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
-using StockPriceSheetPrintService.Service.Ports.Persistence;
 
 namespace StockPriceSheetPrintService.Service.Application
 {

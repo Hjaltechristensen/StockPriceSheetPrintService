@@ -1,7 +1,7 @@
-﻿using StockPriceSheetPrintService.Service.Models.Saxo;
-using StockPriceSheetPrintService.Service.Models.Saxo.InstrumentDetails;
-using StockPriceSheetPrintService.Service.Models.Saxo.Positions;
-using StockPriceSheetPrintService.Service.Models.Saxo.Transactions;
+﻿using StockPriceSheetPrintService.OutboundDto.Saxo;
+using StockPriceSheetPrintService.OutboundDto.Saxo.InstrumentDetails;
+using StockPriceSheetPrintService.OutboundDto.Saxo.Positions;
+using StockPriceSheetPrintService.OutboundDto.Saxo.Transactions;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Net.Http.Headers;
 using System.Text.Json;

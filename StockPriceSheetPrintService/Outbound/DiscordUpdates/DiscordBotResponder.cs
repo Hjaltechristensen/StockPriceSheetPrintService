@@ -1,7 +1,6 @@
 using Discord;
 using Discord.WebSocket;
-using StockPriceSheetPrintService.Service.Models;
-using StockPriceSheetPrintService.Service.Ports.Outbound;
+using StockPriceSheetPrintService.InboundDto;
 
 namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 {

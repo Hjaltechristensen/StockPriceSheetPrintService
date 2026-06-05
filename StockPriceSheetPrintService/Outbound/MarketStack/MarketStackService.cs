@@ -1,4 +1,4 @@
-﻿using StockPriceSheetPrintService.Service.Models;
+﻿using StockPriceSheetPrintService.OutboundDto;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Text.Json;
 
