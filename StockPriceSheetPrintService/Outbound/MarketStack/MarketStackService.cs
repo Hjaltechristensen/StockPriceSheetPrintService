@@ -1,12 +1,14 @@
-﻿using StockPriceSheetPrintService.OutboundDto;
+using StockPriceSheetPrintService.OutboundDto;
+using StockPriceSheetPrintService.OutboundMappers;
+using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Text.Json;
 
 namespace StockPriceSheetPrintService.Outbound.MarketStack
 {
 	public class MarketStackService(
-		IHttpClientFactory httpClientFactory, 
-		IConfiguration configuration, 
+		IHttpClientFactory httpClientFactory,
+		IConfiguration configuration,
 		ILogger<MarketStackService> logger,
 		INordnetSymbolStore nordnetSymbolStore) : IMarketStackService
 	{
@@ -28,7 +30,7 @@ namespace StockPriceSheetPrintService.Outbound.MarketStack
 			Converters = { new FlexibleDateTimeOffsetConverter() }
 		};
 
-		public async Task<EodResponse?> GetStockPricesAsync(CancellationToken ct)
+		public async Task<List<StockPrice>?> GetStockPricesAsync(CancellationToken ct)
 		{
 			var client = _httpClientFactory.CreateClient(StockApiClientName);
 			var nordnetSymbols = await _nordnetSymbolStore.GetSymbolsAsync();
@@ -54,7 +56,7 @@ namespace StockPriceSheetPrintService.Outbound.MarketStack
 					_logger.LogError("[MARKETSTACK] Empty data in API response");
 					return null;
 				}
-				return eodResponse;
+				return EodMapper.ToStockPrices(eodResponse);
 			}
 			catch (JsonException ex)
 			{

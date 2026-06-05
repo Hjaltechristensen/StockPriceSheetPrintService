@@ -1,5 +1,4 @@
-using StockPriceSheetPrintService.OutboundDto.Saxo.InstrumentDetails;
-using StockPriceSheetPrintService.OutboundDto.Saxo.Transactions;
+using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 
 namespace StockPriceSheetPrintService.Service.Application
@@ -36,15 +35,15 @@ namespace StockPriceSheetPrintService.Service.Application
 					return 0m;
 				}
 
-				var response = await _saxoAccountService.GetBalanceAsync(saxoToken, ct);
-				if (response == null)
+				var balance = await _saxoAccountService.GetBalanceAsync(saxoToken, ct);
+				if (balance == null)
 				{
 					_logger.LogError("[FETCHER] Failed to get Saxo balance");
 					return 0m;
 				}
 
-				_logger.LogInformation("[FETCHER] Saxo balance: {balance:F2} DKK", response.TotalValue);
-				return response.TotalValue;
+				_logger.LogInformation("[FETCHER] Saxo balance: {balance:F2} DKK", balance.TotalValue);
+				return balance.TotalValue;
 			}
 			catch (Exception ex)
 			{
@@ -57,16 +56,16 @@ namespace StockPriceSheetPrintService.Service.Application
 		{
 			try
 			{
-				var eodResponse = await _marketStackService.GetStockPricesAsync(ct);
-				if (eodResponse == null)
+				var prices = await _marketStackService.GetStockPricesAsync(ct);
+				if (prices == null)
 				{
 					_logger.LogError("[FETCHER] Failed to get stock prices");
 					return 0m;
 				}
 
-				var stockValue = await _portfolioCalculator.CalculateTotalStockValueAsync(eodResponse, ct);
+				var stockValue = await _portfolioCalculator.CalculateTotalStockValueAsync(prices, ct);
 				var cash = await _nordnetStore.GetNordnetCashAmountAsync();
-				var totalNordnetValue = stockValue + cash.CashAmount;
+				var totalNordnetValue = stockValue + cash.Amount;
 
 				_logger.LogInformation("[FETCHER] Nordnet value: {value:F2} DKK", totalNordnetValue);
 				return totalNordnetValue;
@@ -99,7 +98,7 @@ namespace StockPriceSheetPrintService.Service.Application
 			}
 		}
 
-		public async Task<List<SaxoTransaction>> GetNewTransfersAsync(CancellationToken ct)
+		public async Task<List<Transfer>> GetNewTransfersAsync(CancellationToken ct)
 		{
 			try
 			{
@@ -119,17 +118,17 @@ namespace StockPriceSheetPrintService.Service.Application
 
 				var fromDate = DateTime.UtcNow.AddDays(-14);
 				var toDate = DateTime.UtcNow;
-				var response = await _saxoAccountService.GetSaxoTransactionsAsync(saxoToken, fromDate, toDate, ct);
+				var transfers = await _saxoAccountService.GetSaxoTransactionsAsync(saxoToken, fromDate, toDate, ct);
 
 				var seenIds = await _seenTransferStore.LoadAsync(ct);
-				var newTransfers = response.Data
-					.Where(t => !seenIds.Contains(t.BookingId))
+				var newTransfers = transfers
+					.Where(t => !seenIds.Contains(t.Id))
 					.Where(t => t.Amount > 0)
 					.ToList();
 
 				if (newTransfers.Count > 0)
 				{
-					await _seenTransferStore.SaveAsync(newTransfers.Select(t => t.BookingId), ct);
+					await _seenTransferStore.SaveAsync(newTransfers.Select(t => t.Id), ct);
 					_logger.LogInformation("[FETCHER] Found {count} new transfers", newTransfers.Count);
 				}
 
@@ -142,7 +141,7 @@ namespace StockPriceSheetPrintService.Service.Application
 			}
 		}
 
-		public async Task<List<SaxoInstrument>> GetNetPositionsAsync(CancellationToken ct)
+		public async Task<List<Instrument>> GetNetPositionsAsync(CancellationToken ct)
 		{
 			try
 			{

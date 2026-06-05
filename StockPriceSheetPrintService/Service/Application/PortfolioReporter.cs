@@ -1,5 +1,4 @@
-using StockPriceSheetPrintService.OutboundDto;
-using StockPriceSheetPrintService.OutboundDto.Saxo.Transactions;
+using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Globalization;
 
@@ -21,7 +20,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		private const string TimeZoneId = "Central European Standard Time";
 		private const int ReportHourLocal = 7; // 07:00 lokal tid (DST håndteres automatisk af TimeZoneInfo)
 
-		public async Task ReportMorningAsync(decimal saxoBalance, decimal nordnetValue, decimal juneValue, decimal total, decimal previousDayValue, List<SaxoTransaction> newTransfers, bool sendDiscordImmediately, string? geminiInsights, CancellationToken ct)
+		public async Task ReportMorningAsync(decimal saxoBalance, decimal nordnetValue, decimal juneValue, decimal total, decimal previousDayValue, List<Transfer> newTransfers, bool sendDiscordImmediately, string? geminiInsights, CancellationToken ct)
 		{
 			try
 			{
@@ -51,7 +50,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				_logger.LogInformation("[REPORTER] Next report scheduled at {localTime} (in {hours}h {minutes}m)",
 					todayTargetLocal, (int)delayUntilReport.TotalHours, delayUntilReport.Minutes);
 
-				_pendingReportStore.Set(new PendingReport(saxoBalance, nordnetValue, juneValue, total, previousDayValue, transferAmount, geminiInsights, DateTime.UtcNow));
+				_pendingReportStore.Set(new ScheduledReport(saxoBalance, nordnetValue, juneValue, total, previousDayValue, transferAmount, geminiInsights, DateTime.UtcNow));
 
 
 				_ = Task.Run(async () =>

@@ -177,7 +177,7 @@ namespace StockPriceSheetPrintService.Service.Application
 			try
 			{
 				var result = await _nordnetStore.GetNordnetCashAmountAsync();
-				return new TextBotResponse($"💰 Cash: {result.CashAmount:N2} DKK (Last updated: {result.LastUpdated:dd/MM/yyyy HH:mm})");
+				return new TextBotResponse($"💰 Cash: {result.Amount:N2} DKK (Last updated: {result.LastUpdated:dd/MM/yyyy HH:mm})");
 			}
 			catch (NordnetStoreException ex)
 			{

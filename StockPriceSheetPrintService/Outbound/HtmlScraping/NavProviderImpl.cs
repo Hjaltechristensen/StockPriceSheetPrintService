@@ -1,5 +1,7 @@
 using HtmlAgilityPack;
 using StockPriceSheetPrintService.OutboundDto;
+using StockPriceSheetPrintService.OutboundMappers;
+using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Globalization;
 using System.Text.Json;
@@ -9,7 +11,7 @@ namespace StockPriceSheetPrintService.Outbound.HtmlScraping
 {
 	public class NavProviderImpl(HttpClient client) : IHtmlScraper
 	{
-		public async Task<JuneData?> GetJuneNavAsync(string url, CancellationToken token)
+		public async Task<FundNav?> GetJuneNavAsync(string url, CancellationToken token)
 		{
 			var html = await client.GetStringAsync(url, token);
 
@@ -39,10 +41,10 @@ namespace StockPriceSheetPrintService.Outbound.HtmlScraping
 			if (!DateTime.TryParseExact(dateMatch.Value, "dd.MM.yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
 				return null;
 
-			return new JuneData { Nav = nav, Date = date };
+			return JuneMapper.ToFundNav(new JuneData { Nav = nav, Date = date });
 		}
 
-		public async Task<JuneData?> GetFromYahooApiAsync(string ticker, CancellationToken token)
+		public async Task<FundNav?> GetFromYahooApiAsync(string ticker, CancellationToken token)
 		{
 			var url = $"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}";
 			var json = await client.GetStringAsync(url, token);
@@ -64,7 +66,7 @@ namespace StockPriceSheetPrintService.Outbound.HtmlScraping
 
 			var date = DateTimeOffset.FromUnixTimeSeconds(timestamp).LocalDateTime;
 
-			return new JuneData { Nav = price, Date = date };
+			return JuneMapper.ToFundNav(new JuneData { Nav = price, Date = date });
 		}
 	}
 }

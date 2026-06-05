@@ -1,6 +1,8 @@
-﻿using StockPriceSheetPrintService.Outbound.Filesystem.Helpers;
+using StockPriceSheetPrintService.Outbound.Filesystem.Helpers;
 using StockPriceSheetPrintService.OutboundExceptions;
 using StockPriceSheetPrintService.OutboundDto;
+using StockPriceSheetPrintService.OutboundMappers;
+using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Text.Json;
 
@@ -11,24 +13,24 @@ namespace StockPriceSheetPrintService.Outbound.Filesystem
 		private readonly string _filePath = configuration["NordnetCash:FilePath"] ?? throw new InvalidOperationException("NordnetCash:FilePath is missing");
 		private readonly ILogger<JsonNordnetStore> _logger = logger;
 
-		public async Task<NordnetCashJson> GetNordnetCashAmountAsync()
+		public async Task<CashBalance> GetNordnetCashAmountAsync()
 		{
 			try
 			{
 				if (!File.Exists(_filePath))
 				{
 					_logger.LogWarning("NordnetCash file not found at '{FilePath}. Returning defaults.", _filePath);
-					return new NordnetCashJson(0m, DateTime.UtcNow);
+					return NordnetMapper.ToCashBalance(new NordnetCashJson(0m, DateTime.UtcNow));
 				}
 				var json = await File.ReadAllTextAsync(_filePath);
 				var entries = JsonSerializer.Deserialize<NordnetCashJson>(json);
 				if (entries == null)
 				{
 					_logger.LogWarning("NordnetCash deserialized as null, returning defaults.");
-					return new NordnetCashJson(0m, DateTime.UtcNow);
+					return NordnetMapper.ToCashBalance(new NordnetCashJson(0m, DateTime.UtcNow));
 				}
 
-				return entries;
+				return NordnetMapper.ToCashBalance(entries);
 			}
 			catch (Exception ex)
 			{

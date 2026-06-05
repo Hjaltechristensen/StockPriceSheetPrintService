@@ -1,4 +1,4 @@
-﻿using NetArchTest.Rules;
+using NetArchTest.Rules;
 using System.Reflection;
 
 namespace StockPriceSheetPrintService.ArchTests
@@ -8,17 +8,12 @@ namespace StockPriceSheetPrintService.ArchTests
 		private readonly Assembly assembly = Assembly.Load("StockPriceSheetPrintService");
 
 		[Fact]
-		public void Inbound_ShouldNotDependOn_Service_And_Outbound()
+		public void Inbound_ShouldNotDependOn_ServiceApplication_Or_Outbound()
 		{
 			var result = Types.InAssembly(assembly)
 				.That().ResideInNamespace("StockPriceSheetPrintService.Inbound")
 				.ShouldNot().HaveDependencyOnAny(
 					"StockPriceSheetPrintService.Service.Application",
-					"StockPriceSheetPrintService.Service.Exceptions",
-					"StockPriceSheetPrintService.Service.Helpers",
-					"StockPriceSheetPrintService.Service.Models",
-					"StockPriceSheetPrintService.Service.Ports.Outbound",
-					"StockPriceSheetPrintService.Service.Ports.Persistence",
 					"StockPriceSheetPrintService.Outbound")
 				.GetResult();
 
@@ -39,17 +34,12 @@ namespace StockPriceSheetPrintService.ArchTests
 		}
 
 		[Fact]
-		public void Outbound_ShouldNotDependOn_Service_And_Inbound()
+		public void Outbound_ShouldNotDependOn_ServiceApplication_Or_Inbound()
 		{
 			var result = Types.InAssembly(assembly)
 				.That().ResideInNamespace("StockPriceSheetPrintService.Outbound")
 				.ShouldNot().HaveDependencyOnAny(
 					"StockPriceSheetPrintService.Service.Application",
-					"StockPriceSheetPrintService.Service.Exceptions",
-					"StockPriceSheetPrintService.Service.Helpers",
-					"StockPriceSheetPrintService.Service.Models",
-					"StockPriceSheetPrintService.Service.Ports.Inbound",
-					"StockPriceSheetPrintService.Service.Ports.Persistence",
 					"StockPriceSheetPrintService.Inbound")
 				.GetResult();
 
