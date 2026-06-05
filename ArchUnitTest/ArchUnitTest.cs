@@ -1,7 +1,7 @@
-using NetArchTest.Rules;
+﻿using NetArchTest.Rules;
 using System.Reflection;
 
-namespace StockPriceSheetPrintService.ArchTests
+namespace ArchUnitTest
 {
 	public class ArchUnitTest
 	{
