@@ -1,5 +1,4 @@
-﻿using StockPriceSheetPrintService.Service.Ports.Outbound;
-using StockPriceSheetPrintService.Service.Ports.Persistence;
+using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Text.Json;
 
 namespace StockPriceSheetPrintService.Outbound.Saxo

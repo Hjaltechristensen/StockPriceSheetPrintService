@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using StockPriceSheetPrintService.Outbound.Persistence.Entities;
 using StockPriceSheetPrintService.Service.Exceptions;
+using StockPriceSheetPrintService.Outbound.Mappers;
+using StockPriceSheetPrintService.Outbound.Dto;
 using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 
@@ -8,15 +10,16 @@ namespace StockPriceSheetPrintService.Outbound.Persistence
 {
 	public class DbJuneStore(IDbContextFactory<StockDbContext> dbFactory, ILogger<DbJuneStore> logger) : IJuneStore
 	{
-		public async Task<JuneAmountData> GetJuneSharesAmountAsync()
+		public async Task<FundHolding> GetJuneSharesAmountAsync()
 		{
 			try
 			{
 				await using var db = await dbFactory.CreateDbContextAsync();
 				var entity = await db.JuneShares.FindAsync(1);
-				return entity != null
+				var dto = entity != null
 					? new JuneAmountData(entity.Amount, entity.LastUpdated)
 					: new JuneAmountData(0m, DateTime.UtcNow);
+				return JuneMapper.ToFundHolding(dto);
 			}
 			catch (Exception ex)
 			{

@@ -1,5 +1,4 @@
-using StockPriceSheetPrintService.Service.Models.Saxo.InstrumentDetails;
-using StockPriceSheetPrintService.Service.Models.Saxo.Transactions;
+using StockPriceSheetPrintService.Service.Models;
 
 namespace StockPriceSheetPrintService.Service.Ports.Outbound
 {
@@ -8,8 +7,8 @@ namespace StockPriceSheetPrintService.Service.Ports.Outbound
 		Task<decimal> GetSaxoBalanceAsync(CancellationToken ct);
 		Task<decimal> GetNordnetValueAsync(CancellationToken ct);
 		Task<decimal> GetJuneValueAsync(CancellationToken ct);
-		Task<List<SaxoTransaction>> GetNewTransfersAsync(CancellationToken ct);
+		Task<List<Transfer>> GetNewTransfersAsync(CancellationToken ct);
 		Task<decimal> GetPreviousDayValueAsync(CancellationToken ct);
-		Task<List<SaxoInstrument>> GetNetPositionsAsync(CancellationToken ct);
+		Task<List<Instrument>> GetNetPositionsAsync(CancellationToken ct);
 	}
 }

@@ -1,4 +1,4 @@
-﻿using StockPriceSheetPrintService.Service.Models;
+using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Globalization;
 using System.Xml.Linq;
@@ -33,21 +33,21 @@ namespace StockPriceSheetPrintService.Service.Application
 			["XCSE"] = "DKK",
 		};
 
-		public async Task<decimal> CalculateTotalStockValueAsync(EodResponse data, CancellationToken ct)
+		public async Task<decimal> CalculateTotalStockValueAsync(List<StockPrice> prices, CancellationToken ct)
 		{
 			decimal totalPrice = 0;
-			if (data == null) return 0;
+			if (prices == null) return 0;
 
 			_exchangeRateCache = null;
 			var rates = await GetExchangeRatesAsync(ct);
 
 			var nordnetSymbols = await _nordnetSymbolStore.GetSymbolsAsync();
-			foreach (var d in data.Data)
+			foreach (var d in prices)
 			{
 				if (!nordnetSymbols.TryGetValue(d.Symbol, out decimal multiplier))
 					continue;
 
-				var effectiveCurrency = !string.IsNullOrEmpty(d.PriceCurrency) ? d.PriceCurrency
+				var effectiveCurrency = !string.IsNullOrEmpty(d.Currency) ? d.Currency
 					: (ExchangeCurrencyFallback.TryGetValue(d.Exchange ?? "", out var fb) ? fb : "?");
 
 				if (d.Close is null or 0m)
@@ -59,7 +59,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				}
 
 				var closePrice = d.Close ?? 0m;
-				var priceInDkk = ConvertCurrencyToDkk(closePrice, d.PriceCurrency, d.Exchange, rates);
+				var priceInDkk = ConvertCurrencyToDkk(closePrice, d.Currency, d.Exchange, rates);
 				_logger.LogInformation("[JOB] {Multiplier} x {Symbol} closed at: {Close} {Currency} = {Dkk:F4} DKK, total: {Total:F2} DKK",
 					multiplier, d.Symbol, closePrice, effectiveCurrency, priceInDkk, multiplier * priceInDkk);
 				totalPrice += priceInDkk * multiplier;
@@ -77,8 +77,8 @@ namespace StockPriceSheetPrintService.Service.Application
 			if (junePrice != null)
 			{
 				_logger.LogInformation("Todays June price: {nav} pr. {date}", junePrice.Nav, junePrice.Date.ToString("dd/MM/yyyy"));
-				var shareAmount = await _juneStore.GetJuneSharesAmountAsync();
-				totalJuneValue = junePrice.Nav * shareAmount.Amount;
+				var holding = await _juneStore.GetJuneSharesAmountAsync();
+				totalJuneValue = junePrice.Nav * holding.Amount;
 			}
 
 			return totalJuneValue;

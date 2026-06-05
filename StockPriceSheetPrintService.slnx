@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="ArchUnitTest/ArchUnitTest.csproj" Id="3a92173d-b625-43dd-ba5d-ff56380daaef" />
   <Project Path="StockPriceSheetPrintService/StockPriceSheetPrintService.csproj" />
 </Solution>

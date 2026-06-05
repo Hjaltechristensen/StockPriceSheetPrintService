@@ -1,7 +1,6 @@
 using Google.GenAI;
 using Google.GenAI.Types;
-using StockPriceSheetPrintService.Service.Models.Saxo.InstrumentDetails;
-using StockPriceSheetPrintService.Service.Models.Saxo.Transactions;
+using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 
 namespace StockPriceSheetPrintService.Outbound.GeminiInsights
@@ -25,9 +24,9 @@ namespace StockPriceSheetPrintService.Outbound.GeminiInsights
 			decimal juneValue,
 			decimal total,
 			decimal previousDayValue,
-			List<SaxoTransaction> newTransfers,
+			List<Transfer> newTransfers,
 			List<string> nordnetTickers,
-			List<SaxoInstrument> saxoPositions,
+			List<Instrument> saxoPositions,
 			CancellationToken ct)
 		{
 			var change = total - previousDayValue;
@@ -40,7 +39,7 @@ namespace StockPriceSheetPrintService.Outbound.GeminiInsights
 
 			var saxoPositionsText = saxoPositions.Count > 0
 				? string.Join("\n", saxoPositions.Select(p =>
-					$"  - {p.Symbol} ({p.Description}), {p.AssetType}, børs: {p.Exchange?.ExchangeId ?? "ukendt"}, valuta: {p.CurrencyCode}"))
+					$"  - {p.Symbol} ({p.Description}), {p.AssetType}, børs: {p.ExchangeId ?? "ukendt"}, valuta: {p.Currency}"))
 				: "  Ingen positioner fundet";
 
 			var nordnetTickersText = nordnetTickers.Count > 0
@@ -61,7 +60,7 @@ var userPrompt =
     $"Nordnet-tickers: {nordnetTickersText}\n\n" +
     $"{transfersText}";
 
-			string basePrompt = 
+			string basePrompt =
     "Du er en finansiel analytiker. Din opgave er at forklare dagens bevægelser i en portefølje.\n\n" +
     "PROCES:\n" +
     $"1. Søg efter de specifikke lukkekurser eller dagsafkast for hver ticker for datoen {yesterdaysDate}.\n" +

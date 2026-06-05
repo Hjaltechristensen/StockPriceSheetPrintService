@@ -1,10 +1,10 @@
-﻿using StockPriceSheetPrintService.Service.Models;
+using StockPriceSheetPrintService.Service.Models;
 
 namespace StockPriceSheetPrintService.Service.Ports.Outbound
 {
 	public interface INordnetStore
 	{
-		Task<NordnetCashJson> GetNordnetCashAmountAsync();
+		Task<CashBalance> GetNordnetCashAmountAsync();
 		Task SetNordnetCashAmountAsync(decimal newAmount);
 	}
 }

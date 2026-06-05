@@ -1,6 +1,5 @@
 using StockPriceSheetPrintService.Service.Ports.Inbound;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
-using StockPriceSheetPrintService.Service.Ports.Persistence;
 
 namespace StockPriceSheetPrintService.Service.Application
 {

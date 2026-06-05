@@ -1,7 +1,9 @@
-﻿using StockPriceSheetPrintService.Service.Models.Saxo;
-using StockPriceSheetPrintService.Service.Models.Saxo.InstrumentDetails;
-using StockPriceSheetPrintService.Service.Models.Saxo.Positions;
-using StockPriceSheetPrintService.Service.Models.Saxo.Transactions;
+using StockPriceSheetPrintService.Outbound.Dto.Saxo;
+using StockPriceSheetPrintService.Outbound.Dto.Saxo.InstrumentDetails;
+using StockPriceSheetPrintService.Outbound.Dto.Saxo.Positions;
+using StockPriceSheetPrintService.Outbound.Dto.Saxo.Transactions;
+using StockPriceSheetPrintService.Outbound.Mappers;
+using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -32,7 +34,7 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 			return Task.FromResult(loginUrl);
 		}
 
-		public async Task<SaxoTokenResult> ExchangeCodeForTokensAsync(string code, CancellationToken ct)
+		public async Task<OAuthTokens> ExchangeCodeForTokensAsync(string code, CancellationToken ct)
 		{
 			var client = _httpClientFactory.CreateClient();
 
@@ -56,14 +58,16 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 			}
 
 			var jsonDoc = JsonDocument.Parse(tokenData);
-			return new SaxoTokenResult
+			var dto = new SaxoTokenResult
 			{
 				AccessToken = jsonDoc.RootElement.GetProperty("access_token").GetString() ?? string.Empty,
 				RefreshToken = jsonDoc.RootElement.GetProperty("refresh_token").GetString() ?? string.Empty
 			};
+
+			return SaxoMapper.ToOAuthTokens(dto);
 		}
 
-		public async Task<SaxoBalanceResponse?> GetBalanceAsync(string accessToken, CancellationToken ct)
+		public async Task<AccountBalance?> GetBalanceAsync(string accessToken, CancellationToken ct)
 		{
 			var client = _httpClientFactory.CreateClient();
 			client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
@@ -78,11 +82,13 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 				throw new HttpRequestException("Could not fetch balance from Saxo.");
 			}
 
-			return JsonSerializer.Deserialize<SaxoBalanceResponse>(balanceData, JsonOptions)
-			?? throw new InvalidOperationException("Empty balance response from Saxo.");
+			var dto = JsonSerializer.Deserialize<SaxoBalanceResponse>(balanceData, JsonOptions)
+				?? throw new InvalidOperationException("Empty balance response from Saxo.");
+
+			return SaxoMapper.ToAccountBalance(dto);
 		}
 
-		public async Task<SaxoTransactionsResponse> GetSaxoTransactionsAsync(string accessToken, DateTime fromDate, DateTime toDate, CancellationToken ct)
+		public async Task<List<Transfer>> GetSaxoTransactionsAsync(string accessToken, DateTime fromDate, DateTime toDate, CancellationToken ct)
 		{
 			var client = _httpClientFactory.CreateClient();
 			client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
@@ -103,11 +109,13 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 				throw new HttpRequestException("Could not fetch transactions from Saxo.");
 			}
 
-			return JsonSerializer.Deserialize<SaxoTransactionsResponse>(transactionsData, JsonOptions)
-			?? throw new InvalidOperationException("Empty transactions response from Saxo.");
+			var dto = JsonSerializer.Deserialize<SaxoTransactionsResponse>(transactionsData, JsonOptions)
+				?? throw new InvalidOperationException("Empty transactions response from Saxo.");
+
+			return SaxoMapper.ToTransfers(dto);
 		}
 
-		public async Task<List<SaxoInstrument>> GetNetPositionsAsync(string accessToken, CancellationToken ct)
+		public async Task<List<Instrument>> GetNetPositionsAsync(string accessToken, CancellationToken ct)
 		{
 			var client = _httpClientFactory.CreateClient();
 			client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
@@ -150,7 +158,9 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 				var tasks = apiPositions
 					.Select(p => GetInstrumentDetails(client, p.Uic, p.AssetType, ct));
 
-				var instruments = (await Task.WhenAll(tasks)).ToList();
+				var instruments = (await Task.WhenAll(tasks))
+					.Select(SaxoMapper.ToInstrument)
+					.ToList();
 
 				await _saxoNetPositionStore.UpsertPositionsAsync(instruments);
 				await _saxoNetPositionStore.RemoveStalePositionsAsync(instruments.Select(i => i.Uic).ToList());

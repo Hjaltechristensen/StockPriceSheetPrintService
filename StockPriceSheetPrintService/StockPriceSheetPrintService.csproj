@@ -29,8 +29,4 @@
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Secrets\" />
-  </ItemGroup>
-
 </Project>
