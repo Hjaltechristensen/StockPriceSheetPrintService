@@ -1,7 +1,7 @@
 using StockPriceSheetPrintService.Service.Ports.Inbound;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 
-namespace StockPriceSheetPrintService.Service
+namespace StockPriceSheetPrintService.Service.Application
 {
 	public class StockpriceWorker(
 		ILogger<StockpriceWorker> logger,

@@ -12,7 +12,6 @@ using StockPriceSheetPrintService.Outbound.HtmlScraping;
 using StockPriceSheetPrintService.Outbound.MarketStack;
 using StockPriceSheetPrintService.Outbound.Persistence;
 using StockPriceSheetPrintService.Outbound.Saxo;
-using StockPriceSheetPrintService.Service;
 using StockPriceSheetPrintService.Service.Application;
 using StockPriceSheetPrintService.Service.Ports.Inbound;
 using StockPriceSheetPrintService.Service.Ports.Outbound;

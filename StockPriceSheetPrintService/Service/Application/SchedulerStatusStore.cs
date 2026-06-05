@@ -1,6 +1,6 @@
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 
-namespace StockPriceSheetPrintService.Service
+namespace StockPriceSheetPrintService.Service.Application
 {
 	public sealed class SchedulerStatusStore : ISchedulerStatus
 	{
