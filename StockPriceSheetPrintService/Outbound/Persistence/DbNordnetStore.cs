@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using StockPriceSheetPrintService.Outbound.Persistence.Entities;
-using StockPriceSheetPrintService.OutboundExceptions;
-using StockPriceSheetPrintService.OutboundMappers;
-using StockPriceSheetPrintService.OutboundDto;
+using StockPriceSheetPrintService.Service.Exceptions;
+using StockPriceSheetPrintService.Outbound.Mappers;
+using StockPriceSheetPrintService.Outbound.Dto;
 using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 

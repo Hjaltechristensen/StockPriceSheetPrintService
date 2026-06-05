@@ -3,7 +3,6 @@ using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Events;
-using StockPriceSheetPrintService.InboundDto;
 using StockPriceSheetPrintService.Inbound.Listener;
 using StockPriceSheetPrintService.Outbound.DiscordUpdates;
 using StockPriceSheetPrintService.Outbound.Filesystem;
@@ -43,7 +42,6 @@ builder.Services.AddSingleton(new DiscordSocketClient(new DiscordSocketConfig
 {
 	GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.MessageContent
 }));
-builder.Services.AddSingleton<IDiscordBotResponder, DiscordBotResponder>();
 builder.Services.AddScoped<ISaxoManagementService, SaxoManagementServiceImpl>();
 builder.Services.AddScoped<IDashboardService, DashboardServiceImpl>();
 builder.Services.AddSingleton<IPendingReportStore, InMemoryPendingReportStore>();

@@ -1,8 +1,8 @@
-using StockPriceSheetPrintService.OutboundDto.Saxo;
-using StockPriceSheetPrintService.OutboundDto.Saxo.InstrumentDetails;
-using StockPriceSheetPrintService.OutboundDto.Saxo.Positions;
-using StockPriceSheetPrintService.OutboundDto.Saxo.Transactions;
-using StockPriceSheetPrintService.OutboundMappers;
+using StockPriceSheetPrintService.Outbound.Dto.Saxo;
+using StockPriceSheetPrintService.Outbound.Dto.Saxo.InstrumentDetails;
+using StockPriceSheetPrintService.Outbound.Dto.Saxo.Positions;
+using StockPriceSheetPrintService.Outbound.Dto.Saxo.Transactions;
+using StockPriceSheetPrintService.Outbound.Mappers;
 using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Net.Http.Headers;

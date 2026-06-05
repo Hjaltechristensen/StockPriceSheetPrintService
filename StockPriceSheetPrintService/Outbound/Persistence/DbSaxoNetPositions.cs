@@ -1,7 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using StockPriceSheetPrintService.Outbound.Dto.Saxo.InstrumentDetails;
+using StockPriceSheetPrintService.Outbound.Mappers;
 using StockPriceSheetPrintService.Outbound.Persistence.Entities;
-using StockPriceSheetPrintService.OutboundExceptions;
-using StockPriceSheetPrintService.OutboundMappers;
+using StockPriceSheetPrintService.Service.Exceptions;
 using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 
@@ -67,7 +68,7 @@ namespace StockPriceSheetPrintService.Outbound.Persistence
 				var positions = await db.SaxoPositions.ToListAsync();
 
 				return positions
-					.Select(p => SaxoMapper.ToInstrument(new OutboundDto.Saxo.InstrumentDetails.SaxoInstrument
+					.Select(p => SaxoMapper.ToInstrument(new SaxoInstrument
 					{
 						Uic = p.Uic,
 						AssetType = p.AssetType,

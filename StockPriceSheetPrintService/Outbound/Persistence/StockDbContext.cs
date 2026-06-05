@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using StockPriceSheetPrintService.Outbound.Persistence.Entities;
-using StockPriceSheetPrintService.OutboundDto.Saxo.InstrumentDetails;
+using StockPriceSheetPrintService.Outbound.Dto.Saxo.InstrumentDetails;
 using System.Text.Json;
 
 namespace StockPriceSheetPrintService.Outbound.Persistence

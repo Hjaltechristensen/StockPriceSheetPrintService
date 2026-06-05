@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using StockPriceSheetPrintService.Outbound.Persistence.Entities;
-using StockPriceSheetPrintService.OutboundExceptions;
+using StockPriceSheetPrintService.Service.Exceptions;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 
 namespace StockPriceSheetPrintService.Outbound.Persistence
