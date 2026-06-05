@@ -5,7 +5,7 @@ using Serilog;
 using Serilog.Events;
 using StockPriceSheetPrintService.Inbound.Listener;
 using StockPriceSheetPrintService.Outbound.DiscordUpdates;
-using StockPriceSheetPrintService.Outbound.Filesystem;
+using StockPriceSheetPrintService.Outbound.Memory;
 using StockPriceSheetPrintService.Outbound.GeminiInsights;
 using StockPriceSheetPrintService.Outbound.GoogleSheets;
 using StockPriceSheetPrintService.Outbound.HtmlScraping;

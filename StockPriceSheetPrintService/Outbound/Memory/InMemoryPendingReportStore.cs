@@ -3,7 +3,7 @@ using StockPriceSheetPrintService.Outbound.Mappers;
 using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 
-namespace StockPriceSheetPrintService.Outbound.Filesystem
+namespace StockPriceSheetPrintService.Outbound.Memory
 {
 	public class InMemoryPendingReportStore : IPendingReportStore
 	{
