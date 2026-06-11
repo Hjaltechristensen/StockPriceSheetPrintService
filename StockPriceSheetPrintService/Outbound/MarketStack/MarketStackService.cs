@@ -73,9 +73,9 @@ namespace StockPriceSheetPrintService.Outbound.MarketStack
 			var response = await client.GetAsync(
 				BuildQueryUrl(primaryKey, symbolsQuery), ct);
 
-			if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+			if (!response.IsSuccessStatusCode)
 			{
-				_logger.LogInformation("[MARKETSTACK] Primary API key exhausted, trying fallback key");
+				_logger.LogInformation("[MARKETSTACK] Primary API key failed ({status}), trying fallback key", (int)response.StatusCode);
 				var fallbackKey = _configuration[FallbackAccessKeyConfig] ?? string.Empty;
 				if (string.IsNullOrEmpty(fallbackKey))
 					_logger.LogWarning("[MARKETSTACK] Failed to get fallback access key to MarketStack");
