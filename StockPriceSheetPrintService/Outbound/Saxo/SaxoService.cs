@@ -34,7 +34,7 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 			return Task.FromResult(loginUrl);
 		}
 
-		public async Task<OAuthTokens> ExchangeCodeForTokensAsync(string code, CancellationToken ct)
+		public async Task<OAuthTokens> ExchangeCodeForTokensAsync(string code, ClientContext ctx, CancellationToken ct)
 		{
 			var client = _httpClientFactory.CreateClient();
 
@@ -67,7 +67,7 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 			return SaxoMapper.ToOAuthTokens(dto);
 		}
 
-		public async Task<AccountBalance?> GetBalanceAsync(string accessToken, CancellationToken ct)
+		public async Task<AccountBalance?> GetBalanceAsync(string accessToken, ClientContext ctx, CancellationToken ct)
 		{
 			var client = _httpClientFactory.CreateClient();
 			client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
@@ -88,7 +88,7 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 			return SaxoMapper.ToAccountBalance(dto);
 		}
 
-		public async Task<List<Transfer>> GetSaxoTransactionsAsync(string accessToken, DateTime fromDate, DateTime toDate, CancellationToken ct)
+		public async Task<List<Transfer>> GetSaxoTransactionsAsync(string accessToken, DateTime fromDate, DateTime toDate, ClientContext ctx, CancellationToken ct)
 		{
 			var client = _httpClientFactory.CreateClient();
 			client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
@@ -115,7 +115,7 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 			return SaxoMapper.ToTransfers(dto);
 		}
 
-		public async Task<List<Instrument>> GetNetPositionsAsync(string accessToken, CancellationToken ct)
+		public async Task<List<Instrument>> GetNetPositionsAsync(string accessToken, ClientContext ctx, CancellationToken ct)
 		{
 			var client = _httpClientFactory.CreateClient();
 			client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);

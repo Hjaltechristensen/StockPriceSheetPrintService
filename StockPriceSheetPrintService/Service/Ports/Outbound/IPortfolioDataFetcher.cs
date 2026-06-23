@@ -4,11 +4,11 @@ namespace StockPriceSheetPrintService.Service.Ports.Outbound
 {
 	public interface IPortfolioDataFetcher
 	{
-		Task<decimal> GetSaxoBalanceAsync(CancellationToken ct);
-		Task<decimal> GetNordnetValueAsync(CancellationToken ct);
-		Task<decimal> GetJuneValueAsync(CancellationToken ct);
-		Task<List<Transfer>> GetNewTransfersAsync(CancellationToken ct);
-		Task<decimal> GetPreviousDayValueAsync(CancellationToken ct);
-		Task<List<Instrument>> GetNetPositionsAsync(CancellationToken ct);
+		Task<decimal> GetSaxoBalanceAsync(ClientContext ctx, CancellationToken ct);
+		Task<decimal> GetNordnetValueAsync(ClientContext ctx, CancellationToken ct);
+		Task<decimal> GetJuneValueAsync(ClientContext ctx, CancellationToken ct);
+		Task<List<Transfer>> GetNewTransfersAsync(ClientContext ctx, CancellationToken ct);
+		Task<decimal> GetPreviousDayValueAsync(ClientContext ctx, CancellationToken ct);
+		Task<List<Instrument>> GetNetPositionsAsync(ClientContext ctx, CancellationToken ct);
 	}
 }

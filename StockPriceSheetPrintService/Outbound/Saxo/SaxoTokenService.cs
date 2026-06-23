@@ -20,7 +20,7 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 			await _discordNotifier.SendLoginUrlAsync(loginUrl, ct);
 		}
 
-		public async Task<string?> GetAccessTokenAsync(CancellationToken ct)
+		public async Task<string?> GetAccessTokenAsync(ClientContext ctx, CancellationToken ct)
 		{
 			var refreshToken = await _tokenStore.ReadRefreshTokenAsync(ct);
 			if (refreshToken == null)

@@ -20,7 +20,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		private readonly INordnetSymbolStore _nordnetSymbolStore = nordnetSymbolStore;
 		private readonly IGeminiToggle _geminiToggle = geminiToggle;
 
-		public async Task RunJobAsync(CancellationToken ct, bool sendDiscordImmediately = false)
+		public async Task RunJobAsync(ClientContext ctx, CancellationToken ct, bool sendDiscordImmediately = false)
 		{
 			_logger.LogInformation("╔═══════════════════════════════════════════╗");
 			_logger.LogInformation("║  JOB RUNNING START - {time:HH:mm:ss} UTC        ║", DateTime.UtcNow);
@@ -36,12 +36,12 @@ namespace StockPriceSheetPrintService.Service.Application
 			{
 				// Fetch all data in parallel
 				_logger.LogInformation("[JOB] [1/4] Fetching portfolio data...");
-				var saxoBalanceTask = _dataFetcher.GetSaxoBalanceAsync(ct);
-				var nordnetValueTask = _dataFetcher.GetNordnetValueAsync(ct);
-				var juneValueTask = _dataFetcher.GetJuneValueAsync(ct);
-				var transfersTask = _dataFetcher.GetNewTransfersAsync(ct);
-				var previousDayValueTask = _dataFetcher.GetPreviousDayValueAsync(ct);
-				var netPositionsTask = _dataFetcher.GetNetPositionsAsync(ct);
+				var saxoBalanceTask = _dataFetcher.GetSaxoBalanceAsync(ctx, ct);
+				var nordnetValueTask = _dataFetcher.GetNordnetValueAsync(ctx, ct);
+				var juneValueTask = _dataFetcher.GetJuneValueAsync(ctx, ct);
+				var transfersTask = _dataFetcher.GetNewTransfersAsync(ctx, ct);
+				var previousDayValueTask = _dataFetcher.GetPreviousDayValueAsync(ctx, ct);
+				var netPositionsTask = _dataFetcher.GetNetPositionsAsync(ctx, ct);
 
 				await Task.WhenAll(saxoBalanceTask, nordnetValueTask, juneValueTask, transfersTask, previousDayValueTask, netPositionsTask);
 
@@ -60,7 +60,7 @@ namespace StockPriceSheetPrintService.Service.Application
 
 				// Update Google Sheets
 				_logger.LogInformation("[JOB] [2/4] Updating Google Sheets...");
-				await _reporter.UpdateGoogleSheetsAsync(total, ct);
+				await _reporter.UpdateGoogleSheetsAsync(total, ctx, ct);
 				_executionGuard.LogExecution();
 
 				// Get morning report insights from Gemini
@@ -70,7 +70,7 @@ namespace StockPriceSheetPrintService.Service.Application
 					_logger.LogInformation("[JOB] [3/4] Getting morning report insights from Gemini...");
 					var nordnetSymbols = await _nordnetSymbolStore.GetSymbolsAsync();
 					var nordnetTickers = nordnetSymbols.Keys.ToList();
-					insights = await _geminiInsights.GetInsightsAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, newTransfers, nordnetTickers, saxoPositions, ct);
+					insights = await _geminiInsights.GetInsightsAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, newTransfers, nordnetTickers, saxoPositions, ctx, ct);
 				}
 				else
 				{
@@ -79,7 +79,7 @@ namespace StockPriceSheetPrintService.Service.Application
 
 				// Report results
 				_logger.LogInformation("[JOB] [4/4] Reporting results...");
-				await _reporter.ReportMorningAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, newTransfers, sendDiscordImmediately, insights, ct);
+				await _reporter.ReportMorningAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, newTransfers, sendDiscordImmediately, insights, ctx, ct);
 
 				LogJobCompleted(total);
 			}

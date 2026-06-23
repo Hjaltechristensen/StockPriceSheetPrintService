@@ -8,7 +8,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		private readonly IPendingReportStore _pendingReportStore = pendingReportStore;
 		private readonly IDiscordNotifier _discordNotifier = discordNotifier;
 
-		public async Task<bool> TrySendPendingReportAsync(CancellationToken ct)
+		public async Task<bool> TrySendPendingReportAsync(ClientContext ctx, CancellationToken ct)
 		{
 			var report = _pendingReportStore.Get();
 			if (report is null) return false;

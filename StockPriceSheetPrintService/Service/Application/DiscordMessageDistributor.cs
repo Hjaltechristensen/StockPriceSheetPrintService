@@ -23,17 +23,17 @@ namespace StockPriceSheetPrintService.Service.Application
 		private readonly IGeminiToggle _geminiToggle = geminiToggle;
 		private readonly ITriggerReportService _triggerReportService = triggerReportService;
 
-		public async Task<BotResponse> HandleMessageAsync(BotMessageCommand command, CancellationToken ct) =>
+		public async Task<BotResponse> HandleMessageAsync(BotMessageCommand command, ClientContext ctx, CancellationToken ct) =>
 			command.Command switch
 			{
-				"!refreshToken" => await HandleRefreshToken(ct),
-				"!trigger"      => await HandleTrigger(ct),
+				"!refreshToken" => await HandleRefreshToken(ctx, ct),
+				"!trigger"      => await HandleTrigger(ctx, ct),
 				"!start"        => HandleStartMenu(),
 				"!help"         => HandleHelp(),
 				_               => new EmptyBotResponse()
 			};
 
-		public async Task<BotResponse> HandleComponentAsync(BotComponentCommand command, CancellationToken ct)
+		public async Task<BotResponse> HandleComponentAsync(BotComponentCommand command, ClientContext ctx, CancellationToken ct)
 		{
 			return command.CustomId switch
 			{
@@ -41,9 +41,9 @@ namespace StockPriceSheetPrintService.Service.Application
 				"btn_get"            => HandleGetButtons(),
 				"btn_update"         => HandleUpdateButtons(),
 				"btn_actions"        => HandleActionsButtons(),
-				"btn_trigger"        => AsEphemeral(await HandleTrigger(ct)),
-				"btn_refreshToken"   => AsEphemeral(await HandleRefreshToken(ct)),
-				"btn_send_report"	 => AsEphemeral(await HandleSendReport(ct)),
+				"btn_trigger"        => AsEphemeral(await HandleTrigger(ctx, ct)),
+				"btn_refreshToken"   => AsEphemeral(await HandleRefreshToken(ctx, ct)),
+				"btn_send_report"	 => AsEphemeral(await HandleSendReport(ctx, ct)),
 				"btn_toggle_gemini"  => HandleToggleGemini(),
 				"btn_june" => new ModalBotResponse("Choose number", "june_modal", [
 					new BotModalField("New June share amount", "input_share_count", "June share amount...")
@@ -69,7 +69,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		private static BotResponse AsEphemeral(BotResponse response) =>
 			response is TextBotResponse t ? t with { Ephemeral = true } : response;
 
-		public async Task<BotResponse> HandleModalAsync(BotModalCommand command, CancellationToken ct) =>
+		public async Task<BotResponse> HandleModalAsync(BotModalCommand command, ClientContext ctx, CancellationToken ct) =>
 			command.ModalId switch
 			{
 				"june_modal"          => await HandleJuneModal(command.Fields),
@@ -151,23 +151,23 @@ namespace StockPriceSheetPrintService.Service.Application
 				""");
 		}
 
-		private async Task<BotResponse> HandleRefreshToken(CancellationToken ct)
+		private async Task<BotResponse> HandleRefreshToken(ClientContext ctx, CancellationToken ct)
 		{
 			await using var scope = _scopeFactory.CreateAsyncScope();
 			var saxoTokenService = scope.ServiceProvider.GetRequiredService<ISaxoTokenService>();
-			var accessToken = await saxoTokenService.GetAccessTokenAsync(ct);
+			var accessToken = await saxoTokenService.GetAccessTokenAsync(ctx, ct);
 			return new TextBotResponse(accessToken != null
 				? "✅ AccessToken successfully updated"
 				: "❌ Failed to update AccessToken");
 		}
 
-		private Task<BotResponse> HandleTrigger(CancellationToken ct)
+		private Task<BotResponse> HandleTrigger(ClientContext ctx, CancellationToken ct)
 		{
 			_ = Task.Run(async () =>
 			{
 				await using var scope = _scopeFactory.CreateAsyncScope();
 				var jobRunner = scope.ServiceProvider.GetRequiredService<IPortfolioJobRunner>();
-				await jobRunner.RunJobAsync(CancellationToken.None, true);
+				await jobRunner.RunJobAsync(ctx, CancellationToken.None, true);
 			}, ct);
 			return Task.FromResult<BotResponse>(new TextBotResponse("⚡ Portfolio job started – rapport ankommer om lidt via Discord"));
 		}
@@ -277,9 +277,9 @@ namespace StockPriceSheetPrintService.Service.Application
 			}
 		}
 
-		private async Task<BotResponse> HandleSendReport(CancellationToken ct)
+		private async Task<BotResponse> HandleSendReport(ClientContext ctx, CancellationToken ct)
 		{
-			var sent = await _triggerReportService.TrySendPendingReportAsync(ct);
+			var sent = await _triggerReportService.TrySendPendingReportAsync(ctx, ct);
 			return new TextBotResponse(sent
 				? "📨 Morning report sendt!"
 				: "⚠️ No pending report found - try again after 03:30");

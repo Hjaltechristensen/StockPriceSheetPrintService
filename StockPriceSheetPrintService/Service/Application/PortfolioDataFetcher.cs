@@ -24,18 +24,18 @@ namespace StockPriceSheetPrintService.Service.Application
 		private readonly ISeenTransferStore _seenTransferStore = seenTransferStore;
 		private readonly INordnetStore _nordnetStore = nordnetStore;
 
-		public async Task<decimal> GetSaxoBalanceAsync(CancellationToken ct)
+		public async Task<decimal> GetSaxoBalanceAsync(ClientContext ctx, CancellationToken ct)
 		{
 			try
 			{
-				var saxoToken = await _saxoTokenService.GetAccessTokenAsync(ct);
+				var saxoToken = await _saxoTokenService.GetAccessTokenAsync(ctx, ct);
 				if (saxoToken == null)
 				{
 					_logger.LogWarning("[FETCHER] Saxo token not available");
 					return 0m;
 				}
 
-				var balance = await _saxoAccountService.GetBalanceAsync(saxoToken, ct);
+				var balance = await _saxoAccountService.GetBalanceAsync(saxoToken, ctx, ct);
 				if (balance == null)
 				{
 					_logger.LogError("[FETCHER] Failed to get Saxo balance");
@@ -52,18 +52,18 @@ namespace StockPriceSheetPrintService.Service.Application
 			}
 		}
 
-		public async Task<decimal> GetNordnetValueAsync(CancellationToken ct)
+		public async Task<decimal> GetNordnetValueAsync(ClientContext ctx, CancellationToken ct)
 		{
 			try
 			{
-				var prices = await _marketStackService.GetStockPricesAsync(ct);
+				var prices = await _marketStackService.GetStockPricesAsync(ctx, ct);
 				if (prices == null)
 				{
 					_logger.LogError("[FETCHER] Failed to get stock prices");
 					return 0m;
 				}
 
-				var stockValue = await _portfolioCalculator.CalculateTotalStockValueAsync(prices, ct);
+				var stockValue = await _portfolioCalculator.CalculateTotalStockValueAsync(prices, ctx, ct);
 				var cash = await _nordnetStore.GetNordnetCashAmountAsync();
 				var totalNordnetValue = stockValue + cash.Amount;
 
@@ -77,11 +77,11 @@ namespace StockPriceSheetPrintService.Service.Application
 			}
 		}
 
-		public async Task<decimal> GetJuneValueAsync(CancellationToken ct)
+		public async Task<decimal> GetJuneValueAsync(ClientContext ctx, CancellationToken ct)
 		{
 			try
 			{
-				var juneValue = await _portfolioCalculator.FindTotalJuneValueAsync(ct);
+				var juneValue = await _portfolioCalculator.FindTotalJuneValueAsync(ctx, ct);
 				if (juneValue == 0m)
 				{
 					_logger.LogError("[FETCHER] Failed to get June value");
@@ -98,7 +98,7 @@ namespace StockPriceSheetPrintService.Service.Application
 			}
 		}
 
-		public async Task<List<Transfer>> GetNewTransfersAsync(CancellationToken ct)
+		public async Task<List<Transfer>> GetNewTransfersAsync(ClientContext ctx, CancellationToken ct)
 		{
 			try
 			{
@@ -109,7 +109,7 @@ namespace StockPriceSheetPrintService.Service.Application
 					return [];
 				}
 
-				var saxoToken = await _saxoTokenService.GetAccessTokenAsync(ct);
+				var saxoToken = await _saxoTokenService.GetAccessTokenAsync(ctx, ct);
 				if (saxoToken == null)
 				{
 					_logger.LogWarning("[FETCHER] Saxo token not available for transfer check");
@@ -118,7 +118,7 @@ namespace StockPriceSheetPrintService.Service.Application
 
 				var fromDate = DateTime.UtcNow.AddDays(-14);
 				var toDate = DateTime.UtcNow;
-				var transfers = await _saxoAccountService.GetSaxoTransactionsAsync(saxoToken, fromDate, toDate, ct);
+				var transfers = await _saxoAccountService.GetSaxoTransactionsAsync(saxoToken, fromDate, toDate, ctx, ct);
 
 				var seenIds = await _seenTransferStore.LoadAsync(ct);
 				var newTransfers = transfers
@@ -141,18 +141,18 @@ namespace StockPriceSheetPrintService.Service.Application
 			}
 		}
 
-		public async Task<List<Instrument>> GetNetPositionsAsync(CancellationToken ct)
+		public async Task<List<Instrument>> GetNetPositionsAsync(ClientContext ctx, CancellationToken ct)
 		{
 			try
 			{
-				var saxoToken = await _saxoTokenService.GetAccessTokenAsync(ct);
+				var saxoToken = await _saxoTokenService.GetAccessTokenAsync(ctx, ct);
 				if (saxoToken == null)
 				{
 					_logger.LogWarning("[FETCHER] Saxo token not available for net positions fetch");
 					return [];
 				}
 
-				var positions = await _saxoAccountService.GetNetPositionsAsync(saxoToken, ct);
+				var positions = await _saxoAccountService.GetNetPositionsAsync(saxoToken, ctx, ct);
 				_logger.LogInformation("[FETCHER] Fetched {count} Saxo net positions", positions.Count);
 				return positions;
 			}
@@ -163,7 +163,7 @@ namespace StockPriceSheetPrintService.Service.Application
 			}
 		}
 
-		public async Task<decimal> GetPreviousDayValueAsync(CancellationToken ct)
+		public async Task<decimal> GetPreviousDayValueAsync(ClientContext ctx, CancellationToken ct)
 		{
 			try
 			{
@@ -176,7 +176,7 @@ namespace StockPriceSheetPrintService.Service.Application
 					return 0m;
 				}
 
-				var historicalData = await _googleSheetsClient.GetHistoricalDataAsync(spreadsheetId, sheetName, ct);
+				var historicalData = await _googleSheetsClient.GetHistoricalDataAsync(spreadsheetId, sheetName, ctx, ct);
 
 				if (historicalData.Count == 0)
 				{

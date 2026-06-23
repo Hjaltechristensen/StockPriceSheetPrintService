@@ -29,7 +29,7 @@ namespace StockPriceSheetPrintService.Outbound.GoogleSheets
 			});
 		}
 
-		public async Task<List<(DateOnly Date, decimal Value)>> GetHistoricalDataAsync(string spreadsheetId, string sheetName, CancellationToken ct)
+		public async Task<List<(DateOnly Date, decimal Value)>> GetHistoricalDataAsync(string spreadsheetId, string sheetName, ClientContext ctx, CancellationToken ct)
 		{
 			var service = await CreateServiceAsync(ct);
 
@@ -57,7 +57,7 @@ namespace StockPriceSheetPrintService.Outbound.GoogleSheets
 				.ToList();
 		}
 
-		public async Task<decimal> UpdateGoogleSheetsCellAsync(string spreadsheetId, string sheetName, string totalValue, CancellationToken ct)
+		public async Task<decimal> UpdateGoogleSheetsCellAsync(string spreadsheetId, string sheetName, string totalValue, ClientContext ctx, CancellationToken ct)
 		{
 			var service = await CreateServiceAsync(ct);
 

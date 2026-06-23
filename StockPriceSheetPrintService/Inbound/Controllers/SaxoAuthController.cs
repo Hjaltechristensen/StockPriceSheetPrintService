@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Serilog.Context;
 using StockPriceSheetPrintService.Service.Ports.Inbound;
 
 namespace StockPriceSheetPrintService.Inbound.Controllers
@@ -23,13 +24,20 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 		[HttpGet("login")]
 		public async Task<IActionResult> GetLoginUrl(CancellationToken ct)
 		{
-			var url = await _saxoLoginService.GetLoginUrlAsync(ct);
+			var ctx = ClientContextFactory.New("HTTP:login");
+			using var _1 = LogContext.PushProperty("CorrelationId", ctx.CorrelationId);
+			using var _2 = LogContext.PushProperty("Source", ctx.Source);
+			var url = await _saxoLoginService.GetLoginUrlAsync(ctx, ct);
 			return Content(url);
 		}
 
 		[HttpGet("callback")]
 		public async Task<IActionResult> Callback([FromQuery] string code, CancellationToken ct)
 		{
+			var ctx = ClientContextFactory.New("HTTP:callback");
+			using var _1 = LogContext.PushProperty("CorrelationId", ctx.CorrelationId);
+			using var _2 = LogContext.PushProperty("Source", ctx.Source);
+
 			_logger.LogInformation("[SAXO-CALLBACK] OAuth callback starter");
 
 			if (string.IsNullOrEmpty(code))
@@ -37,7 +45,7 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 
 			try
 			{
-				var result = await _saxoManagementService.HandleCallbackAsync(code, ct);
+				var result = await _saxoManagementService.HandleCallbackAsync(code, ctx, ct);
 				return Ok(new
 				{
 					Message = "Everything is set up! Your worker will now run automatically.",
@@ -56,14 +64,20 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 		[HttpPost("trigger")]
 		public async Task<IActionResult> TriggerJob(CancellationToken ct)
 		{
-			await _jobRunner.RunJobAsync(ct, true);
+			var ctx = ClientContextFactory.New("HTTP:trigger");
+			using var _1 = LogContext.PushProperty("CorrelationId", ctx.CorrelationId);
+			using var _2 = LogContext.PushProperty("Source", ctx.Source);
+			await _jobRunner.RunJobAsync(ctx, ct, true);
 			return Ok(new { Message = "Job completed." });
 		}
 
 		[HttpPost("refreshToken")]
 		public async Task<IActionResult> RefreshSaxoAccessTokenAsync(CancellationToken ct)
 		{
-			var accessToken = await _saxoManagementService.GetOrRefreshAccessTokenAsync(ct);
+			var ctx = ClientContextFactory.New("HTTP:refreshToken");
+			using var _1 = LogContext.PushProperty("CorrelationId", ctx.CorrelationId);
+			using var _2 = LogContext.PushProperty("Source", ctx.Source);
+			var accessToken = await _saxoManagementService.GetOrRefreshAccessTokenAsync(ctx, ct);
 			if (accessToken == null) return NotFound(new { Message = "No valid access token found. Log in via /saxo/login" });
 			return Ok(new { Message = "Token refresh completed." });
 		}
@@ -71,7 +85,10 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 		[HttpPost("getAccessToken")]
 		public async Task<IActionResult> GetAccessTokenAsync(CancellationToken ct)
 		{
-			var accessToken = await _saxoManagementService.GetOrRefreshAccessTokenAsync(ct);
+			var ctx = ClientContextFactory.New("HTTP:getAccessToken");
+			using var _1 = LogContext.PushProperty("CorrelationId", ctx.CorrelationId);
+			using var _2 = LogContext.PushProperty("Source", ctx.Source);
+			var accessToken = await _saxoManagementService.GetOrRefreshAccessTokenAsync(ctx, ct);
 			if (accessToken == null)
 				return NotFound(new { Message = "No valid access token found. Log in via /saxo/login" });
 			return Ok(new { AccessToken = accessToken });

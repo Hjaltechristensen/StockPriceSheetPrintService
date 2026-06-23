@@ -2,6 +2,6 @@
 {
 	public interface IPortfolioJobRunner
 	{
-		Task RunJobAsync(CancellationToken ct, bool sendDiscordImmediately = false);
+		Task RunJobAsync(ClientContext ctx, CancellationToken ct, bool sendDiscordImmediately = false);
 	}
 }
