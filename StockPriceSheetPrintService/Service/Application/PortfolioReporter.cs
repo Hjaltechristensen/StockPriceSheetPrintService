@@ -20,7 +20,7 @@ namespace StockPriceSheetPrintService.Service.Application
 		private const string TimeZoneId = "Central European Standard Time";
 		private const int ReportHourLocal = 7; // 07:00 lokal tid (DST håndteres automatisk af TimeZoneInfo)
 
-		public async Task ReportMorningAsync(decimal saxoBalance, decimal nordnetValue, decimal juneValue, decimal total, decimal previousDayValue, List<Transfer> newTransfers, bool sendDiscordImmediately, string? geminiInsights, CancellationToken ct)
+		public async Task ReportMorningAsync(decimal saxoBalance, decimal nordnetValue, decimal juneValue, decimal total, decimal previousDayValue, List<Transfer> newTransfers, bool sendDiscordImmediately, string? geminiInsights, ClientContext ctx, CancellationToken ct)
 		{
 			try
 			{
@@ -75,7 +75,7 @@ namespace StockPriceSheetPrintService.Service.Application
 			}
 		}
 
-		public async Task UpdateGoogleSheetsAsync(decimal total, CancellationToken ct)
+		public async Task UpdateGoogleSheetsAsync(decimal total, ClientContext ctx, CancellationToken ct)
 		{
 			try
 			{
@@ -88,7 +88,7 @@ namespace StockPriceSheetPrintService.Service.Application
 					return;
 				}
 
-				await _googleSheetsClient.UpdateGoogleSheetsCellAsync(spreadsheetId, sheetName, total.ToString("N2", CultureInfo.GetCultureInfo("da-DK")), ct);
+				await _googleSheetsClient.UpdateGoogleSheetsCellAsync(spreadsheetId, sheetName, total.ToString("N2", CultureInfo.GetCultureInfo("da-DK")), ctx, ct);
 				_logger.LogInformation("[REPORTER] Google Sheets updated with value: {value:F2} DKK", total);
 			}
 			catch (Exception ex)

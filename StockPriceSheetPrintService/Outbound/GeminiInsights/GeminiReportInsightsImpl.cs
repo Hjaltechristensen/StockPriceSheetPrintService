@@ -27,6 +27,7 @@ namespace StockPriceSheetPrintService.Outbound.GeminiInsights
 			List<Transfer> newTransfers,
 			List<string> nordnetTickers,
 			List<Instrument> saxoPositions,
+			ClientContext ctx,
 			CancellationToken ct)
 		{
 			var change = total - previousDayValue;

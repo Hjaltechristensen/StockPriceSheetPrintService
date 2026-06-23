@@ -33,7 +33,7 @@ namespace StockPriceSheetPrintService.Service.Application
 			["XCSE"] = "DKK",
 		};
 
-		public async Task<decimal> CalculateTotalStockValueAsync(List<StockPrice> prices, CancellationToken ct)
+		public async Task<decimal> CalculateTotalStockValueAsync(List<StockPrice> prices, ClientContext ctx, CancellationToken ct)
 		{
 			decimal totalPrice = 0;
 			if (prices == null) return 0;
@@ -53,7 +53,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				if (d.Close is null or 0m)
 				{
 					_logger.LogWarning("Closing price was null/0 for {Symbol} - Redirecting to YahooFinance", d.Symbol);
-					var yahooData = await _htmlScraper.GetFromYahooApiAsync(d.Symbol, ct);
+					var yahooData = await _htmlScraper.GetFromYahooApiAsync(d.Symbol, ctx, ct);
 					d.Date = yahooData?.Date ?? d.Date;
 					d.Close = yahooData?.Nav ?? d.Close ?? 0m;
 				}
@@ -69,11 +69,11 @@ namespace StockPriceSheetPrintService.Service.Application
 			return totalPrice;
 		}
 
-		public async Task<decimal> FindTotalJuneValueAsync(CancellationToken ct)
+		public async Task<decimal> FindTotalJuneValueAsync(ClientContext ctx, CancellationToken ct)
 		{
 			decimal totalJuneValue = 0m;
 
-			var junePrice = await _htmlScraper.GetJuneNavAsync(_configuration["JuneUrl"] ?? string.Empty, ct);
+			var junePrice = await _htmlScraper.GetJuneNavAsync(_configuration["JuneUrl"] ?? string.Empty, ctx, ct);
 			if (junePrice != null)
 			{
 				_logger.LogInformation("Todays June price: {nav} pr. {date}", junePrice.Nav, junePrice.Date.ToString("dd/MM/yyyy"));

@@ -1,3 +1,4 @@
+using Serilog.Context;
 using StockPriceSheetPrintService.Service.Ports.Inbound;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 
@@ -21,7 +22,12 @@ namespace StockPriceSheetPrintService.Service.Application
 			_logger.LogInformation("╚═══════════════════════════════════════════╝");
 
 			_logger.LogInformation("[STARTUP] Performing initial token refresh...");
-			await _saxoTokenService.GetAccessTokenAsync(ct);
+			var startupCtx = ClientContextFactory.New("Startup:TokenRefresh");
+			using (LogContext.PushProperty("CorrelationId", startupCtx.CorrelationId))
+			using (LogContext.PushProperty("Source", startupCtx.Source))
+			{
+				await _saxoTokenService.GetAccessTokenAsync(startupCtx, ct);
+			}
 			_logger.LogInformation("[STARTUP] ✓ Initial token refresh completed");
 
 			while (!ct.IsCancellationRequested)
@@ -47,7 +53,12 @@ namespace StockPriceSheetPrintService.Service.Application
 						_statusStore.SetNextTokenRefreshAt(DateTimeOffset.UtcNow.Add(refreshDelay));
 						await Task.Delay(refreshDelay, ct);
 						_statusStore.SetNextTokenRefreshAt(null);
-						await _saxoTokenService.GetAccessTokenAsync(ct);
+						var refreshCtx = ClientContextFactory.New("Scheduler:TokenRefresh");
+						using (LogContext.PushProperty("CorrelationId", refreshCtx.CorrelationId))
+						using (LogContext.PushProperty("Source", refreshCtx.Source))
+						{
+							await _saxoTokenService.GetAccessTokenAsync(refreshCtx, ct);
+						}
 					}
 
 					var finalDelay = nextRunUtc - DateTimeOffset.UtcNow;
@@ -56,7 +67,12 @@ namespace StockPriceSheetPrintService.Service.Application
 
 					try
 					{
-						await _jobRunner.RunJobAsync(ct);
+						var jobCtx = ClientContextFactory.New("Scheduler:Job");
+						using (LogContext.PushProperty("CorrelationId", jobCtx.CorrelationId))
+						using (LogContext.PushProperty("Source", jobCtx.Source))
+						{
+							await _jobRunner.RunJobAsync(jobCtx, ct);
+						}
 						_statusStore.SetLastRun(DateTimeOffset.UtcNow, true);
 					}
 					catch (Exception ex) when (ex is not OperationCanceledException)

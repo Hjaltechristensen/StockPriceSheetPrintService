@@ -2,6 +2,6 @@
 {
 	public interface ITriggerReportService
 	{
-		Task<bool> TrySendPendingReportAsync(CancellationToken ct);
+		Task<bool> TrySendPendingReportAsync(ClientContext ctx, CancellationToken ct);
 	}
 }

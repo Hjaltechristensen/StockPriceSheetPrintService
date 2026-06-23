@@ -10,6 +10,7 @@ namespace StockPriceSheetPrintService.Service.Ports.Outbound
 			List<Transfer> newTransfers,
 			List<string> nordnetTickers,
 			List<Instrument> saxoPositions,
+			ClientContext ctx,
 			CancellationToken ct);
 	}
 }

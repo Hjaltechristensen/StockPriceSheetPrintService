@@ -11,7 +11,7 @@ namespace StockPriceSheetPrintService.Outbound.HtmlScraping
 {
 	public class NavProviderImpl(HttpClient client) : IHtmlScraper
 	{
-		public async Task<FundNav?> GetJuneNavAsync(string url, CancellationToken token)
+		public async Task<FundNav?> GetJuneNavAsync(string url, ClientContext ctx, CancellationToken token)
 		{
 			var html = await client.GetStringAsync(url, token);
 
@@ -44,7 +44,7 @@ namespace StockPriceSheetPrintService.Outbound.HtmlScraping
 			return JuneMapper.ToFundNav(new JuneData { Nav = nav, Date = date });
 		}
 
-		public async Task<FundNav?> GetFromYahooApiAsync(string ticker, CancellationToken token)
+		public async Task<FundNav?> GetFromYahooApiAsync(string ticker, ClientContext ctx, CancellationToken token)
 		{
 			var url = $"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}";
 			var json = await client.GetStringAsync(url, token);

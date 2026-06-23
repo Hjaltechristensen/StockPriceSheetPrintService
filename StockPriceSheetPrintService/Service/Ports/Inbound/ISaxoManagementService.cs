@@ -4,7 +4,7 @@ namespace StockPriceSheetPrintService.Service.Ports.Inbound
 
 	public interface ISaxoManagementService
 	{
-		Task<SaxoCallbackResult> HandleCallbackAsync(string code, CancellationToken ct);
-		Task<string?> GetOrRefreshAccessTokenAsync(CancellationToken ct);
+		Task<SaxoCallbackResult> HandleCallbackAsync(string code, ClientContext ctx, CancellationToken ct);
+		Task<string?> GetOrRefreshAccessTokenAsync(ClientContext ctx, CancellationToken ct);
 	}
 }

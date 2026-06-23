@@ -1,5 +1,6 @@
 using Discord;
 using Discord.WebSocket;
+using Serilog.Context;
 using StockPriceSheetPrintService.Inbound.Mappers;
 using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Ports.Inbound;
@@ -37,9 +38,13 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 			if (msg.Author.IsBot) return;
 			if (msg.Channel.Id != ChannelId) return;
 
+			var ctx = ClientContextFactory.New("Discord:message");
+			using var _1 = LogContext.PushProperty("CorrelationId", ctx.CorrelationId);
+			using var _2 = LogContext.PushProperty("Source", ctx.Source);
+
 			var dto = BotMapper.ToCommandDto(msg);
 			var command = BotMapper.ToDomain(dto);
-			var response = await receiver.HandleMessageAsync(command, _stoppingToken);
+			var response = await receiver.HandleMessageAsync(command, ctx, _stoppingToken);
 			await SendResponseToChannel(msg.Channel.Id, response, msg.Id);
 		}
 
@@ -47,9 +52,13 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 		{
 			if (interaction.Channel.Id != ChannelId) return;
 
+			var ctx = ClientContextFactory.New("Discord:button");
+			using var _1 = LogContext.PushProperty("CorrelationId", ctx.CorrelationId);
+			using var _2 = LogContext.PushProperty("Source", ctx.Source);
+
 			var dto = BotMapper.ToComponentDto(interaction);
 			var command = BotMapper.ToDomain(dto);
-			var response = await receiver.HandleComponentAsync(command, _stoppingToken);
+			var response = await receiver.HandleComponentAsync(command, ctx, _stoppingToken);
 
 			switch (response)
 			{
@@ -84,9 +93,13 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 		{
 			if (modalInteraction.Channel.Id != ChannelId) return;
 
+			var ctx = ClientContextFactory.New("Discord:modal");
+			using var _1 = LogContext.PushProperty("CorrelationId", ctx.CorrelationId);
+			using var _2 = LogContext.PushProperty("Source", ctx.Source);
+
 			var dto = BotMapper.ToModalDto(modalInteraction);
 			var command = BotMapper.ToDomain(dto);
-			var response = await receiver.HandleModalAsync(command, _stoppingToken);
+			var response = await receiver.HandleModalAsync(command, ctx, _stoppingToken);
 
 			if (response is TextBotResponse text)
 				await modalInteraction.RespondAsync(text.Text, ephemeral: text.Ephemeral);

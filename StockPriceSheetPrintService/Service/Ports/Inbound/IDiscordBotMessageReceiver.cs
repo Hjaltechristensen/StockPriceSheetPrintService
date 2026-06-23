@@ -4,8 +4,8 @@ namespace StockPriceSheetPrintService.Service.Ports.Inbound
 {
 	public interface IDiscordBotMessageReceiver
 	{
-		Task<BotResponse> HandleMessageAsync(BotMessageCommand command, CancellationToken ct);
-		Task<BotResponse> HandleComponentAsync(BotComponentCommand command, CancellationToken ct);
-		Task<BotResponse> HandleModalAsync(BotModalCommand command, CancellationToken ct);
+		Task<BotResponse> HandleMessageAsync(BotMessageCommand command, ClientContext ctx, CancellationToken ct);
+		Task<BotResponse> HandleComponentAsync(BotComponentCommand command, ClientContext ctx, CancellationToken ct);
+		Task<BotResponse> HandleModalAsync(BotModalCommand command, ClientContext ctx, CancellationToken ct);
 	}
 }

@@ -30,7 +30,7 @@ namespace StockPriceSheetPrintService.Outbound.MarketStack
 			Converters = { new FlexibleDateTimeOffsetConverter() }
 		};
 
-		public async Task<List<StockPrice>?> GetStockPricesAsync(CancellationToken ct)
+		public async Task<List<StockPrice>?> GetStockPricesAsync(ClientContext ctx, CancellationToken ct)
 		{
 			var client = _httpClientFactory.CreateClient(StockApiClientName);
 			var nordnetSymbols = await _nordnetSymbolStore.GetSymbolsAsync();
