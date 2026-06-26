@@ -2,6 +2,7 @@
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
 using Google.Apis.Sheets.v4.Data;
+using StockPriceSheetPrintService.Service;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Globalization;
 
@@ -15,6 +16,8 @@ namespace StockPriceSheetPrintService.Outbound.GoogleSheets
 		private const string ValueColumn = "B";
 		private const string CredentialsPath = "Secrets/stockprizeservice-59bc4ea3961d.json";
 		private const string ApplicationName = "HomeServerBackend";
+
+		private const string ATMCell = "J1";
 
 		private async Task<SheetsService> CreateServiceAsync(CancellationToken ct)
 		{
@@ -101,6 +104,15 @@ namespace StockPriceSheetPrintService.Outbound.GoogleSheets
 
 			_logger.LogInformation("[SHEETS] ✓ Value {value} written to {range}", totalValue, updateRange);
 			return dayBeforeValue;
+		}
+
+		public async Task<string> GetAtmValue(string spreadsheetId, string sheetName, CancellationToken ct)
+		{
+			var service = await CreateServiceAsync(ct);
+			var getRequest = service.Spreadsheets.Values.Get(spreadsheetId, $"'{sheetName}'!{ATMCell}");
+
+			var getResponse = await getRequest.ExecuteAsync(ct);
+			return getResponse.Values?.FirstOrDefault()?.FirstOrDefault()?.ToString() ?? string.Empty;
 		}
 	}
 }

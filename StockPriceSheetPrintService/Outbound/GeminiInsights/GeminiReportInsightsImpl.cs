@@ -1,5 +1,6 @@
 using Google.GenAI;
 using Google.GenAI.Types;
+using StockPriceSheetPrintService.Service;
 using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 

@@ -8,11 +8,11 @@ namespace StockPriceSheetPrintService.Outbound.Mappers
 		public static PendingReport ToDto(ScheduledReport domain) =>
 			new(domain.SaxoBalance, domain.NordnetValue, domain.JuneValue,
 				domain.Total, domain.PreviousDayValue, domain.TransferAmount,
-				domain.GeminiInsights, domain.ScheduledAtUtc);
+				domain.GeminiInsights, domain.ScheduledAtUtc, domain.Atm);
 
 		public static ScheduledReport ToDomain(PendingReport dto) =>
 			new(dto.SaxoBalance, dto.NordnetValue, dto.JuneValue,
 				dto.Total, dto.PreviousDayValue, dto.TransferAmount,
-				dto.GeminiInsights, dto.ScheduledAtUtc);
+				dto.GeminiInsights, dto.ScheduledAtUtc, dto.Atm);
 	}
 }

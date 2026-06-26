@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Serilog.Context;
+using StockPriceSheetPrintService.Service;
 using StockPriceSheetPrintService.Service.Ports.Inbound;
 
 namespace StockPriceSheetPrintService.Inbound.Controllers

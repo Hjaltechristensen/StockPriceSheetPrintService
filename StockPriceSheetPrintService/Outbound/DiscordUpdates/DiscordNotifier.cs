@@ -29,9 +29,9 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 				_logger.LogWarning("[DISCORD] Discord:WebhookLogin configuration missing");
 		}
 
-		public async Task SendMorningReportAsync(decimal saxoBalance, decimal stockValue, decimal juneValue, decimal total, decimal dayBeforeValue, decimal? lastTransferAmount, string? geminiInsights, CancellationToken stoppingToken)
+		public async Task SendMorningReportAsync(decimal saxoBalance, decimal stockValue, decimal juneValue, decimal total, decimal dayBeforeValue, decimal? lastTransferAmount, string? geminiInsights, string atm, CancellationToken stoppingToken)
 		{
-			var payload = BuildPayload(saxoBalance, stockValue, juneValue, total, dayBeforeValue, lastTransferAmount, geminiInsights);
+			var payload = BuildPayload(saxoBalance, stockValue, juneValue, total, dayBeforeValue, lastTransferAmount, geminiInsights, atm);
 			await PublishDiscordMessage(_webhookUrl, payload, stoppingToken);
 		}
 
@@ -96,7 +96,7 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 			return value.ToString("N2", CultureInfo.GetCultureInfo("da-DK"));
 		}
 
-		private object BuildPayload(decimal saxoBalance, decimal stockValue, decimal juneValue, decimal total, decimal dayBeforeValue, decimal? lastTransferAmount, string? geminiInsights)
+		private object BuildPayload(decimal saxoBalance, decimal stockValue, decimal juneValue, decimal total, decimal dayBeforeValue, decimal? lastTransferAmount, string? geminiInsights, string atm)
 		{
 			var change = total - dayBeforeValue;
 			var changePct = dayBeforeValue != 0 ? Math.Round((change / dayBeforeValue) * 100, 2) : (decimal?)null;
@@ -118,7 +118,8 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 			{
 				new { name = "🏛️ Portfolio", value = $"||{portfolioValue}||", inline = false },
 				new { name = "💰 Total Value", value = $"||**{Dkk(total)} DKK**||", inline = false },
-				new { name = changeSinceYesterdayString, value = changeValue, inline = false }
+				new { name = changeSinceYesterdayString, value = changeValue, inline = false },
+				new { name = "All time high?", value = $"||{atm}||", inline = false }
 			};
 
 			if (!string.IsNullOrWhiteSpace(geminiInsights))

@@ -3,18 +3,11 @@ using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Events;
+using StockPriceSheetPrintService;
 using StockPriceSheetPrintService.Inbound.Listener;
 using StockPriceSheetPrintService.Outbound.DiscordUpdates;
-using StockPriceSheetPrintService.Outbound.Memory;
-using StockPriceSheetPrintService.Outbound.GeminiInsights;
-using StockPriceSheetPrintService.Outbound.GoogleSheets;
-using StockPriceSheetPrintService.Outbound.HtmlScraping;
-using StockPriceSheetPrintService.Outbound.MarketStack;
 using StockPriceSheetPrintService.Outbound.Persistence;
-using StockPriceSheetPrintService.Outbound.Saxo;
 using StockPriceSheetPrintService.Service.Application;
-using StockPriceSheetPrintService.Service.Ports.Inbound;
-using StockPriceSheetPrintService.Service.Ports.Outbound;
 
 var errorWebhook = Environment.GetEnvironmentVariable("Discord__WebhookError")
 	?? throw new InvalidOperationException("Discord:WebhookError missing");
@@ -42,41 +35,13 @@ builder.Services.AddSingleton(new DiscordSocketClient(new DiscordSocketConfig
 {
 	GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.MessageContent
 }));
-builder.Services.AddScoped<ISaxoManagementService, SaxoManagementServiceImpl>();
-builder.Services.AddScoped<IDashboardService, DashboardServiceImpl>();
-builder.Services.AddSingleton<IPendingReportStore, InMemoryPendingReportStore>();
 builder.Services.AddSingleton<SchedulerStatusStore>();
-builder.Services.AddSingleton<ISchedulerStatus>(sp => sp.GetRequiredService<SchedulerStatusStore>());
-builder.Services.AddSingleton<IGeminiToggle, GeminiToggleStore>();
 builder.Services.AddHostedService<StockpriceWorker>();
 builder.Services.AddHostedService<DiscordBotListener>();
-builder.Services.AddScoped<ITriggerReportService, TriggerReportServiceImpl>();
-builder.Services.AddScoped<IPortfolioCalculator, PortfolioCalculator>();
-builder.Services.AddScoped<IPortfolioJobRunner, PortfolioJobRunner>();
-builder.Services.AddScoped<ISaxoLoginService, SaxoLoginServiceImpl>();
-builder.Services.AddScoped<IPortfolioDataFetcher, PortfolioDataFetcher>();
-builder.Services.AddScoped<IPortfolioReporter, PortfolioReporter>();
-builder.Services.AddScoped<ITokenStore, DbTokenStore>();
-builder.Services.AddScoped<ISeenTransferStore, DbSeenTransferStore>();
-builder.Services.AddScoped<ISaxoAuthService, SaxoService>();
-builder.Services.AddScoped<ISaxoAccountService, SaxoService>();
-builder.Services.AddScoped<ISaxoNetPositionStore, DbSaxoNetPositions>();
-builder.Services.AddScoped<IGeminiReportInsights, GeminiReportInsightsImpl>();
-builder.Services.AddScoped<ISaxoTokenService, SaxoTokenService>();
-builder.Services.AddScoped<IMarketStackService, MarketStackService>();
-builder.Services.AddSingleton<IGoogleSheetsClient, GoogleSheetsClientImpl>();
-builder.Services.AddSingleton<IExecutionGuard, DbExecutionGuard>();
-builder.Services.AddSingleton<INordnetStore, DbNordnetStore>();
-builder.Services.AddSingleton<IJuneStore, DbJuneStore>();
-builder.Services.AddSingleton<IDiscordBotMessageReceiver, DiscordMessageDistributor>();
-builder.Services.AddSingleton<INordnetSymbolStore, DbNordnetSymbolStore>();
-builder.Services.AddHttpClient<IDiscordNotifier, DiscordNotifier>();
-builder.Services.AddHttpClient<IHtmlScraper, NavProviderImpl>(client =>
-{
-	client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
-	client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-	client.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.9");
-});
+
+builder.Services.AddInboundServices();
+builder.Services.AddOutboundServices();
+
 
 builder.Services.AddHttpClient("StockApi", client =>
 {

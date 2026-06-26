@@ -42,8 +42,9 @@ namespace StockPriceSheetPrintService.Service.Application
 				var transfersTask = _dataFetcher.GetNewTransfersAsync(ctx, ct);
 				var previousDayValueTask = _dataFetcher.GetPreviousDayValueAsync(ctx, ct);
 				var netPositionsTask = _dataFetcher.GetNetPositionsAsync(ctx, ct);
+				var atmTask = _dataFetcher.GetAtmValue(ctx, ct);
 
-				await Task.WhenAll(saxoBalanceTask, nordnetValueTask, juneValueTask, transfersTask, previousDayValueTask, netPositionsTask);
+				await Task.WhenAll(saxoBalanceTask, nordnetValueTask, juneValueTask, transfersTask, previousDayValueTask, netPositionsTask, atmTask);
 
 				var saxoBalance = saxoBalanceTask.Result;
 				var nordnetValue = nordnetValueTask.Result;
@@ -51,6 +52,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				var newTransfers = transfersTask.Result;
 				var previousDayValue = previousDayValueTask.Result;
 				var saxoPositions = netPositionsTask.Result;
+				var atm = atmTask.Result;
 
 				var total = saxoBalance + nordnetValue + juneValue;
 
@@ -79,7 +81,7 @@ namespace StockPriceSheetPrintService.Service.Application
 
 				// Report results
 				_logger.LogInformation("[JOB] [4/4] Reporting results...");
-				await _reporter.ReportMorningAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, newTransfers, sendDiscordImmediately, insights, ctx, ct);
+				await _reporter.ReportMorningAsync(saxoBalance, nordnetValue, juneValue, total, previousDayValue, newTransfers, sendDiscordImmediately, insights, atm, ctx, ct);
 
 				LogJobCompleted(total);
 			}

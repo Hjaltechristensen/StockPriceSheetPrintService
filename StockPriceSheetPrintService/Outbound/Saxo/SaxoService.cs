@@ -3,6 +3,7 @@ using StockPriceSheetPrintService.Outbound.Dto.Saxo.InstrumentDetails;
 using StockPriceSheetPrintService.Outbound.Dto.Saxo.Positions;
 using StockPriceSheetPrintService.Outbound.Dto.Saxo.Transactions;
 using StockPriceSheetPrintService.Outbound.Mappers;
+using StockPriceSheetPrintService.Service;
 using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Net.Http.Headers;

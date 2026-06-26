@@ -2,6 +2,7 @@ using Discord;
 using Discord.WebSocket;
 using Serilog.Context;
 using StockPriceSheetPrintService.Inbound.Mappers;
+using StockPriceSheetPrintService.Service;
 using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Ports.Inbound;
 

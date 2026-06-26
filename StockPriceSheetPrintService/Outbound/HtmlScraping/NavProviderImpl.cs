@@ -1,6 +1,7 @@
 using HtmlAgilityPack;
 using StockPriceSheetPrintService.Outbound.Dto;
 using StockPriceSheetPrintService.Outbound.Mappers;
+using StockPriceSheetPrintService.Service;
 using StockPriceSheetPrintService.Service.Models;
 using StockPriceSheetPrintService.Service.Ports.Outbound;
 using System.Globalization;

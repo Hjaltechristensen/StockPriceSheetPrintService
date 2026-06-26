@@ -8,6 +8,7 @@ namespace StockPriceSheetPrintService.Service.Models
 		decimal PreviousDayValue,
 		decimal? TransferAmount,
 		string? GeminiInsights,
-		DateTime ScheduledAtUtc
+		DateTime ScheduledAtUtc,
+		string Atm
 	);
 }

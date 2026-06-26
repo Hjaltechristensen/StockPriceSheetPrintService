@@ -1,4 +1,4 @@
-namespace StockPriceSheetPrintService
+namespace StockPriceSheetPrintService.Service
 {
 	public static class ClientContextFactory
 	{

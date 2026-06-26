@@ -210,5 +210,33 @@ namespace StockPriceSheetPrintService.Service.Application
 				return 0m;
 			}
 		}
+
+		public async Task<string> GetAtmValue(ClientContext ctx, CancellationToken ct)
+		{
+			try
+			{
+				var spreadsheetId = _configuration["SheetsApi:SheetsKey"];
+				const string sheetName = "Daily";
+				if (string.IsNullOrEmpty(spreadsheetId))
+				{
+					_logger.LogWarning("[FETCHER] SheetsApi:SheetsKey configuration missing, cannot fetch previous day value");
+					return string.Empty;
+				}
+				var atm = await _googleSheetsClient.GetAtmValue(spreadsheetId, sheetName, ct);
+
+				if (atm.Equals(string.Empty))
+				{
+					_logger.LogWarning("[FETCHER] No ATM value avaliable, returning default: No");
+					return "No";
+				}
+
+				return atm;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[FETCHER] Unexpected error fetching ATM value");
+				return "No";
+			}
+		}
 	}
 }
