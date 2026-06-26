@@ -119,7 +119,7 @@ namespace StockPriceSheetPrintService.Outbound.DiscordUpdates
 				new { name = "🏛️ Portfolio", value = $"||{portfolioValue}||", inline = false },
 				new { name = "💰 Total Value", value = $"||**{Dkk(total)} DKK**||", inline = false },
 				new { name = changeSinceYesterdayString, value = changeValue, inline = false },
-				new { name = "All time high?", value = $"||{atm}||", inline = false }
+				new { name = "All time high?: ", value = $" {atm}", inline = true }
 			};
 
 			if (!string.IsNullOrWhiteSpace(geminiInsights))
