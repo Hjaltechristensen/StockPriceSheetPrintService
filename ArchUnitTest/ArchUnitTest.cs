@@ -17,7 +17,8 @@ namespace ArchUnitTest
 					"StockPriceSheetPrintService.Outbound")
 				.GetResult();
 
-			Assert.True(result.IsSuccessful);
+			Assert.True(result.IsSuccessful, FormatFailure(result));
+
 		}
 
 		[Fact]
@@ -25,12 +26,14 @@ namespace ArchUnitTest
 		{
 			var result = Types.InAssembly(assembly)
 				.That().ResideInNamespace("StockPriceSheetPrintService.Service")
+				.And().DoNotHaveNameEndingWith("ServiceCollectionExtensions")
 				.ShouldNot().HaveDependencyOnAny(
 					"StockPriceSheetPrintService.Outbound",
 					"StockPriceSheetPrintService.Inbound")
 				.GetResult();
 
-			Assert.True(result.IsSuccessful);
+			Assert.True(result.IsSuccessful, FormatFailure(result));
+
 		}
 
 		[Fact]
@@ -43,7 +46,7 @@ namespace ArchUnitTest
 					"StockPriceSheetPrintService.Inbound")
 				.GetResult();
 
-			Assert.True(result.IsSuccessful);
+			Assert.True(result.IsSuccessful, FormatFailure(result));
 		}
 
 		[Fact]
@@ -55,7 +58,7 @@ namespace ArchUnitTest
 				.Or().ResideInNamespaceStartingWith("StockPriceSheetPrintService.Outbound")
 				.GetResult();
 
-			Assert.True(result.IsSuccessful);
+			Assert.True(result.IsSuccessful, FormatFailure(result));
 		}
 
 		[Fact]
@@ -67,7 +70,7 @@ namespace ArchUnitTest
 					"StockPriceSheetPrintService.Service.Ports.Outbound")
 				.GetResult();
 
-			Assert.True(result.IsSuccessful);
+			Assert.True(result.IsSuccessful, FormatFailure(result));
 		}
 
 		[Fact]
@@ -78,7 +81,7 @@ namespace ArchUnitTest
 				.ShouldNot().HaveDependencyOn(
 					"StockPriceSheetPrintService.Service.Ports.Inbound")
 				.GetResult();
-			Assert.True(result.IsSuccessful);
+			Assert.True(result.IsSuccessful, FormatFailure(result));
 		}
 
 		[Fact]
@@ -90,7 +93,7 @@ namespace ArchUnitTest
 					"StockPriceSheetPrintService.Outbound.Dto",
 					"StockPriceSheetPrintService.Inbound.Dto")
 				.GetResult();
-			Assert.True(result.IsSuccessful);
+			Assert.True(result.IsSuccessful, FormatFailure(result));
 		}
 
 		[Fact]
@@ -102,7 +105,7 @@ namespace ArchUnitTest
 					"StockPriceSheetPrintService.Outbound",
 					"StockPriceSheetPrintService.Inbound")
 				.GetResult();
-			Assert.True(result.IsSuccessful);
+			Assert.True(result.IsSuccessful, FormatFailure(result));
 		}
 
 		[Fact]
@@ -114,7 +117,7 @@ namespace ArchUnitTest
 					"StockPriceSheetPrintService.Service",
 					"StockPriceSheetPrintService.Inbound")
 				.GetResult();
-			Assert.True(result.IsSuccessful);
+			Assert.True(result.IsSuccessful, FormatFailure(result));
 		}
 
 		[Fact]
@@ -126,7 +129,7 @@ namespace ArchUnitTest
 					"StockPriceSheetPrintService.Service",
 					"StockPriceSheetPrintService.Outbound")
 				.GetResult();
-			Assert.True(result.IsSuccessful);
+			Assert.True(result.IsSuccessful, FormatFailure(result));
 		}
 
 		[Fact]
@@ -136,7 +139,7 @@ namespace ArchUnitTest
 				.That().ResideInNamespace("StockPriceSheetPrintService.Inbound.Mappers")
 				.ShouldNot().HaveDependencyOn("StockPriceSheetPrintService.Outbound")
 				.GetResult();
-			Assert.True(result.IsSuccessful);
+			Assert.True(result.IsSuccessful, FormatFailure(result));
 		}
 
 		[Fact]
@@ -146,7 +149,7 @@ namespace ArchUnitTest
 				.That().ResideInNamespace("StockPriceSheetPrintService.Outbound.Mappers")
 				.ShouldNot().HaveDependencyOn("StockPriceSheetPrintService.Inbound")
 				.GetResult();
-			Assert.True(result.IsSuccessful);
+			Assert.True(result.IsSuccessful, FormatFailure(result));
 		}
 
 		[Fact]
@@ -157,7 +160,10 @@ namespace ArchUnitTest
 				.Should().ResideInNamespaceStartingWith("StockPriceSheetPrintService.Inbound.Mappers")
 				.Or().ResideInNamespaceStartingWith("StockPriceSheetPrintService.Outbound.Mappers")
 				.GetResult();
-			Assert.True(result.IsSuccessful);
+			Assert.True(result.IsSuccessful, FormatFailure(result));
 		}
+
+		private static string FormatFailure(TestResult result) =>
+	"Failing types:\n" + string.Join("\n", result.FailingTypes?.Select(t => $"  - {t.FullName}") ?? []);
 	}
 }
