@@ -57,7 +57,7 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "[SAXO-CALLBACK] Error in callback");
+				_logger.LogError(ex, "[SAXO-CALLBACK] Error in callback f");
 				return StatusCode(500, $"Internal server error: {ex.Message}");
 			}
 		}
