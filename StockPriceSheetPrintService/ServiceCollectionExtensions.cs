@@ -1,6 +1,7 @@
 ﻿using StockPriceSheetPrintService.Outbound.DiscordUpdates;
 using StockPriceSheetPrintService.Outbound.GeminiInsights;
 using StockPriceSheetPrintService.Outbound.GoogleSheets;
+using StockPriceSheetPrintService.Outbound.HealthChecks;
 using StockPriceSheetPrintService.Outbound.HtmlScraping;
 using StockPriceSheetPrintService.Outbound.MarketStack;
 using StockPriceSheetPrintService.Outbound.Memory;
@@ -33,6 +34,7 @@ namespace StockPriceSheetPrintService
 			services.AddScoped<IGeminiReportInsights, GeminiReportInsightsImpl>();
 			services.AddSingleton<IGeminiToggle, GeminiToggleStore>();
 			services.AddSingleton<IGoogleSheetsClient, GoogleSheetsClientImpl>();
+			services.AddHttpClient<IHealthCheckPinger, HealthChecksPinger>();
 			services.AddHttpClient<IHtmlScraper, NavProviderImpl>(client =>
 			{
 				client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
