@@ -1,17 +1,39 @@
-name: Deploy StockPriceSheetPrintService
+name: Build and Deploy StockPriceSheetPrintService
 
 on:
+  pull_request:
+    branches:
+      - master
   push:
     branches:
       - master
 
-concurrency:
-  group: deploy-stock-price-sheet-print-service
-  cancel-in-progress: true
-
 jobs:
-  deploy:
+  build:
     runs-on: self-hosted
+    concurrency:
+      group: build-stock-price-sheet-print-service-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build and test
+        run: dotnet test ArchUnitTest/ArchUnitTest.csproj --configuration Release
+
+  deploy:
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: self-hosted
+    concurrency:
+      group: deploy-stock-price-sheet-print-service
+      cancel-in-progress: true
 
     steps:
       - name: Deploy service
