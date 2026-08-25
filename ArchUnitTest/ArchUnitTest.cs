@@ -163,7 +163,7 @@ namespace ArchUnitTest
 			Assert.True(result.IsSuccessful, FormatFailure(result));
 		}
 
-		private static string FormatFailure(TestResult result) =>
+		private static string FormatFailure(NetArchTest.Rules.TestResult result) =>
 	"Failing types:\n" + string.Join("\n", result.FailingTypes?.Select(t => $"  - {t.FullName}") ?? []);
 	}
 }
