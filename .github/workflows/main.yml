@@ -11,6 +11,7 @@ on:
 jobs:
   build:
     runs-on: self-hosted
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     concurrency:
       group: build-stock-price-sheet-print-service-${{ github.ref }}
       cancel-in-progress: true
