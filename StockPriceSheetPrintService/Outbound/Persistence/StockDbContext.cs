@@ -14,6 +14,7 @@ namespace StockPriceSheetPrintService.Outbound.Persistence
 		public DbSet<NordnetSymbolEntity> NordnetSymbols { get; set; }
 		public DbSet<ExecutionLogEntity> ExecutionLogs { get; set; }
 		public DbSet<SaxoPositionsEntity> SaxoPositions { get; set; }
+		public DbSet<GeminiToggleEntity> GeminiToggle { get; set; }
 
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{

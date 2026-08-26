@@ -32,7 +32,7 @@ namespace StockPriceSheetPrintService
 			services.AddHttpClient<IDiscordNotifier, DiscordNotifier>();
 			services.AddSingleton<IExecutionGuard, DbExecutionGuard>();
 			services.AddScoped<IGeminiReportInsights, GeminiReportInsightsImpl>();
-			services.AddSingleton<IGeminiToggle, GeminiToggleStore>();
+			services.AddSingleton<IGeminiToggle, DbGeminiToggleStore>();
 			services.AddSingleton<IGoogleSheetsClient, GoogleSheetsClientImpl>();
 			services.AddHttpClient<IHealthCheckPinger, HealthChecksPinger>();
 			services.AddHttpClient<IHtmlScraper, NavProviderImpl>(client =>

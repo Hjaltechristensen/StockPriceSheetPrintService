@@ -40,11 +40,11 @@ namespace StockPriceSheetPrintService.Service.Application
 				"btn_back"           => HandleStartMenu(),
 				"btn_get"            => HandleGetButtons(),
 				"btn_update"         => HandleUpdateButtons(),
-				"btn_actions"        => HandleActionsButtons(),
+				"btn_actions"        => await HandleActionsButtons(),
 				"btn_trigger"        => AsEphemeral(await HandleTrigger(ctx, ct)),
 				"btn_refreshToken"   => AsEphemeral(await HandleRefreshToken(ctx, ct)),
 				"btn_send_report"	 => AsEphemeral(await HandleSendReport(ctx, ct)),
-				"btn_toggle_gemini"  => HandleToggleGemini(),
+				"btn_toggle_gemini"  => await HandleToggleGemini(),
 				"btn_june" => new ModalBotResponse("Choose number", "june_modal", [
 					new BotModalField("New June share amount", "input_share_count", "June share amount...")
 				]),
@@ -61,7 +61,7 @@ namespace StockPriceSheetPrintService.Service.Application
 				"btn_get_cash"    => AsEphemeral(await HandleGetNordnetCash()),
 				"btn_get_june"    => AsEphemeral(await HandleGetJuneSharesAmount()),
 				"btn_get_symbols" => AsEphemeral(await HandleGetNordnetSymbols()),
-				"btn_get_status"  => AsEphemeral(HandleStatus()),
+				"btn_get_status"  => AsEphemeral(await HandleStatus()),
 				_ => new EmptyBotResponse()
 			};
 		}
@@ -86,22 +86,26 @@ namespace StockPriceSheetPrintService.Service.Application
 				new BotButton("⚙️ Actions",       "btn_actions", BotButtonStyle.Primary)
 			]);
 
-		private MenuBotResponse HandleActionsButtons() =>
-			new("⚙️ **Actions:**", [
+		private async Task<MenuBotResponse> HandleActionsButtons()
+		{
+			var geminiEnabled = await _geminiToggle.IsEnabledAsync();
+			return new("⚙️ **Actions:**", [
 				new BotButton("⚡ Trigger portfolio",                   "btn_trigger",       BotButtonStyle.Action),
 				new BotButton("🔑 Refresh token",                       "btn_refreshToken",  BotButtonStyle.Action),
 				new BotButton("📨 Send rapport nu",                     "btn_send_report",   BotButtonStyle.Action),
-				new BotButton(_geminiToggle.IsEnabled ? "🤖 Gemini: TIL" : "🤖 Gemini: FRA",
+				new BotButton(geminiEnabled ? "🤖 Gemini: TIL" : "🤖 Gemini: FRA",
 							  "btn_toggle_gemini",
-							  _geminiToggle.IsEnabled ? BotButtonStyle.Action : BotButtonStyle.Action),
+							  BotButtonStyle.Action),
 				new BotButton("⬅️ Back",                                "btn_back",          BotButtonStyle.Secondary)
 			]);
+		}
 
-		private BotResponse HandleToggleGemini()
+		private async Task<BotResponse> HandleToggleGemini()
 		{
-			_geminiToggle.Toggle();
+			await _geminiToggle.ToggleAsync();
+			var geminiEnabled = await _geminiToggle.IsEnabledAsync();
 			return new TextBotResponse(
-				_geminiToggle.IsEnabled ? "🤖 Gemini insights: **slået TIL**" : "🤖 Gemini insights: **slået FRA**",
+				geminiEnabled ? "🤖 Gemini insights: **slået TIL**" : "🤖 Gemini insights: **slået FRA**",
 				Ephemeral: true);
 		}
 
@@ -131,7 +135,7 @@ namespace StockPriceSheetPrintService.Service.Application
 			`!help` — Vis denne besked
 			""");
 
-		private BotResponse HandleStatus()
+		private async Task<BotResponse> HandleStatus()
 		{
 			string Fmt(DateTimeOffset? t) => t is { } v ? $"<t:{v.ToUnixTimeSeconds()}:R>" : "Ukendt";
 			string FmtAbsolute(DateTimeOffset? t) => t is { } v ? $"{v:dd/MM/yyyy HH:mm} UTC" : "Aldrig";
@@ -141,13 +145,14 @@ namespace StockPriceSheetPrintService.Service.Application
 				false => "❌ Fejl",
 				null  => "Ukendt"
 			};
+			var geminiEnabled = await _geminiToggle.IsEnabledAsync();
 			return new TextBotResponse($"""
 				📊 **Service Status**
 				⏳ **Næste job run:** {Fmt(_schedulerStatus.NextRunAt)} ({FmtAbsolute(_schedulerStatus.NextRunAt)})
 				🔑 **Næste token refresh:** {(_schedulerStatus.NextTokenRefreshAt is not null ? Fmt(_schedulerStatus.NextTokenRefreshAt) : "Ingen planlagt")}
 				🕐 **Sidste run:** {FmtAbsolute(_schedulerStatus.LastRunAt)}
 				📋 **Sidste run status:** {lastRunStatus}
-				🤖 **Gemini insights:** {(_geminiToggle.IsEnabled ? "TIL" : "FRA")}
+				🤖 **Gemini insights:** {(geminiEnabled ? "TIL" : "FRA")}
 				""");
 		}
 

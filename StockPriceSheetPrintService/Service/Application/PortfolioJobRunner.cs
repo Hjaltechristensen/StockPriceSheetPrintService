@@ -67,7 +67,7 @@ namespace StockPriceSheetPrintService.Service.Application
 
 				// Get morning report insights from Gemini
 				string? insights = null;
-				if (_geminiToggle.IsEnabled)
+				if (await _geminiToggle.IsEnabledAsync())
 				{
 					_logger.LogInformation("[JOB] [3/4] Getting morning report insights from Gemini...");
 					var nordnetSymbols = await _nordnetSymbolStore.GetSymbolsAsync();
