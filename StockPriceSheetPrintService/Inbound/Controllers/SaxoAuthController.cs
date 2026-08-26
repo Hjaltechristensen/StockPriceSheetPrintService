@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Serilog.Context;
+using StockPriceSheetPrintService.Inbound.Filters;
 using StockPriceSheetPrintService.Service;
 using StockPriceSheetPrintService.Service.Ports.Inbound;
 
@@ -62,6 +63,7 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 			}
 		}
 
+		[AdminApiKeyFilter]
 		[HttpPost("trigger")]
 		public async Task<IActionResult> TriggerJob(CancellationToken ct)
 		{
@@ -72,6 +74,7 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 			return Ok(new { Message = "Job completed." });
 		}
 
+		[AdminApiKeyFilter]
 		[HttpPost("refreshToken")]
 		public async Task<IActionResult> RefreshSaxoAccessTokenAsync(CancellationToken ct)
 		{
@@ -83,6 +86,7 @@ namespace StockPriceSheetPrintService.Inbound.Controllers
 			return Ok(new { Message = "Token refresh completed." });
 		}
 
+		[AdminApiKeyFilter]
 		[HttpPost("getAccessToken")]
 		public async Task<IActionResult> GetAccessTokenAsync(CancellationToken ct)
 		{

@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using StockPriceSheetPrintService.Outbound.Persistence.Entities;
 using StockPriceSheetPrintService.Outbound.Helpers;
@@ -28,7 +29,7 @@ namespace StockPriceSheetPrintService.Outbound.Persistence
 			{
 				return TokenEncryptor.Decrypt(entity.EncryptedToken, _encryptionKey);
 			}
-			catch (FormatException ex)
+			catch (Exception ex) when (ex is FormatException or CryptographicException)
 			{
 				logger.LogWarning(ex, "[TOKEN-STORE] Corrupt token in database – deleting and requiring new login");
 				db.RefreshTokens.Remove(entity);
