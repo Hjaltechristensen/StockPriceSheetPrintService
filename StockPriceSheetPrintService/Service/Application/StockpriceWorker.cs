@@ -8,14 +8,12 @@ namespace StockPriceSheetPrintService.Service.Application
 		ILogger<StockpriceWorker> logger,
 		ISaxoTokenService saxoTokenService,
 		IPortfolioJobRunner jobRunner,
-		SchedulerStatusStore statusStore,
-		IHealthCheckPinger healthCheckPinger) : BackgroundService
+		SchedulerStatusStore statusStore) : BackgroundService
 	{
 		private readonly ILogger<StockpriceWorker> _logger = logger;
 		private readonly ISaxoTokenService _saxoTokenService = saxoTokenService;
 		private readonly IPortfolioJobRunner _jobRunner = jobRunner;
 		private readonly SchedulerStatusStore _statusStore = statusStore;
-		private readonly IHealthCheckPinger _healthCheckPinger = healthCheckPinger;
 
 		protected override async Task ExecuteAsync(CancellationToken ct)
 		{
@@ -28,11 +26,7 @@ namespace StockPriceSheetPrintService.Service.Application
 			using (LogContext.PushProperty("CorrelationId", startupCtx.CorrelationId))
 			using (LogContext.PushProperty("Source", startupCtx.Source))
 			{
-				var startupToken = await _saxoTokenService.GetAccessTokenAsync(startupCtx, ct);
-				if (startupToken != null)
-					await _healthCheckPinger.PingSuccessAsync(ct);
-				else
-					await _healthCheckPinger.PingFailureAsync(ct);
+				await _saxoTokenService.GetAccessTokenAsync(startupCtx, ct);
 			}
 			_logger.LogInformation("[STARTUP] ✓ Initial token refresh completed");
 
@@ -63,11 +57,7 @@ namespace StockPriceSheetPrintService.Service.Application
 						using (LogContext.PushProperty("CorrelationId", refreshCtx.CorrelationId))
 						using (LogContext.PushProperty("Source", refreshCtx.Source))
 						{
-							var refreshedToken = await _saxoTokenService.GetAccessTokenAsync(refreshCtx, ct);
-							if (refreshedToken != null)
-								await _healthCheckPinger.PingSuccessAsync(ct);
-							else
-								await _healthCheckPinger.PingFailureAsync(ct);
+							await _saxoTokenService.GetAccessTokenAsync(refreshCtx, ct);
 						}
 					}
 

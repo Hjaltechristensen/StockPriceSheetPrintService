@@ -4,13 +4,14 @@ using System.Text.Json;
 
 namespace StockPriceSheetPrintService.Outbound.Saxo
 {
-	public class SaxoTokenService(ILogger<SaxoTokenService> logger, IConfiguration configuration, IHttpClientFactory httpClientFactory, ITokenStore tokenStore, ISaxoAuthService saxoAuthService, IDiscordNotifier discordNotifier) : ISaxoTokenService
+	public class SaxoTokenService(ILogger<SaxoTokenService> logger, IConfiguration configuration, IHttpClientFactory httpClientFactory, ITokenStore tokenStore, ISaxoAuthService saxoAuthService, IDiscordNotifier discordNotifier, IHealthCheckPinger healthCheckPinger) : ISaxoTokenService
 	{
 		private readonly ILogger<SaxoTokenService> _logger = logger;
 		private readonly ITokenStore _tokenStore = tokenStore;
 		private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 		private readonly ISaxoAuthService _saxoAuthService = saxoAuthService;
 		private readonly IDiscordNotifier _discordNotifier = discordNotifier;
+		private readonly IHealthCheckPinger _healthCheckPinger = healthCheckPinger;
 		private readonly string _appKey = configuration["Saxo:AppKey"] ?? throw new InvalidOperationException("Saxo:AppKey missing");
 		private readonly string _appSecret = configuration["Saxo:AppSecret"] ?? throw new InvalidOperationException("Saxo:AppSecret missing");
 		private readonly string _tokenEndpoint = configuration["Saxo:TokenEndpoint"] ?? throw new InvalidOperationException("Saxo:TokenEndpoint missing");
@@ -22,6 +23,16 @@ namespace StockPriceSheetPrintService.Outbound.Saxo
 		}
 
 		public async Task<string?> GetAccessTokenAsync(ClientContext ctx, CancellationToken ct)
+		{
+			var token = await RefreshAccessTokenAsync(ct);
+			if (token != null)
+				await _healthCheckPinger.PingSuccessAsync(ct);
+			else
+				await _healthCheckPinger.PingFailureAsync(ct);
+			return token;
+		}
+
+		private async Task<string?> RefreshAccessTokenAsync(CancellationToken ct)
 		{
 			var refreshToken = await _tokenStore.ReadRefreshTokenAsync(ct);
 			if (refreshToken == null)
