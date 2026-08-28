@@ -58,4 +58,4 @@ jobs:
         run: |
           echo "Deploying..."
           cd /home/hjalte/deploy/update
-          ./update_stock-price-sheet-print-service.sh
+          ./update.sh "${{ github.event.repository.name }}"
