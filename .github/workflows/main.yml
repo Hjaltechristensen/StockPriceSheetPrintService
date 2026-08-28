@@ -31,8 +31,8 @@ jobs:
           dotnet-version: '10.0.x'
         env:
           DOTNET_INSTALL_DIR: ${{ github.workspace }}/.dotnet
-      - name: Install SonarScanner
-        run: dotnet tool install --global dotnet-sonarscanner
+      - name: Restore local tools
+        run: dotnet tool restore
       - name: Begin analysis
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
