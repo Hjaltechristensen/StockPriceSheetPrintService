@@ -1,5 +1,4 @@
 name: Build and Deploy StockPriceSheetPrintService
-
 on:
   pull_request:
     branches:
@@ -7,7 +6,6 @@ on:
   push:
     branches:
       - master
-
 jobs:
   build:
     runs-on: self-hosted
@@ -17,21 +15,36 @@ jobs:
     concurrency:
       group: build-stock-price-sheet-print-service-${{ github.ref }}
       cancel-in-progress: true
-
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-
+        with:
+          fetch-depth: 0
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
         env:
           DOTNET_INSTALL_DIR: ${{ github.workspace }}/.dotnet
-
+      - name: Install SonarScanner
+        run: dotnet tool install --global dotnet-sonarscanner
+      - name: Begin analysis
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          dotnet sonarscanner begin /k:"Hjaltechristensen_StockPriceSheetPrintService" /o:"Hjaltechristensen" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io"
       - name: Build and test
         run: dotnet test --project ArchUnitTest/ArchUnitTest.csproj --configuration Release
-
+      - name: End analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
   deploy:
     needs: build
     if: github.event_name == 'push'
@@ -40,7 +53,6 @@ jobs:
     concurrency:
       group: deploy-stock-price-sheet-print-service
       cancel-in-progress: true
-
     steps:
       - name: Deploy service
         run: |
