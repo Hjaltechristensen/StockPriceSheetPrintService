@@ -22,9 +22,9 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 		private ulong? _lastUpdateMessageId;
 		private ulong? _lastGetMessageId;
 
-		public async Task StartAsync(CancellationToken ct)
+		public async Task StartAsync(CancellationToken cancellationToken)
 		{
-			_stoppingToken = ct;
+			_stoppingToken = cancellationToken;
 			client.MessageReceived += OnMessageReceived;
 			client.ButtonExecuted += OnButtonExecuted;
 			client.ModalSubmitted += OnModalSubmitted;
@@ -32,7 +32,7 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 			await client.StartAsync();
 		}
 
-		public async Task StopAsync(CancellationToken ct) => await client.StopAsync();
+		public async Task StopAsync(CancellationToken cancellationToken) => await client.StopAsync();
 
 		private async Task OnMessageReceived(SocketMessage msg)
 		{
@@ -108,7 +108,7 @@ namespace StockPriceSheetPrintService.Inbound.Listener
 
 		private async Task SendResponseToChannel(ulong channelId, BotResponse response, ulong sourceMessageId)
 		{
-			if (client.GetChannel(channelId) is not IMessageChannel channel) return;
+			if (await client.GetChannelAsync(channelId) is not IMessageChannel channel) return;
 
 			switch (response)
 			{
