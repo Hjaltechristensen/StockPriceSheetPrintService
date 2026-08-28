@@ -15,71 +15,25 @@ namespace StockPriceSheetPrintService.Service.Application
 		private readonly IPortfolioJobRunner _jobRunner = jobRunner;
 		private readonly SchedulerStatusStore _statusStore = statusStore;
 
-		protected override async Task ExecuteAsync(CancellationToken ct)
+		protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 		{
 			_logger.LogInformation("╔═══════════════════════════════════════════╗");
 			_logger.LogInformation("║  STOCKPRIZE WORKER STARTET                ║");
 			_logger.LogInformation("╚═══════════════════════════════════════════╝");
 
-			_logger.LogInformation("[STARTUP] Performing initial token refresh...");
-			var startupCtx = ClientContextFactory.New("Startup:TokenRefresh");
-			using (LogContext.PushProperty("CorrelationId", startupCtx.CorrelationId))
-			using (LogContext.PushProperty("Source", startupCtx.Source))
-			{
-				await _saxoTokenService.GetAccessTokenAsync(startupCtx, ct);
-			}
-			_logger.LogInformation("[STARTUP] ✓ Initial token refresh completed");
+			await PerformStartupTokenRefreshAsync(stoppingToken);
 
-			while (!ct.IsCancellationRequested)
+			while (!stoppingToken.IsCancellationRequested)
 			{
 				try
 				{
-					var nextRunUtc = GetNextRunTime(3, 30);
-					while (nextRunUtc.DayOfWeek == DayOfWeek.Sunday || nextRunUtc.DayOfWeek == DayOfWeek.Monday)
-					{
-						nextRunUtc = nextRunUtc.AddDays(1);
-					}
-
+					var nextRunUtc = GetNextScheduledRunTime();
 					_statusStore.SetNextRunAt(nextRunUtc);
 					_logger.LogInformation("[SCHEDULER] Next run scheduled for: {nextRun:dd/MM/yyyy HH:mm} UTC (in {hours:F1} hours)",
 						nextRunUtc, (nextRunUtc - DateTimeOffset.UtcNow).TotalHours);
 
-					while (DateTimeOffset.UtcNow < nextRunUtc && !ct.IsCancellationRequested)
-					{
-						var timeUntilJob = nextRunUtc - DateTimeOffset.UtcNow;
-						var refreshDelay = TimeSpan.FromMinutes(45);
-						if (refreshDelay > timeUntilJob) break;
-
-						_statusStore.SetNextTokenRefreshAt(DateTimeOffset.UtcNow.Add(refreshDelay));
-						await Task.Delay(refreshDelay, ct);
-						_statusStore.SetNextTokenRefreshAt(null);
-						var refreshCtx = ClientContextFactory.New("Scheduler:TokenRefresh");
-						using (LogContext.PushProperty("CorrelationId", refreshCtx.CorrelationId))
-						using (LogContext.PushProperty("Source", refreshCtx.Source))
-						{
-							await _saxoTokenService.GetAccessTokenAsync(refreshCtx, ct);
-						}
-					}
-
-					var finalDelay = nextRunUtc - DateTimeOffset.UtcNow;
-					if (finalDelay > TimeSpan.Zero)
-						await Task.Delay(finalDelay, ct);
-
-					try
-					{
-						var jobCtx = ClientContextFactory.New("Scheduler:Job");
-						using (LogContext.PushProperty("CorrelationId", jobCtx.CorrelationId))
-						using (LogContext.PushProperty("Source", jobCtx.Source))
-						{
-							await _jobRunner.RunJobAsync(jobCtx, ct);
-						}
-						_statusStore.SetLastRun(DateTimeOffset.UtcNow, true);
-					}
-					catch (Exception ex) when (ex is not OperationCanceledException)
-					{
-						_statusStore.SetLastRun(DateTimeOffset.UtcNow, false);
-						throw;
-					}
+					await WaitUntilNextRunAsync(nextRunUtc, stoppingToken);
+					await RunScheduledJobAsync(stoppingToken);
 				}
 				catch (OperationCanceledException)
 				{
@@ -89,6 +43,71 @@ namespace StockPriceSheetPrintService.Service.Application
 				{
 					_logger.LogError(ex, "[SCHEDULER] ✗ Unexpected error in scheduler!");
 				}
+			}
+		}
+
+		private async Task PerformStartupTokenRefreshAsync(CancellationToken stoppingToken)
+		{
+			_logger.LogInformation("[STARTUP] Performing initial token refresh...");
+			var startupCtx = ClientContextFactory.New("Startup:TokenRefresh");
+			using (LogContext.PushProperty("CorrelationId", startupCtx.CorrelationId))
+			using (LogContext.PushProperty("Source", startupCtx.Source))
+			{
+				await _saxoTokenService.GetAccessTokenAsync(startupCtx, stoppingToken);
+			}
+			_logger.LogInformation("[STARTUP] ✓ Initial token refresh completed");
+		}
+
+		private DateTimeOffset GetNextScheduledRunTime()
+		{
+			var nextRunUtc = GetNextRunTime(3, 30);
+			while (nextRunUtc.DayOfWeek == DayOfWeek.Sunday || nextRunUtc.DayOfWeek == DayOfWeek.Monday)
+			{
+				nextRunUtc = nextRunUtc.AddDays(1);
+			}
+			return nextRunUtc;
+		}
+
+		private async Task WaitUntilNextRunAsync(DateTimeOffset nextRunUtc, CancellationToken stoppingToken)
+		{
+			while (DateTimeOffset.UtcNow < nextRunUtc && !stoppingToken.IsCancellationRequested)
+			{
+				var timeUntilJob = nextRunUtc - DateTimeOffset.UtcNow;
+				var refreshDelay = TimeSpan.FromMinutes(45);
+				if (refreshDelay > timeUntilJob) break;
+
+				_statusStore.SetNextTokenRefreshAt(DateTimeOffset.UtcNow.Add(refreshDelay));
+				await Task.Delay(refreshDelay, stoppingToken);
+				_statusStore.SetNextTokenRefreshAt(null);
+				var refreshCtx = ClientContextFactory.New("Scheduler:TokenRefresh");
+				using (LogContext.PushProperty("CorrelationId", refreshCtx.CorrelationId))
+				using (LogContext.PushProperty("Source", refreshCtx.Source))
+				{
+					await _saxoTokenService.GetAccessTokenAsync(refreshCtx, stoppingToken);
+				}
+			}
+
+			var finalDelay = nextRunUtc - DateTimeOffset.UtcNow;
+			if (finalDelay > TimeSpan.Zero)
+				await Task.Delay(finalDelay, stoppingToken);
+		}
+
+		private async Task RunScheduledJobAsync(CancellationToken stoppingToken)
+		{
+			try
+			{
+				var jobCtx = ClientContextFactory.New("Scheduler:Job");
+				using (LogContext.PushProperty("CorrelationId", jobCtx.CorrelationId))
+				using (LogContext.PushProperty("Source", jobCtx.Source))
+				{
+					await _jobRunner.RunJobAsync(jobCtx, stoppingToken);
+				}
+				_statusStore.SetLastRun(DateTimeOffset.UtcNow, true);
+			}
+			catch (Exception ex) when (ex is not OperationCanceledException)
+			{
+				_statusStore.SetLastRun(DateTimeOffset.UtcNow, false);
+				throw;
 			}
 		}
 

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Portefølje Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
     <style>
         *, *::before, *::after {
             box-sizing: border-box;
@@ -275,7 +275,7 @@
         </div>
         <div class="chart-toolbar">
             <div class="toolbar-group">
-                <span class="toolbar-label">Benchmark</span>
+                <label class="toolbar-label" for="benchmarkSelect">Benchmark</label>
                 <select id="benchmarkSelect">
                     <option value="msci">MSCI World (~10% p.a.)</option>
                     <option value="sp500">S&P 500 (~11% p.a.)</option>

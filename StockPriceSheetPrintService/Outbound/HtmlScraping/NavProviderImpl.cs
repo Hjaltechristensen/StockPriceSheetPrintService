@@ -36,7 +36,7 @@ namespace StockPriceSheetPrintService.Outbound.HtmlScraping
 				"//small[contains(@class,'description') and starts-with(normalize-space(.), 'Indre værdi pr')]"
 			);
 
-			var dateMatch = Regex.Match(smallNode?.InnerText ?? "", @"\d{2}\.\d{2}\.\d{4}");
+			var dateMatch = Regex.Match(smallNode?.InnerText ?? "", @"\d{2}\.\d{2}\.\d{4}", RegexOptions.None, TimeSpan.FromSeconds(1));
 			if (!dateMatch.Success) return null;
 
 			if (!DateTime.TryParseExact(dateMatch.Value, "dd.MM.yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))

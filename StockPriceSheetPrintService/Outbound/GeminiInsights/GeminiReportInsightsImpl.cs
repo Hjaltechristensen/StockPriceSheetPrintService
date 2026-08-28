@@ -81,7 +81,8 @@ var userPrompt =
 				var response = await _client.Models.GenerateContentAsync(
 					model: _model,
 					contents: basePrompt,
-					config: _config);
+					config: _config,
+					cancellationToken: ct);
 
 				const decimal inputPricePerMillion = 0.075m;
 				const decimal outputPricePerMillion = 0.30m;
